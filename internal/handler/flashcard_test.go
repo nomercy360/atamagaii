@@ -159,6 +159,97 @@ func TestImportDeckFromFile_InvalidFilename(t *testing.T) {
 	}
 }
 
+func TestGetDueCards(t *testing.T) {
+	e := testutils.SetupHandlerDependencies(t)
+
+	resp, err := testutils.AuthHelper(t, e, testutils.TelegramTestUserID, "mkkksim", "Maksim")
+	if err != nil {
+		t.Fatalf("Failed to authenticate: %v", err)
+	}
+
+	reqBody := map[string]string{
+		"name":        "Test Vocabulary",
+		"description": "Test deck for due cards",
+		"file_name":   "vocab_n5.json",
+	}
+
+	body, _ := json.Marshal(reqBody)
+
+	rec := testutils.PerformRequest(
+		t,
+		e,
+		http.MethodPost,
+		"/v1/decks/import",
+		string(body),
+		resp.Token,
+		http.StatusCreated,
+	)
+
+	deck := testutils.ParseResponse[db.Deck](t, rec)
+
+	rec = testutils.PerformRequest(
+		t,
+		e,
+		http.MethodGet,
+		"/v1/cards/due?deck_id="+deck.ID,
+		"",
+		resp.Token,
+		http.StatusOK,
+	)
+
+	cards := testutils.ParseResponse[[]contract.CardResponse](t, rec)
+
+	if len(cards) == 0 {
+		t.Error("Expected at least one due card")
+	}
+
+	rec = testutils.PerformRequest(
+		t,
+		e,
+		http.MethodGet,
+		"/v1/cards/due?deck_id="+deck.ID+"&limit=5",
+		"",
+		resp.Token,
+		http.StatusOK,
+	)
+
+	limitedCards := testutils.ParseResponse[[]contract.CardResponse](t, rec)
+
+	if len(limitedCards) > 5 {
+		t.Errorf("Expected at most 5 cards, got %d", len(limitedCards))
+	}
+
+	rec = testutils.PerformRequest(
+		t,
+		e,
+		http.MethodGet,
+		"/v1/cards/due",
+		"",
+		resp.Token,
+		http.StatusBadRequest,
+	)
+
+	errorResp := testutils.ParseResponse[contract.ErrorResponse](t, rec)
+	if errorResp.Error == "" {
+		t.Error("Expected non-empty error message for missing deck_id")
+	}
+
+	rec = testutils.PerformRequest(
+		t,
+		e,
+		http.MethodGet,
+		"/v1/cards/due?deck_id=nonexistent",
+		"",
+		resp.Token,
+		http.StatusNotFound,
+	)
+
+	errorResp = testutils.ParseResponse[contract.ErrorResponse](t, rec)
+	if errorResp.Error == "" {
+		t.Error("Expected non-empty error message for non-existent deck")
+	}
+}
+
 func strPtr(s string) *string {
 	return &s
 }

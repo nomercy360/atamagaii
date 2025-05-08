@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"atamagaii/internal/contract"
 	"atamagaii/internal/db"
 	"encoding/json"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 )
 
 type ReviewCardRequest struct {
@@ -118,7 +120,54 @@ func (h *Handler) GetDueCards(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch due cards").WithInternal(err)
 	}
 
-	return c.JSON(http.StatusOK, cards)
+	// Convert to response format with properly unmarshaled JSON
+	responses := make([]contract.CardResponse, 0, len(cards))
+	for _, card := range cards {
+		var response contract.CardResponse
+
+		// Copy basic card data
+		response.ID = card.ID
+		response.DeckID = card.DeckID
+		response.CreatedAt = card.CreatedAt.Format(time.RFC3339)
+		response.UpdatedAt = card.UpdatedAt.Format(time.RFC3339)
+
+		if card.DeletedAt != nil {
+			deletedAt := card.DeletedAt.Format(time.RFC3339)
+			response.DeletedAt = &deletedAt
+		}
+
+		// Copy progress data
+		response.Interval = card.Interval
+		response.Ease = card.Ease
+		response.ReviewCount = card.ReviewCount
+		response.LapsCount = card.LapsCount
+
+		if card.NextReview != nil {
+			nextReview := card.NextReview.Format(time.RFC3339)
+			response.NextReview = &nextReview
+		}
+
+		if card.LastReviewedAt != nil {
+			lastReviewedAt := card.LastReviewedAt.Format(time.RFC3339)
+			response.LastReviewedAt = &lastReviewedAt
+		}
+
+		// Unmarshal front
+		var front contract.CardFront
+		if err := json.Unmarshal([]byte(card.Front), &front); err == nil {
+			response.Front = front
+		}
+
+		// Unmarshal back
+		var back contract.CardBack
+		if err := json.Unmarshal([]byte(card.Back), &back); err == nil {
+			response.Back = back
+		}
+
+		responses = append(responses, response)
+	}
+
+	return c.JSON(http.StatusOK, responses)
 }
 
 func (h *Handler) ReviewCard(c echo.Context) error {

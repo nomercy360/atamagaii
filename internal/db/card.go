@@ -21,10 +21,10 @@ type Card struct {
 type CardWithProgress struct {
 	Card
 	NextReview     *time.Time `db:"next_review" json:"next_review,omitempty"`
-	Interval       int        `db:"interval" json:"interval"`
-	Ease           float64    `db:"ease" json:"ease"`
-	ReviewCount    int        `db:"review_count" json:"review_count"`
-	LapsCount      int        `db:"laps_count" json:"laps_count"`
+	Interval       *int       `db:"interval" json:"interval,omitempty"`
+	Ease           *float64   `db:"ease" json:"ease,omitempty"`
+	ReviewCount    *int       `db:"review_count" json:"review_count,omitempty"`
+	LapsCount      *int       `db:"laps_count" json:"laps_count,omitempty"`
 	LastReviewedAt *time.Time `db:"last_reviewed_at" json:"last_reviewed_at,omitempty"`
 }
 
