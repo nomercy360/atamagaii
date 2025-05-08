@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 type ReviewCardRequest struct {
@@ -87,6 +86,37 @@ func (h *Handler) GetDeck(c echo.Context) error {
 	return c.JSON(http.StatusOK, deck)
 }
 
+func formatCardResponse(card db.CardWithProgress) (contract.CardResponse, error) {
+	response := contract.CardResponse{
+		ID:              card.ID,
+		DeckID:          card.DeckID,
+		CreatedAt:       card.CreatedAt,
+		UpdatedAt:       card.UpdatedAt,
+		DeletedAt:       card.DeletedAt,
+		NextReview:      card.NextReview,
+		Interval:        card.Interval,
+		Ease:            card.Ease,
+		ReviewCount:     card.ReviewCount,
+		LapsCount:       card.LapsCount,
+		LastReviewedAt:  card.LastReviewedAt,
+		FirstReviewedAt: card.FirstReviewedAt,
+	}
+
+	var front contract.CardFront
+	if err := json.Unmarshal([]byte(card.Front), &front); err != nil {
+		return response, fmt.Errorf("error unmarshalling card front: %w", err)
+	}
+	response.Front = front
+
+	var back contract.CardBack
+	if err := json.Unmarshal([]byte(card.Back), &back); err != nil {
+		return response, fmt.Errorf("error unmarshalling card back: %w", err)
+	}
+	response.Back = back
+
+	return response, nil
+}
+
 func (h *Handler) GetDueCards(c echo.Context) error {
 	userID, err := GetUserIDFromToken(c)
 	if err != nil {
@@ -119,43 +149,10 @@ func (h *Handler) GetDueCards(c echo.Context) error {
 
 	responses := make([]contract.CardResponse, 0, len(cards))
 	for _, card := range cards {
-		var response contract.CardResponse
-
-		response.ID = card.ID
-		response.DeckID = card.DeckID
-		response.CreatedAt = card.CreatedAt.Format(time.RFC3339)
-		response.UpdatedAt = card.UpdatedAt.Format(time.RFC3339)
-
-		if card.DeletedAt != nil {
-			deletedAt := card.DeletedAt.Format(time.RFC3339)
-			response.DeletedAt = &deletedAt
+		response, err := formatCardResponse(card)
+		if err != nil {
+			continue
 		}
-
-		response.Interval = card.Interval
-		response.Ease = card.Ease
-		response.ReviewCount = card.ReviewCount
-		response.LapsCount = card.LapsCount
-
-		if card.NextReview != nil {
-			nextReview := card.NextReview.Format(time.RFC3339)
-			response.NextReview = &nextReview
-		}
-
-		if card.LastReviewedAt != nil {
-			lastReviewedAt := card.LastReviewedAt.Format(time.RFC3339)
-			response.LastReviewedAt = &lastReviewedAt
-		}
-
-		var front contract.CardFront
-		if err := json.Unmarshal([]byte(card.Front), &front); err == nil {
-			response.Front = front
-		}
-
-		var back contract.CardBack
-		if err := json.Unmarshal([]byte(card.Back), &back); err == nil {
-			response.Back = back
-		}
-
 		responses = append(responses, response)
 	}
 

@@ -5,16 +5,32 @@ import (
 	"fmt"
 	nanoid "github.com/matoous/go-nanoid/v2"
 	"math"
+	"math/rand"
 	"time"
 )
 
-// Constants for the SuperMemo SM-2 algorithm
+// Constants for the Anki-like algorithm
 const (
-	MinEase     = 1.3
-	DefaultEase = 2.5
-	EaseModHard = 0.15
-	EaseModGood = 0.0
-	EaseModEasy = 0.15
+	MinEase          = 1.3
+	MaxEase          = 2.5
+	DefaultEase      = 2.5
+	EaseBonus        = 1.3 // Bonus for Easy rating
+	EasePenaltyAgain = -0.8
+	EasePenaltyHard  = -0.2
+	EaseBonusEasy    = 0.15
+	MaxInterval      = 365 // Maximum interval in days
+	LearningStep1Min = 1   // First learning step: 1 minute
+	LearningStep2Min = 10  // Second learning step: 10 minutes
+)
+
+// CardState represents the state of a card
+type CardState string
+
+const (
+	StateNew        CardState = "new"
+	StateLearning   CardState = "learning"
+	StateReview     CardState = "review"
+	StateRelearning CardState = "relearning"
 )
 
 // Review represents a card review event
@@ -31,29 +47,28 @@ type Review struct {
 	NewEase      float64   `db:"new_ease" json:"new_ease"`
 }
 
-// CardProgress tracks a user's progress with a specific card
 type CardProgress struct {
 	UserID          string     `db:"user_id" json:"user_id"`
 	CardID          string     `db:"card_id" json:"card_id"`
 	NextReview      *time.Time `db:"next_review" json:"next_review,omitempty"`
-	Interval        int        `db:"interval" json:"interval"`         // in days
-	Ease            float64    `db:"ease" json:"ease"`                 // SM-2 ease factor
+	Interval        int        `db:"interval" json:"interval"`         // in days for review, minutes for learning
+	Ease            float64    `db:"ease" json:"ease"`                 // Anki-like ease factor
 	ReviewCount     int        `db:"review_count" json:"review_count"` // total reviews
 	LapsCount       int        `db:"laps_count" json:"laps_count"`     // times forgotten
 	LastReviewedAt  *time.Time `db:"last_reviewed_at" json:"last_reviewed_at,omitempty"`
-	FirstReviewedAt *time.Time `db:"first_reviewed_at" json:"first_reviewed_at,omitempty"` // when this card was first studied
+	FirstReviewedAt *time.Time `db:"first_reviewed_at" json:"first_reviewed_at,omitempty"`
+	State           CardState  `db:"state" json:"state"`                 // new, learning, review, relearning
+	LearningStep    int        `db:"learning_step" json:"learning_step"` // tracks current learning step
 }
 
-// ReviewCard processes a card review using the SM-2 spaced repetition algorithm
 func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int) error {
 	if rating < 1 || rating > 4 {
 		return errors.New("invalid rating: must be between 1 and 4")
 	}
 
-	// Get current progress or create new one
 	var progress CardProgress
 	query := `
-		SELECT user_id, card_id, next_review, interval, ease, review_count, laps_count, last_reviewed_at, first_reviewed_at
+		SELECT user_id, card_id, next_review, interval, ease, review_count, laps_count, last_reviewed_at, first_reviewed_at, state, learning_step
 		FROM card_progress 
 		WHERE user_id = ? AND card_id = ?
 	`
@@ -62,12 +77,14 @@ func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int)
 		&progress.UserID,
 		&progress.CardID,
 		&progress.NextReview,
-		&progress.Interval,
 		&progress.Ease,
+		&progress.Interval,
 		&progress.ReviewCount,
 		&progress.LapsCount,
 		&progress.LastReviewedAt,
 		&progress.FirstReviewedAt,
+		&progress.State,
+		&progress.LearningStep,
 	)
 
 	isNew := false
@@ -75,9 +92,11 @@ func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int)
 		// No existing progress, create new
 		isNew = true
 		progress = CardProgress{
-			UserID: userID,
-			CardID: cardID,
-			Ease:   DefaultEase,
+			UserID:       userID,
+			CardID:       cardID,
+			Ease:         DefaultEase,
+			State:        StateNew,
+			LearningStep: 0,
 		}
 	}
 
@@ -89,48 +108,92 @@ func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int)
 	// Update card progress
 	progress.ReviewCount++
 	progress.LastReviewedAt = &now
+	if progress.FirstReviewedAt == nil {
+		progress.FirstReviewedAt = &now
+	}
 
-	// Calculate new interval and ease based on rating
-	// This implements a simplified version of the SM-2 algorithm
-	if rating == 1 { // Again (Fail)
-		progress.Interval = 1 // Reset to 1 day
-		progress.LapsCount++
-		progress.Ease = math.Max(progress.Ease-0.2, MinEase) // Decrease ease
-	} else {
-		// Apply SM-2 algorithm
-		if progress.Interval == 0 {
-			// First review
-			switch rating {
-			case 2: // Hard
-				progress.Interval = 1
-			case 3: // Good
-				progress.Interval = 3
-			case 4: // Easy
-				progress.Interval = 7
+	// Handle card state transitions and interval calculations
+	if progress.State == StateNew || progress.State == StateLearning {
+		// Handle learning phase
+		if rating == 1 { // Again
+			progress.LearningStep = 0
+			progress.Interval = LearningStep1Min
+			progress.Ease = math.Max(progress.Ease+EasePenaltyAgain, MinEase)
+		} else if rating == 2 { // Hard
+			progress.LearningStep = 0
+			progress.Interval = LearningStep1Min
+			progress.Ease = math.Max(progress.Ease+EasePenaltyHard, MinEase)
+		} else if rating == 3 { // Good
+			progress.LearningStep++
+			if progress.LearningStep == 1 {
+				progress.Interval = LearningStep2Min
+			} else {
+				// Graduate to review
+				progress.State = StateReview
+				progress.Interval = 1 // First review in 1 day
+				progress.LearningStep = 0
 			}
+		} else { // Easy
+			// Graduate immediately to review
+			progress.State = StateReview
+			progress.Interval = 4 // Easy cards get 4 days
+			progress.LearningStep = 0
+			progress.Ease = math.Min(progress.Ease+EaseBonusEasy, MaxEase)
+		}
+		// Learning intervals are in minutes
+		nextReview := now.Add(time.Duration(progress.Interval) * time.Minute)
+		progress.NextReview = &nextReview
+	} else if progress.State == StateReview || progress.State == StateRelearning {
+		// Handle review or relearning phase
+		if rating == 1 { // Again
+			progress.State = StateRelearning
+			progress.LapsCount++
+			progress.Ease = math.Max(progress.Ease+EasePenaltyAgain, MinEase)
+			progress.Interval = 1 // Relearn with short interval
+			progress.LearningStep = 0
+			nextReview := now.Add(time.Duration(progress.Interval) * time.Minute)
+			progress.NextReview = &nextReview
 		} else {
-			// Apply ease modifications
-			switch rating {
-			case 2: // Hard
-				progress.Ease = math.Max(progress.Ease-EaseModHard, MinEase)
+			// Calculate new interval for Hard, Good, Easy
+			if rating == 2 { // Hard
+				progress.Ease = math.Max(progress.Ease+EasePenaltyHard, MinEase)
 				progress.Interval = int(float64(progress.Interval) * 1.2)
-			case 3: // Good
-				progress.Interval = int(float64(progress.Interval) * progress.Ease)
-			case 4: // Easy
-				progress.Ease += EaseModEasy
-				progress.Interval = int(float64(progress.Interval) * progress.Ease * 1.3)
+			} else if rating == 3 { // Good
+				if progress.ReviewCount == 1 {
+					progress.Interval = 1
+				} else if progress.ReviewCount == 2 {
+					progress.Interval = 4
+				} else {
+					progress.Interval = int(float64(progress.Interval) * progress.Ease)
+				}
+			} else { // Easy
+				progress.Ease = math.Min(progress.Ease+EaseBonusEasy, MaxEase)
+				progress.Interval = int(float64(progress.Interval) * progress.Ease * EaseBonus)
 			}
+
+			// Apply interval fuzzing (Anki-style)
+			if progress.Interval > 1 {
+				fuzz := int(float64(progress.Interval) * 0.05) // 5% fuzz
+				if fuzz > 0 {
+					progress.Interval += rand.Intn(fuzz*2) - fuzz
+				}
+			}
+
+			// Cap interval
+			if progress.Interval > MaxInterval {
+				progress.Interval = MaxInterval
+			}
+
+			// If relearning and rating >= 2, graduate back to review
+			if progress.State == StateRelearning && rating >= 2 {
+				progress.State = StateReview
+			}
+
+			// Review intervals are in days
+			nextReview := now.AddDate(0, 0, progress.Interval)
+			progress.NextReview = &nextReview
 		}
 	}
-
-	// Cap very long intervals at 365 days to prevent excessive intervals
-	if progress.Interval > 365 {
-		progress.Interval = 365
-	}
-
-	// Calculate next review date
-	nextReview := now.AddDate(0, 0, progress.Interval)
-	progress.NextReview = &nextReview
 
 	// Save the review in transaction
 	tx, err := s.db.Begin()
@@ -167,12 +230,9 @@ func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int)
 	var args []interface{}
 
 	if isNew {
-		// For new card progress entries, set first_reviewed_at to now
-		progress.FirstReviewedAt = &now
-
 		progressQuery = `
-			INSERT INTO card_progress (user_id, card_id, next_review, interval, ease, review_count, laps_count, last_reviewed_at, first_reviewed_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+			INSERT INTO card_progress (user_id, card_id, next_review, interval, ease, review_count, laps_count, last_reviewed_at, first_reviewed_at, state, learning_step)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`
 		args = []interface{}{
 			userID,
@@ -184,11 +244,13 @@ func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int)
 			progress.LapsCount,
 			progress.LastReviewedAt,
 			progress.FirstReviewedAt,
+			progress.State,
+			progress.LearningStep,
 		}
 	} else {
 		progressQuery = `
 			UPDATE card_progress
-			SET next_review = ?, interval = ?, ease = ?, review_count = ?, laps_count = ?, last_reviewed_at = ?
+			SET next_review = ?, interval = ?, ease = ?, review_count = ?, laps_count = ?, last_reviewed_at = ?, state = ?, learning_step = ?
 			WHERE user_id = ? AND card_id = ?
 		`
 		args = []interface{}{
@@ -198,6 +260,8 @@ func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int)
 			progress.ReviewCount,
 			progress.LapsCount,
 			progress.LastReviewedAt,
+			progress.State,
+			progress.LearningStep,
 			userID,
 			cardID,
 		}
@@ -216,10 +280,9 @@ func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int)
 	return nil
 }
 
-// GetCardProgress gets the progress for a specific card
 func (s *Storage) GetCardProgress(userID, cardID string) (*CardProgress, error) {
 	query := `
-		SELECT user_id, card_id, next_review, interval, ease, review_count, laps_count, last_reviewed_at, first_reviewed_at
+		SELECT user_id, card_id, next_review, interval, ease, review_count, laps_count, last_reviewed_at, first_reviewed_at, state, learning_step
 		FROM card_progress
 		WHERE user_id = ? AND card_id = ?
 	`
@@ -235,6 +298,8 @@ func (s *Storage) GetCardProgress(userID, cardID string) (*CardProgress, error) 
 		&progress.LapsCount,
 		&progress.LastReviewedAt,
 		&progress.FirstReviewedAt,
+		&progress.State,
+		&progress.LearningStep,
 	)
 
 	if err != nil {
@@ -247,7 +312,7 @@ func (s *Storage) GetCardProgress(userID, cardID string) (*CardProgress, error) 
 func (s *Storage) GetDueCardCount(userID string) (int, error) {
 	decks, err := s.GetDecks(userID)
 	if err != nil {
-		return 0, fmt.Errorf("error fetching decks for due card counting: %w", err)
+		return 0, fmt.Errorf("error fetching decks for due card count: %w", err)
 	}
 
 	var totalDueCount int

@@ -25,12 +25,14 @@ var (
 	dbStorage *db.Storage
 )
 
-// CustomValidator implements the echo.Validator interface
 type CustomValidator struct {
 	validator *validator.Validate
 }
 
-// Validate validates the provided struct
+func GetDBStorage() *db.Storage {
+	return dbStorage
+}
+
 func (cv *CustomValidator) Validate(i interface{}) error {
 	if err := cv.validator.Struct(i); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())

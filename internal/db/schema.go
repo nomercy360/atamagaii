@@ -49,6 +49,8 @@ func (s *Storage) UpdateSchema() error {
 		review_count INTEGER NOT NULL DEFAULT 0,
 		laps_count INTEGER NOT NULL DEFAULT 0,
 		last_reviewed_at TIMESTAMP,
+		learning_step INTEGER DEFAULT 0,
+		state TEXT DEFAULT 'new',
 		first_reviewed_at TIMESTAMP,
 		PRIMARY KEY (user_id, card_id),
 		FOREIGN KEY (user_id) REFERENCES users(id),

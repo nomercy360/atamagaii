@@ -113,7 +113,7 @@ func (s *Storage) AddCardsInBatch(deckID string, fronts, backs []string) error {
 	return nil
 }
 
-func (s *Storage) GetCardsWithProgress(userID string, deckID string, limit int) ([]CardWithProgress, error) {
+func (s *Storage) GetNewCards(userID string, deckID string, limit int) ([]CardWithProgress, error) {
 	deck, err := s.GetDeck(deckID)
 	if err != nil {
 		return nil, fmt.Errorf("error getting deck settings: %w", err)
@@ -142,34 +142,73 @@ func (s *Storage) GetCardsWithProgress(userID string, deckID string, limit int) 
 		newCardsRemaining = 0
 	}
 
+	if newCardsRemaining == 0 {
+		return []CardWithProgress{}, nil
+	}
+
 	query := `
-		WITH new_card_pool AS (
-			SELECT c2.id
-			FROM cards c2
-			LEFT JOIN card_progress p2
-				ON c2.id = p2.card_id AND p2.user_id = ?
-			WHERE c2.deck_id = ? AND c2.deleted_at IS NULL AND p2.card_id IS NULL
-			ORDER BY c2.id
-			LIMIT ?
-		)
-		SELECT c.id, c.deck_id, c.front, c.back, c.created_at, c.updated_at, c.deleted_at,
-		       p.next_review, p.interval, p.ease, p.review_count, p.laps_count, p.last_reviewed_at, p.first_reviewed_at
+		SELECT c.id,
+		       c.deck_id, 
+		       c.front,
+		       c.back,
+		       c.created_at, 
+		       c.updated_at,
+		       c.deleted_at
 		FROM cards c
 		LEFT JOIN card_progress p ON c.id = p.card_id AND p.user_id = ?
 		JOIN decks d ON c.deck_id = d.id AND d.user_id = ?
 		WHERE c.deck_id = ? AND c.deleted_at IS NULL
-		AND (
-			(p.next_review IS NOT NULL AND p.next_review <= CURRENT_TIMESTAMP)
-			OR
-			(p.card_id IS NULL AND c.id IN (SELECT id FROM new_card_pool))
-		)
-		ORDER BY p.next_review IS NULL DESC, p.next_review ASC
+		AND p.card_id IS NULL
+		ORDER BY c.id
 		LIMIT ?
 	`
 
-	rows, err := s.db.Query(query, userID, deckID, newCardsRemaining, userID, userID, deckID, limit)
+	rows, err := s.db.Query(query, userID, userID, deckID, newCardsRemaining)
 	if err != nil {
-		return nil, fmt.Errorf("error getting cards with progress: %w", err)
+		return nil, fmt.Errorf("error getting new cards: %w", err)
+	}
+	defer rows.Close()
+
+	var cards []CardWithProgress
+	for rows.Next() {
+		var card CardWithProgress
+		if err := rows.Scan(
+			&card.ID,
+			&card.DeckID,
+			&card.Front,
+			&card.Back,
+			&card.CreatedAt,
+			&card.UpdatedAt,
+			&card.DeletedAt,
+		); err != nil {
+			return nil, fmt.Errorf("error scanning new card: %w", err)
+		}
+		cards = append(cards, card)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating new card rows: %w", err)
+	}
+
+	return cards, nil
+}
+
+func (s *Storage) GetReviewCards(userID string, deckID string, limit int) ([]CardWithProgress, error) {
+	query := `
+		SELECT c.id, c.deck_id, c.front, c.back, c.created_at, c.updated_at, c.deleted_at,
+		       p.next_review, p.interval, p.ease, p.review_count, p.laps_count, p.last_reviewed_at, p.first_reviewed_at
+		FROM cards c
+		JOIN card_progress p ON c.id = p.card_id AND p.user_id = ?
+		JOIN decks d ON c.deck_id = d.id AND d.user_id = ?
+		WHERE c.deck_id = ? AND c.deleted_at IS NULL
+		AND p.next_review IS NOT NULL AND p.next_review <= CURRENT_TIMESTAMP
+		ORDER BY p.next_review ASC
+		LIMIT ?
+	`
+
+	rows, err := s.db.Query(query, userID, userID, deckID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("error getting review cards: %w", err)
 	}
 	defer rows.Close()
 
@@ -192,16 +231,38 @@ func (s *Storage) GetCardsWithProgress(userID string, deckID string, limit int) 
 			&card.LastReviewedAt,
 			&card.FirstReviewedAt,
 		); err != nil {
-			return nil, fmt.Errorf("error scanning card with progress: %w", err)
+			return nil, fmt.Errorf("error scanning review card: %w", err)
 		}
 		cards = append(cards, card)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating card rows: %w", err)
+		return nil, fmt.Errorf("error iterating review card rows: %w", err)
 	}
 
 	return cards, nil
+}
+
+func (s *Storage) GetCardsWithProgress(userID string, deckID string, limit int) ([]CardWithProgress, error) {
+	reviewCards, err := s.GetReviewCards(userID, deckID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("error getting review cards: %w", err)
+	}
+
+	if len(reviewCards) >= limit {
+		return reviewCards[:limit], nil
+	}
+
+	newCardsNeeded := limit - len(reviewCards)
+
+	newCards, err := s.GetNewCards(userID, deckID, newCardsNeeded)
+	if err != nil {
+		return nil, fmt.Errorf("error getting new cards: %w", err)
+	}
+
+	combinedCards := append(reviewCards, newCards...)
+
+	return combinedCards, nil
 }
 
 func (s *Storage) GetCard(cardID string) (*Card, error) {

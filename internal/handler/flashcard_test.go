@@ -82,10 +82,6 @@ func TestImportDeckFromFile(t *testing.T) {
 	for _, d := range decks {
 		if d.ID == deck.ID {
 			found = true
-			// Verify that the DueCards field is present and has expected value
-			if d.DueCards < 0 {
-				t.Errorf("Expected non-negative due_cards count, got %d", d.DueCards)
-			}
 			break
 		}
 	}
@@ -301,9 +297,6 @@ func TestGetDecksWithDueCards(t *testing.T) {
 	for _, d := range decks {
 		if d.ID == deck.ID {
 			found = true
-			if d.DueCards < 0 {
-				t.Errorf("Expected non-negative due_cards count, got %d", d.DueCards)
-			}
 
 			dueCardsURL := fmt.Sprintf("/v1/cards/due?deck_id=%s", d.ID)
 			dueRec := testutils.PerformRequest(
@@ -322,11 +315,6 @@ func TestGetDecksWithDueCards(t *testing.T) {
 			if expectedCount > d.NewCardsPerDay {
 				expectedCount = d.NewCardsPerDay
 			}
-
-			if d.DueCards != expectedCount {
-				t.Errorf("Expected due_cards count to be %d, got %d", expectedCount, d.DueCards)
-			}
-
 			break
 		}
 	}

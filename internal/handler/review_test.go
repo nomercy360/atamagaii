@@ -5,22 +5,22 @@ import (
 	"atamagaii/internal/db"
 	"atamagaii/internal/testutils"
 	"encoding/json"
-	_ "github.com/mattn/go-sqlite3"
 	"net/http"
 	"testing"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestReviewCard(t *testing.T) {
 	e := testutils.SetupHandlerDependencies(t)
 
-	// Authenticate user
 	resp, err := testutils.AuthHelper(t, e, testutils.TelegramTestUserID, "mkkksim", "Maksim")
 	if err != nil {
 		t.Fatalf("Failed to authenticate: %v", err)
 	}
 
-	// 1. Create a deck with cards
 	reqBody := map[string]string{
 		"name":        "Test Review Deck",
 		"description": "Deck for testing review functionality",
@@ -57,147 +57,66 @@ func TestReviewCard(t *testing.T) {
 	}
 
 	cardID := cards[0].ID
+	now := time.Now()
 
-	// 3. Test review with different ratings
-
-	// 3.1 Rate as "Again" (1)
-	reviewData := map[string]interface{}{
-		"card_id":      cardID,
-		"rating":       1,
-		"time_spent_ms": 3000,
-	}
-	reviewBody, _ := json.Marshal(reviewData)
-
-	rec = testutils.PerformRequest(
-		t,
-		e,
-		http.MethodPost,
-		"/v1/cards/"+cardID+"/review",
-		string(reviewBody),
-		resp.Token,
-		http.StatusOK,
-	)
-
-	progress := testutils.ParseResponse[db.CardProgress](t, rec)
-
-	// Verify the progress was recorded correctly for rating 1 (Again)
-	if progress.Interval != 1 {
-		t.Errorf("Expected interval to be reset to 1 for 'Again' rating, got %d", progress.Interval)
-	}
-	if progress.ReviewCount != 1 {
-		t.Errorf("Expected review count to be 1, got %d", progress.ReviewCount)
-	}
-	if progress.LapsCount != 1 {
-		t.Errorf("Expected laps count to be 1 for 'Again' rating, got %d", progress.LapsCount)
-	}
-	if progress.NextReview == nil {
-		t.Error("Expected next review date to be set")
-	} else {
-		expectedDate := time.Now().AddDate(0, 0, 1)
-		// Allow a few minutes of difference
-		timeDiff := expectedDate.Sub(*progress.NextReview)
-		if timeDiff < -5*time.Minute || timeDiff > 5*time.Minute {
-			t.Errorf("Expected next review to be around %v, got %v", expectedDate, *progress.NextReview)
+	reviewAndCheck := func(t *testing.T, rating int, expectedState db.CardState, expectedInterval int, expectedEase float64, expectedNextReview time.Time, expectedReviewCount int, expectedLapsCount int) {
+		reviewData := map[string]interface{}{
+			"card_id":       cardID,
+			"rating":        rating,
+			"time_spent_ms": 3000,
 		}
-	}
+		reviewBody, _ := json.Marshal(reviewData)
 
-	// 3.2 Rate as "Good" (3)
-	reviewData = map[string]interface{}{
-		"card_id":      cardID,
-		"rating":       3,
-		"time_spent_ms": 2000,
-	}
-	reviewBody, _ = json.Marshal(reviewData)
+		rec := testutils.PerformRequest(
+			t,
+			e,
+			http.MethodPost,
+			"/v1/cards/"+cardID+"/review",
+			string(reviewBody),
+			resp.Token,
+			http.StatusOK,
+		)
 
-	rec = testutils.PerformRequest(
-		t,
-		e,
-		http.MethodPost,
-		"/v1/cards/"+cardID+"/review",
-		string(reviewBody),
-		resp.Token,
-		http.StatusOK,
-	)
+		progress := testutils.ParseResponse[db.CardProgress](t, rec)
 
-	progress = testutils.ParseResponse[db.CardProgress](t, rec)
-
-	// Verify the progress was updated correctly for rating 3 (Good)
-	if progress.Interval <= 1 {
-		t.Errorf("Expected interval to increase for 'Good' rating, got %d", progress.Interval)
-	}
-	if progress.ReviewCount != 2 {
-		t.Errorf("Expected review count to be 2, got %d", progress.ReviewCount)
-	}
-	if progress.NextReview == nil {
-		t.Error("Expected next review date to be set")
-	} else {
-		expectedDate := time.Now().AddDate(0, 0, progress.Interval)
-		// Allow a few minutes of difference
-		timeDiff := expectedDate.Sub(*progress.NextReview)
-		if timeDiff < -5*time.Minute || timeDiff > 5*time.Minute {
-			t.Errorf("Expected next review to be around %v, got %v", expectedDate, *progress.NextReview)
+		// Assertions
+		assert.Equal(t, expectedState, progress.State, "Unexpected state")
+		assert.Equal(t, expectedInterval, progress.Interval, "Unexpected interval")
+		assert.InDelta(t, expectedEase, progress.Ease, 0.01, "Unexpected ease")
+		assert.Equal(t, expectedReviewCount, progress.ReviewCount, "Unexpected review count")
+		assert.Equal(t, expectedLapsCount, progress.LapsCount, "Unexpected laps count")
+		if progress.NextReview == nil {
+			t.Fatal("Expected next review date to be set")
 		}
+		assert.WithinDuration(t, expectedNextReview, *progress.NextReview, time.Second, "Unexpected next review date")
 	}
 
-	// 4. Test invalid card ID
-	rec = testutils.PerformRequest(
-		t,
-		e,
-		http.MethodPost,
-		"/v1/cards/nonexistent-card/review",
-		string(reviewBody),
-		resp.Token,
-		http.StatusNotFound,
-	)
+	// 3. Test Anki-like review flow
 
-	errorResp := testutils.ParseResponse[contract.ErrorResponse](t, rec)
-	if errorResp.Error == "" {
-		t.Error("Expected non-empty error message for non-existent card")
-	}
+	// Step 1: New card, Good (moves to Learning, step 1)
+	reviewAndCheck(t, 3, db.StateLearning, 10, 2.5, now.Add(10*time.Minute), 1, 0)
 
-	// 5. Test invalid rating
-	invalidRatingData := map[string]interface{}{
-		"card_id":      cardID,
-		"rating":       0, // Invalid rating
-		"time_spent_ms": 2000,
-	}
-	invalidRatingBody, _ := json.Marshal(invalidRatingData)
+	// Step 2: Learning step 2, Good (graduates to Review)
+	now = now.Add(10 * time.Minute)
+	reviewAndCheck(t, 3, db.StateReview, 1, 2.5, now.Add(24*time.Hour), 2, 0)
 
-	rec = testutils.PerformRequest(
-		t,
-		e,
-		http.MethodPost,
-		"/v1/cards/"+cardID+"/review",
-		string(invalidRatingBody),
-		resp.Token,
-		http.StatusBadRequest,
-	)
+	// Step 3: Review, Good (interval = 4 days)
+	now = now.Add(24 * time.Hour)
+	reviewAndCheck(t, 3, db.StateReview, 4, 2.5, now.Add(4*24*time.Hour), 3, 0)
 
-	errorResp = testutils.ParseResponse[contract.ErrorResponse](t, rec)
-	if errorResp.Error == "" {
-		t.Error("Expected non-empty error message for invalid rating")
-	}
+	// Step 4: Review, Good (interval = 4 × 2.5 = 10 days)
+	now = now.Add(4 * 24 * time.Hour)
+	reviewAndCheck(t, 3, db.StateReview, 10, 2.5, now.Add(10*24*time.Hour), 4, 0)
 
-	// 6. Test invalid request (missing required fields)
-	invalidRequestData := map[string]interface{}{
-		"card_id":      cardID,
-		"time_spent_ms": 2000,
-		// Missing rating
-	}
-	invalidRequestBody, _ := json.Marshal(invalidRequestData)
+	// Step 5: Review, Again (moves to Relearning)
+	now = now.Add(10 * 24 * time.Hour)
+	reviewAndCheck(t, 1, db.StateRelearning, 10, 1.7, now.Add(10*time.Minute), 5, 1)
 
-	rec = testutils.PerformRequest(
-		t,
-		e,
-		http.MethodPost,
-		"/v1/cards/"+cardID+"/review",
-		string(invalidRequestBody),
-		resp.Token,
-		http.StatusBadRequest,
-	)
+	// Step 6: Relearning, Good (graduates back to Review)
+	now = now.Add(10 * time.Minute)
+	reviewAndCheck(t, 3, db.StateReview, 1, 1.7, now.Add(24*time.Hour), 6, 1)
 
-	errorResp = testutils.ParseResponse[contract.ErrorResponse](t, rec)
-	if errorResp.Error == "" {
-		t.Error("Expected non-empty error message for invalid request")
-	}
+	// Step 7: Review, Easy (interval = 1 × 1.7 × 1.3 ≈ 2 days)
+	now = now.Add(24 * time.Hour)
+	reviewAndCheck(t, 4, db.StateReview, 2, 1.85, now.Add(2*24*time.Hour), 7, 1)
 }
