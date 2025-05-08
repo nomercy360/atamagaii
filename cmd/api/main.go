@@ -85,7 +85,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	handler := handler.New(bot, storage, cfg.JWTSecretKey, cfg.TelegramBotToken)
+	h := handler.New(bot, storage, cfg.JWTSecretKey, cfg.TelegramBotToken)
 
 	log.Printf("Authorized on account %d", bot.ID())
 
@@ -107,7 +107,7 @@ func main() {
 		log.Fatalf("Failed to set webhook: %v", err)
 	}
 
-	handler.RegisterRoutes(e)
+	h.RegisterRoutes(e)
 
 	port := "8080"
 	log.Printf("Starting server on port %s", port)

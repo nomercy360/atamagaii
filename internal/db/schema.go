@@ -21,6 +21,7 @@ func (s *Storage) UpdateSchema() error {
 		id TEXT PRIMARY KEY,
 		name TEXT NOT NULL,
 		description TEXT,
+		new_cards_per_day INTEGER DEFAULT 7,
 		level TEXT,
 		user_id TEXT NOT NULL,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

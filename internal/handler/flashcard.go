@@ -26,10 +26,15 @@ type CreateDeckFromFileRequest struct {
 	FileName    string `json:"file_name" validate:"required"` // e.g., "vocab_n5.json"
 }
 
+type UpdateDeckSettingsRequest struct {
+	NewCardsPerDay int `json:"new_cards_per_day" validate:"required,min=1,max=500"`
+}
+
 func (h *Handler) AddFlashcardRoutes(g *echo.Group) {
 	g.GET("/decks", h.GetDecks)
 	g.GET("/decks/:id", h.GetDeck)
 	g.POST("/decks/import", h.CreateDeckFromFile)
+	g.PUT("/decks/:id/settings", h.UpdateDeckSettings)
 
 	g.GET("/cards/due", h.GetDueCards)
 
@@ -255,6 +260,52 @@ func (h *Handler) GetStats(c echo.Context) error {
 }
 
 // CreateDeckFromFile creates a new deck for a user by importing a vocabulary file
+// UpdateDeckSettings updates a deck's settings such as new cards per day
+func (h *Handler) UpdateDeckSettings(c echo.Context) error {
+	userID, err := GetUserIDFromToken(c)
+	if err != nil {
+		return err
+	}
+
+	deckID := c.Param("id")
+	if deckID == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Deck ID is required")
+	}
+
+	deck, err := h.db.GetDeck(deckID)
+	if err != nil {
+		if errors.Is(err, db.ErrNotFound) {
+			return echo.NewHTTPError(http.StatusNotFound, "Deck not found")
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch deck")
+	}
+
+	if deck.UserID != userID {
+		return echo.NewHTTPError(http.StatusForbidden, "Access denied")
+	}
+
+	req := new(UpdateDeckSettingsRequest)
+	if err := c.Bind(req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request")
+	}
+
+	if err := c.Validate(req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	if err := h.db.UpdateDeckNewCardsPerDay(deckID, req.NewCardsPerDay); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update deck settings: "+err.Error())
+	}
+
+	// Get updated deck to return to the client
+	updatedDeck, err := h.db.GetDeck(deckID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch updated deck")
+	}
+
+	return c.JSON(http.StatusOK, updatedDeck)
+}
+
 func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 	userID, err := GetUserIDFromToken(c)
 	if err != nil {

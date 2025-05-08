@@ -9,44 +9,47 @@ import (
 )
 
 type Deck struct {
-	ID          string     `db:"id" json:"id"`
-	Name        string     `db:"name" json:"name"`
-	Description string     `db:"description" json:"description"`
-	Level       string     `db:"level" json:"level"` // N5, N4, N3, etc.
-	UserID      string     `db:"user_id" json:"user_id"`
-	CreatedAt   time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time  `db:"updated_at" json:"updated_at"`
-	DeletedAt   *time.Time `db:"deleted_at" json:"deleted_at,omitempty"`
+	ID             string     `db:"id" json:"id"`
+	Name           string     `db:"name" json:"name"`
+	Description    string     `db:"description" json:"description"`
+	Level          string     `db:"level" json:"level"` // N5, N4, N3, etc.
+	NewCardsPerDay int        `db:"new_cards_per_day" json:"new_cards_per_day"`
+	UserID         string     `db:"user_id" json:"user_id"`
+	CreatedAt      time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt      time.Time  `db:"updated_at" json:"updated_at"`
+	DeletedAt      *time.Time `db:"deleted_at" json:"deleted_at,omitempty"`
 }
 
 func (s *Storage) CreateDeck(userID, name, description, level string) (*Deck, error) {
 	deckID := nanoid.Must()
 	now := time.Now()
+	defaultNewCardsPerDay := 20
 
 	query := `
-		INSERT INTO decks (id, name, description, level, user_id, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO decks (id, name, description, level, new_cards_per_day, user_id, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
-	_, err := s.db.Exec(query, deckID, name, description, level, userID, now, now)
+	_, err := s.db.Exec(query, deckID, name, description, level, defaultNewCardsPerDay, userID, now, now)
 	if err != nil {
 		return nil, fmt.Errorf("error creating deck: %w", err)
 	}
 
 	return &Deck{
-		ID:          deckID,
-		Name:        name,
-		Description: description,
-		Level:       level,
-		UserID:      userID,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:             deckID,
+		Name:           name,
+		Description:    description,
+		Level:          level,
+		NewCardsPerDay: defaultNewCardsPerDay,
+		UserID:         userID,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}, nil
 }
 
 func (s *Storage) GetDecks(userID string) ([]Deck, error) {
 	query := `
-		SELECT id, name, description, level, user_id, created_at, updated_at, deleted_at
+		SELECT id, name, description, level, new_cards_per_day, user_id, created_at, updated_at, deleted_at
 		FROM decks 
 		WHERE user_id = ? AND deleted_at IS NULL
 	`
@@ -64,6 +67,7 @@ func (s *Storage) GetDecks(userID string) ([]Deck, error) {
 			&deck.Name,
 			&deck.Description,
 			&deck.Level,
+			&deck.NewCardsPerDay,
 			&deck.UserID,
 			&deck.CreatedAt,
 			&deck.UpdatedAt,
@@ -83,7 +87,7 @@ func (s *Storage) GetDecks(userID string) ([]Deck, error) {
 
 func (s *Storage) GetDeck(deckID string) (*Deck, error) {
 	query := ` 
-		SELECT id, name, description, level, user_id, created_at, updated_at, deleted_at
+		SELECT id, name, description, level, new_cards_per_day, user_id, created_at, updated_at, deleted_at
 		FROM decks
 		WHERE id = ? AND deleted_at IS NULL
 	`
@@ -94,6 +98,7 @@ func (s *Storage) GetDeck(deckID string) (*Deck, error) {
 		&deck.Name,
 		&deck.Description,
 		&deck.Level,
+		&deck.NewCardsPerDay,
 		&deck.UserID,
 		&deck.CreatedAt,
 		&deck.UpdatedAt,
@@ -108,4 +113,34 @@ func (s *Storage) GetDeck(deckID string) (*Deck, error) {
 	}
 
 	return &deck, nil
+}
+
+// UpdateDeckNewCardsPerDay updates the number of new cards per day for a deck
+func (s *Storage) UpdateDeckNewCardsPerDay(deckID string, newCardsPerDay int) error {
+	if newCardsPerDay < 0 {
+		return fmt.Errorf("new cards per day cannot be negative")
+	}
+
+	query := `
+		UPDATE decks
+		SET new_cards_per_day = ?, updated_at = ?
+		WHERE id = ? AND deleted_at IS NULL
+	`
+
+	now := time.Now()
+	result, err := s.db.Exec(query, newCardsPerDay, now, deckID)
+	if err != nil {
+		return fmt.Errorf("error updating deck new cards per day: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error checking rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return ErrNotFound
+	}
+
+	return nil
 }

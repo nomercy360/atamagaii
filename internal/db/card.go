@@ -111,6 +111,15 @@ func (s *Storage) AddCardsInBatch(deckID string, fronts, backs []string) error {
 }
 
 func (s *Storage) GetCardsWithProgress(userID string, deckID string, limit int) ([]CardWithProgress, error) {
+	// If no specific limit is provided, get the deck's new_cards_per_day setting
+	if limit <= 0 {
+		deck, err := s.GetDeck(deckID)
+		if err != nil {
+			return nil, fmt.Errorf("error getting deck settings: %w", err)
+		}
+		limit = deck.NewCardsPerDay
+	}
+
 	query := `
 		SELECT c.id, c.deck_id, c.front, c.back, c.created_at, c.updated_at, c.deleted_at,
 		       p.next_review, p.interval, p.ease, p.review_count, p.laps_count, p.last_reviewed_at

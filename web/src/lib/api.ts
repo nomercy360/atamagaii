@@ -58,6 +58,7 @@ export interface Deck {
 	name: string
 	description: string
 	level: string
+	new_cards_per_day: number
 	user_id: string
 	created_at: string
 	updated_at: string
@@ -158,6 +159,20 @@ export interface CardReviewRequest {
 	card_id: string
 	rating: number
 	time_spent_ms: number
+}
+
+export interface UpdateDeckSettingsRequest {
+	new_cards_per_day: number
+}
+
+export async function updateDeckSettings(deckId: string, settings: UpdateDeckSettingsRequest): Promise<{
+	data: Deck | null
+	error: string | null
+}> {
+	return apiRequest(`/decks/${deckId}/settings`, {
+		method: 'PUT',
+		body: JSON.stringify(settings),
+	})
 }
 
 
