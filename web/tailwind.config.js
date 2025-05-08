@@ -11,6 +11,9 @@ module.exports = {
 			},
 		},
 		extend: {
+			fontFamily: {
+				jp: ['"Noto Serif JP"', 'comic Sans MS', 'sans-serif'],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@200..900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -99,11 +101,11 @@
     * {
         @apply border-border;
     }
+
     body {
         @apply bg-background text-foreground;
-        font-feature-settings:
-                "rlig" 1,
-                "calt" 1;
+        font-feature-settings: "rlig" 1,
+        "calt" 1;
     }
 }
 

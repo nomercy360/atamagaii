@@ -2,7 +2,10 @@ import { store } from '~/store'
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string
 
-export async function apiRequest(endpoint: string, options: RequestInit = {}) {
+export async function apiRequest<T = any>(endpoint: string, options: RequestInit = {}): Promise<{
+	data: T | null
+	error: string | null
+}> {
 	try {
 		const response = await fetch(`${API_BASE_URL}/v1${endpoint}`, {
 			...options,
@@ -37,3 +40,102 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}) {
 		return { error: errorMessage, data: null }
 	}
 }
+
+export interface User {
+	id: string
+	telegram_id: number
+	username: string
+	avatar_url: string
+	name: string
+	level: string
+	points: number
+	created_at: string
+	updated_at: string
+}
+
+export interface Deck {
+	id: string
+	name: string
+	description: string
+	level: string
+	user_id: string
+	created_at: string
+	updated_at: string
+	deleted_at?: string
+}
+
+export interface CardFragment {
+	fragment: string
+	furigana: string | null
+}
+
+export interface CardExample {
+	sentence: CardFragment[]
+	translation: string
+}
+
+export interface CardFront {
+	kanji: string
+	kana: string
+}
+
+export interface CardBack {
+	translation: string
+	examples: CardExample[]
+}
+
+export interface Card {
+	id: string
+	deck_id: string
+	front: CardFront
+	back: CardBack
+	created_at: string
+	updated_at: string
+	deleted_at?: string
+	next_review?: string
+	interval?: number
+	ease?: number
+	review_count?: number
+	laps_count?: number
+	last_reviewed_at?: string
+}
+
+export interface CardProgress {
+	user_id: string
+	card_id: string
+	next_review?: string
+	interval: number
+	ease: number
+	review_count: number
+	laps_count: number
+	last_reviewed_at?: string
+}
+
+export interface Stats {
+	due_cards: number
+
+	[key: string]: any
+}
+
+export interface AuthTelegramRequest {
+	query: string
+}
+
+export interface AuthTelegramResponse {
+	token: string
+	user: User
+}
+
+export interface CreateDeckRequest {
+	name: string
+	description: string
+	file_name: string
+}
+
+export interface CardReviewRequest {
+	card_id: string
+	rating: number
+	time_spent_ms: number
+}
+
+

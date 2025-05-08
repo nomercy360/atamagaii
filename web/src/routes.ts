@@ -1,6 +1,7 @@
 import type { RouteDefinition } from '@solidjs/router'
 import NavigationTabs from '~/components/navigation-tabs'
 import Index from '~/pages'
+import Cards from '~/pages/cards'
 
 
 export const routes: RouteDefinition[] = [
@@ -13,5 +14,9 @@ export const routes: RouteDefinition[] = [
 				'component': Index,
 			},
 		],
+	},
+	{
+		'path': '/cards/:deckId',
+		'component': Cards,
 	},
 ]

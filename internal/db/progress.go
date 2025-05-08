@@ -166,11 +166,10 @@ func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int)
 
 	if isNew {
 		progressQuery = `
-			INSERT INTO card_progress (id, user_id, card_id, next_review, interval, ease, review_count, laps_count, last_reviewed_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+			INSERT INTO card_progress (user_id, card_id, next_review, interval, ease, review_count, laps_count, last_reviewed_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		`
 		args = []interface{}{
-			nanoid.Must(),
 			userID,
 			cardID,
 			progress.NextReview,
