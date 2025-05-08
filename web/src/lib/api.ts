@@ -132,6 +132,28 @@ export interface CreateDeckRequest {
 	file_name: string
 }
 
+export interface ImportDeckRequest {
+	name: string
+	description: string
+	file_name: string
+}
+
+export interface ImportDeckResponse {
+	id: string
+	name: string
+	card_count: number
+}
+
+export async function importDeck(request: ImportDeckRequest): Promise<{
+	data: ImportDeckResponse | null
+	error: string | null
+}> {
+	return apiRequest('/decks/import', {
+		method: 'POST',
+		body: JSON.stringify(request),
+	})
+}
+
 export interface CardReviewRequest {
 	card_id: string
 	rating: number

@@ -61,11 +61,11 @@ export default function Cards() {
 				<Show when={currentCard()}>
 					<div class="w-full flex flex-col items-center">
 						<div
-							class="w-full aspect-[3/2] bg-card rounded-xl shadow-lg cursor-pointer relative perspective transition-all"
+							class="w-full bg-card rounded-xl shadow-lg cursor-pointer relative perspective transition-all"
 							onClick={handleCardFlip}
 						>
 							<div
-								class={`w-full absolute inset-0 flex flex-col items-center justify-center p-4 ${flipped() ? 'rotate-y-180 opacity-0' : 'rotate-y-0 opacity-100'} transition-all duration-300`}>
+								class={`absolute inset-0 w-full flex flex-col items-center justify-center p-4 ${flipped() ? 'rotate-y-180 opacity-0' : 'rotate-y-0 opacity-100'} transition-all duration-300`}>
 								<div class="text-4xl font-bold mb-4 font-jp">
 									{currentCard()?.front.kanji ? currentCard()?.front.kanji : currentCard()?.front.kana}
 								</div>
@@ -77,7 +77,7 @@ export default function Cards() {
 												{(fragment) => (
 													<span
 														class={`text-2xl font-jp ${fragment.fragment === currentCard()?.front.kanji ?
-															'text-primary border-b-2 border-primary' : ''}`}
+															'text-blue-400 border-b-2 border-blue-400 border-primary' : ''}`}
 													>
 														{fragment.fragment}
 													</span>
@@ -89,7 +89,7 @@ export default function Cards() {
 							</div>
 
 							<div
-								class={`absolute inset-0 flex flex-col items-center justify-center px-4 pb-4 pt-24 ${flipped() ? 'rotate-y-0 opacity-100' : 'rotate-y-180 opacity-0'} transition-all duration-300`}>
+								class={`flex flex-col items-center justify-center p-4 ${flipped() ? 'rotate-y-0 opacity-100' : 'rotate-y-180 opacity-0'} transition-all duration-300`}>
 								<div class="text-4xl font-bold mb-6 flex flex-col items-center">
 									{currentCard()?.front.kanji}
 									<Show when={currentCard()?.front.kana}>
