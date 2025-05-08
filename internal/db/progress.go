@@ -33,14 +33,15 @@ type Review struct {
 
 // CardProgress tracks a user's progress with a specific card
 type CardProgress struct {
-	UserID         string     `db:"user_id" json:"user_id"`
-	CardID         string     `db:"card_id" json:"card_id"`
-	NextReview     *time.Time `db:"next_review" json:"next_review,omitempty"`
-	Interval       int        `db:"interval" json:"interval"`         // in days
-	Ease           float64    `db:"ease" json:"ease"`                 // SM-2 ease factor
-	ReviewCount    int        `db:"review_count" json:"review_count"` // total reviews
-	LapsCount      int        `db:"laps_count" json:"laps_count"`     // times forgotten
-	LastReviewedAt *time.Time `db:"last_reviewed_at" json:"last_reviewed_at,omitempty"`
+	UserID          string     `db:"user_id" json:"user_id"`
+	CardID          string     `db:"card_id" json:"card_id"`
+	NextReview      *time.Time `db:"next_review" json:"next_review,omitempty"`
+	Interval        int        `db:"interval" json:"interval"`         // in days
+	Ease            float64    `db:"ease" json:"ease"`                 // SM-2 ease factor
+	ReviewCount     int        `db:"review_count" json:"review_count"` // total reviews
+	LapsCount       int        `db:"laps_count" json:"laps_count"`     // times forgotten
+	LastReviewedAt  *time.Time `db:"last_reviewed_at" json:"last_reviewed_at,omitempty"`
+	FirstReviewedAt *time.Time `db:"first_reviewed_at" json:"first_reviewed_at,omitempty"` // when this card was first studied
 }
 
 // ReviewCard processes a card review using the SM-2 spaced repetition algorithm
@@ -52,7 +53,7 @@ func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int)
 	// Get current progress or create new one
 	var progress CardProgress
 	query := `
-		SELECT user_id, card_id, next_review, interval, ease, review_count, laps_count, last_reviewed_at
+		SELECT user_id, card_id, next_review, interval, ease, review_count, laps_count, last_reviewed_at, first_reviewed_at
 		FROM card_progress 
 		WHERE user_id = ? AND card_id = ?
 	`
@@ -66,6 +67,7 @@ func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int)
 		&progress.ReviewCount,
 		&progress.LapsCount,
 		&progress.LastReviewedAt,
+		&progress.FirstReviewedAt,
 	)
 
 	isNew := false
@@ -165,9 +167,12 @@ func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int)
 	var args []interface{}
 
 	if isNew {
+		// For new card progress entries, set first_reviewed_at to now
+		progress.FirstReviewedAt = &now
+
 		progressQuery = `
-			INSERT INTO card_progress (user_id, card_id, next_review, interval, ease, review_count, laps_count, last_reviewed_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+			INSERT INTO card_progress (user_id, card_id, next_review, interval, ease, review_count, laps_count, last_reviewed_at, first_reviewed_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`
 		args = []interface{}{
 			userID,
@@ -178,6 +183,7 @@ func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int)
 			progress.ReviewCount,
 			progress.LapsCount,
 			progress.LastReviewedAt,
+			progress.FirstReviewedAt,
 		}
 	} else {
 		progressQuery = `
@@ -213,7 +219,7 @@ func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int)
 // GetCardProgress gets the progress for a specific card
 func (s *Storage) GetCardProgress(userID, cardID string) (*CardProgress, error) {
 	query := `
-		SELECT user_id, card_id, next_review, interval, ease, review_count, laps_count, last_reviewed_at
+		SELECT user_id, card_id, next_review, interval, ease, review_count, laps_count, last_reviewed_at, first_reviewed_at
 		FROM card_progress
 		WHERE user_id = ? AND card_id = ?
 	`
@@ -228,6 +234,7 @@ func (s *Storage) GetCardProgress(userID, cardID string) (*CardProgress, error) 
 		&progress.ReviewCount,
 		&progress.LapsCount,
 		&progress.LastReviewedAt,
+		&progress.FirstReviewedAt,
 	)
 
 	if err != nil {
@@ -245,38 +252,19 @@ func (s *Storage) GetDueCardCount(userID string) (int, error) {
 
 	var totalDueCount int
 	for _, deck := range decks {
-		query := `
-				SELECT COUNT(*)
-				FROM cards c
-				LEFT JOIN card_progress p ON c.id = p.card_id AND p.user_id = ?
-				JOIN decks d ON c.deck_id = d.id
-				WHERE c.deck_id = ? AND c.deleted_at IS NULL AND d.user_id = ?
-				AND (p.next_review IS NULL OR p.next_review <= CURRENT_TIMESTAMP)
-			`
-
-		var deckTotalDue int
-		if err := s.db.QueryRow(query, userID, deck.ID, userID).Scan(&deckTotalDue); err != nil {
-			return 0, fmt.Errorf("error counting due cards for deck %s: %w", deck.ID, err)
-		}
-
-		deckDueCount := deckTotalDue
-		if deckDueCount > deck.NewCardsPerDay {
-			deckDueCount = deck.NewCardsPerDay
-		}
-
-		totalDueCount += deckDueCount
+		// Use the total count from deck metrics (NewCards already limited in UpdateDeckMetrics)
+		dueCount := deck.NewCards + deck.LearningCards + deck.ReviewCards
+		totalDueCount += dueCount
 	}
 
 	return totalDueCount, nil
 }
 
-// ResetProgress resets progress for a user's cards
 func (s *Storage) ResetProgress(userID string, deckID string) error {
 	var query string
 	var args []interface{}
 
 	if deckID != "" {
-		// Reset for a specific deck
 		query = `
 			DELETE FROM card_progress
 			WHERE user_id = ? AND card_id IN (
@@ -285,7 +273,6 @@ func (s *Storage) ResetProgress(userID string, deckID string) error {
 		`
 		args = []interface{}{userID, deckID}
 	} else {
-		// Reset for all decks
 		query = `
 			DELETE FROM card_progress
 			WHERE user_id = ?

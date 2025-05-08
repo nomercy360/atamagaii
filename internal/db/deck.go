@@ -12,12 +12,15 @@ type Deck struct {
 	ID             string     `db:"id" json:"id"`
 	Name           string     `db:"name" json:"name"`
 	Description    string     `db:"description" json:"description"`
-	Level          string     `db:"level" json:"level"` // N5, N4, N3, etc.
+	Level          string     `db:"level" json:"level"`
 	NewCardsPerDay int        `db:"new_cards_per_day" json:"new_cards_per_day"`
 	UserID         string     `db:"user_id" json:"user_id"`
 	CreatedAt      time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt      time.Time  `db:"updated_at" json:"updated_at"`
 	DeletedAt      *time.Time `db:"deleted_at" json:"deleted_at,omitempty"`
+	NewCards       int        `json:"new_cards,omitempty" db:"-"`
+	LearningCards  int        `json:"learning_cards,omitempty" db:"-"`
+	ReviewCards    int        `json:"review_cards,omitempty" db:"-"`
 }
 
 func (s *Storage) CreateDeck(userID, name, description, level string) (*Deck, error) {
@@ -75,6 +78,11 @@ func (s *Storage) GetDecks(userID string) ([]Deck, error) {
 		); err != nil {
 			return nil, fmt.Errorf("error scanning deck: %w", err)
 		}
+
+		if err := s.UpdateDeckMetrics(&deck, userID); err != nil {
+			return nil, fmt.Errorf("error updating deck metrics: %w", err)
+		}
+
 		decks = append(decks, deck)
 	}
 
@@ -112,10 +120,14 @@ func (s *Storage) GetDeck(deckID string) (*Deck, error) {
 		return nil, fmt.Errorf("error getting deck: %w", err)
 	}
 
+	// We only have the user ID from the deck record, but that's enough to calculate metrics
+	if err := s.UpdateDeckMetrics(&deck, deck.UserID); err != nil {
+		return nil, fmt.Errorf("error updating deck metrics: %w", err)
+	}
+
 	return &deck, nil
 }
 
-// UpdateDeckNewCardsPerDay updates the number of new cards per day for a deck
 func (s *Storage) UpdateDeckNewCardsPerDay(deckID string, newCardsPerDay int) error {
 	if newCardsPerDay < 0 {
 		return fmt.Errorf("new cards per day cannot be negative")
@@ -145,7 +157,6 @@ func (s *Storage) UpdateDeckNewCardsPerDay(deckID string, newCardsPerDay int) er
 	return nil
 }
 
-// DeleteDeck marks a deck as deleted by setting the deleted_at timestamp
 func (s *Storage) DeleteDeck(deckID string) error {
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -158,8 +169,7 @@ func (s *Storage) DeleteDeck(deckID string) error {
 	}()
 
 	now := time.Now()
-	
-	// First mark the deck as deleted
+
 	deckQuery := `
 		UPDATE decks
 		SET deleted_at = ?, updated_at = ?
@@ -179,7 +189,6 @@ func (s *Storage) DeleteDeck(deckID string) error {
 		return ErrNotFound
 	}
 
-	// Then mark all cards in the deck as deleted
 	cardsQuery := `
 		UPDATE cards
 		SET deleted_at = ?, updated_at = ?
@@ -192,6 +201,90 @@ func (s *Storage) DeleteDeck(deckID string) error {
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("error committing transaction: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateDeckMetrics calculates and updates metrics for a deck
+func (s *Storage) UpdateDeckMetrics(deck *Deck, userID string) error {
+	// Get today's date at midnight for tracking new cards started today
+	today := time.Now().Truncate(24 * time.Hour)
+
+	// First, count how many new cards were started today for this deck
+	countNewStartedTodayQuery := `
+		SELECT COUNT(*) 
+		FROM card_progress p
+		JOIN cards c ON p.card_id = c.id
+		WHERE p.user_id = ? 
+		AND c.deck_id = ?
+		AND c.deleted_at IS NULL
+		AND p.first_reviewed_at >= ?
+	`
+
+	var newCardsStartedToday int
+	err := s.db.QueryRow(countNewStartedTodayQuery, userID, deck.ID, today).Scan(&newCardsStartedToday)
+	if err != nil {
+		return fmt.Errorf("error counting new cards started today: %w", err)
+	}
+
+	// Calculate how many additional new cards we can show
+	newCardsRemaining := deck.NewCardsPerDay - newCardsStartedToday
+	if newCardsRemaining < 0 {
+		newCardsRemaining = 0
+	}
+
+	// Query to count new cards (never studied)
+	newCardsQuery := `
+		SELECT COUNT(*)
+		FROM cards c
+		LEFT JOIN card_progress p ON c.id = p.card_id AND p.user_id = ?
+		WHERE c.deck_id = ? AND c.deleted_at IS NULL
+		AND p.card_id IS NULL
+	`
+	var totalNewCards int
+	if err := s.db.QueryRow(newCardsQuery, userID, deck.ID).Scan(&totalNewCards); err != nil {
+		return fmt.Errorf("error counting new cards: %w", err)
+	}
+
+	// Limit new cards to the remaining allowance for today
+	deck.NewCards = totalNewCards
+	if deck.NewCards > newCardsRemaining {
+		deck.NewCards = newCardsRemaining
+	}
+
+	// Query to count learning cards (interval < 1 day or failed recently)
+	learningCardsQuery := `
+		SELECT COUNT(*)
+		FROM cards c
+		JOIN card_progress p ON c.id = p.card_id
+		WHERE c.deck_id = ? AND c.deleted_at IS NULL
+		AND p.user_id = ?
+		AND (
+			p.interval <= 1
+			OR (
+				p.next_review <= CURRENT_TIMESTAMP
+				AND p.last_reviewed_at >= datetime('now', '-1 day')
+			)
+		)
+	`
+	if err := s.db.QueryRow(learningCardsQuery, deck.ID, userID).Scan(&deck.LearningCards); err != nil {
+		return fmt.Errorf("error counting learning cards: %w", err)
+	}
+
+	// Query to count review cards (cards from yesterday or earlier)
+	reviewCardsQuery := `
+		SELECT COUNT(*)
+		FROM cards c
+		JOIN card_progress p ON c.id = p.card_id
+		WHERE c.deck_id = ? AND c.deleted_at IS NULL
+		AND p.user_id = ?
+		AND p.interval > 1
+		AND p.next_review <= CURRENT_TIMESTAMP
+		AND p.last_reviewed_at < datetime('now', '-1 day')
+	`
+	if err := s.db.QueryRow(reviewCardsQuery, deck.ID, userID).Scan(&deck.ReviewCards); err != nil {
+		return fmt.Errorf("error counting review cards: %w", err)
 	}
 
 	return nil

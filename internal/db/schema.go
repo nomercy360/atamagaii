@@ -1,6 +1,5 @@
 package db
 
-// UpdateSchema adds the flashcard tables to the database
 func (s *Storage) UpdateSchema() error {
 	// Flashcard schema
 	schema := `
@@ -50,6 +49,7 @@ func (s *Storage) UpdateSchema() error {
 		review_count INTEGER NOT NULL DEFAULT 0,
 		laps_count INTEGER NOT NULL DEFAULT 0,
 		last_reviewed_at TIMESTAMP,
+		first_reviewed_at TIMESTAMP,
 		PRIMARY KEY (user_id, card_id),
 		FOREIGN KEY (user_id) REFERENCES users(id),
 		FOREIGN KEY (card_id) REFERENCES cards(id)

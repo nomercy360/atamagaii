@@ -2,6 +2,7 @@ import { createResource, For, Show, createSignal } from 'solid-js'
 import { apiRequest, Deck, Stats } from '~/lib/api'
 import { useNavigate } from '@solidjs/router'
 import DeckSettings from '~/components/deck-settings'
+import { setStore } from '~/store'
 
 export default function Index() {
 	const navigate = useNavigate()
@@ -22,6 +23,11 @@ export default function Index() {
 			console.error('Failed to fetch stats:', error)
 			return { due_cards: 0 }
 		}
+
+		if (data) {
+			setStore('stats', data);
+		}
+
 		return data || { due_cards: 0 }
 	})
 
@@ -36,7 +42,7 @@ export default function Index() {
 	const handleUpdateDeck = (updatedDeck: Deck) => {
 		refetch()
 	}
-	
+
 	const handleDeleteDeck = () => {
 		// When a deck is deleted, refresh both decks and stats
 		refetch()
@@ -94,6 +100,22 @@ export default function Index() {
 											<p class="text-xs text-muted-foreground mt-1">
 												{deck.new_cards_per_day} new cards per day
 											</p>
+											<div class="flex gap-2 text-xs text-muted-foreground mt-1">
+												<Show when={deck.new_cards && deck.new_cards > 0}>
+													<span class="text-blue-500">{deck.new_cards} new</span>
+												</Show>
+												<Show when={deck.learning_cards && deck.learning_cards > 0}>
+													<span class="text-yellow-500">{deck.learning_cards} learning</span>
+												</Show>
+												<Show when={deck.review_cards && deck.review_cards > 0}>
+													<span class="text-green-500">{deck.review_cards} review</span>
+												</Show>
+												<Show when={(!deck.new_cards || deck.new_cards === 0) &&
+													(!deck.learning_cards || deck.learning_cards === 0) &&
+													(!deck.review_cards || deck.review_cards === 0)}>
+													<span class="text-muted-foreground">No cards to study</span>
+												</Show>
+											</div>
 										</div>
 										<span class="text-primary text-sm font-medium">{deck.level}</span>
 									</button>

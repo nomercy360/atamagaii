@@ -1,7 +1,8 @@
-import { createSignal, createResource, For, Show } from 'solid-js'
-import { apiRequest, Card } from '~/lib/api'
+import { createSignal, createResource, For, Show, createEffect } from 'solid-js'
+import { apiRequest, Card, Deck, Stats } from '~/lib/api'
 import { useParams, useNavigate } from '@solidjs/router'
 import AudioButton from '~/components/audio-button'
+import { store, setStore } from '~/store'
 
 const getFrontFaceClasses = (isFlipped: boolean, isTrans: boolean) => {
 	let opacityClass = '';
@@ -37,6 +38,32 @@ export default function Cards() {
 	const [cardIndex, setCardIndex] = createSignal(0)
 	const [flipped, setFlipped] = createSignal(false)
 	const [isTransitioning, setIsTransitioning] = createSignal(false)
+	const [deckMetrics, setDeckMetrics] = createSignal<{
+		newCards: number;
+		learningCards: number;
+		reviewCards: number;
+	}>({ newCards: 0, learningCards: 0, reviewCards: 0 })
+
+	const [deck, { refetch: refetchDeck }] = createResource<Deck | null>(
+		async () => {
+			if (!params.deckId) return null
+			const { data, error } = await apiRequest<Deck>(`/decks/${params.deckId}`)
+			if (error) {
+				console.error(`Failed to fetch deck ${params.deckId}:`, error)
+				return null
+			}
+
+			if (data) {
+				setDeckMetrics({
+					newCards: data.new_cards || 0,
+					learningCards: data.learning_cards || 0,
+					reviewCards: data.review_cards || 0
+				})
+			}
+
+			return data
+		},
+	)
 
 	const [cards] = createResource<Card[]>(
 		async () => {
@@ -86,11 +113,85 @@ export default function Cards() {
 			console.error('Failed to submit review:', error);
 			return;
 		}
+
+		// Update deck metrics locally
+		const metrics = deckMetrics();
+		const card = currentCard();
+
+		// Card is moving from "new" to "learning" state
+		if (!card?.interval) {
+			setDeckMetrics({
+				newCards: Math.max(0, metrics.newCards - 1),
+				learningCards: metrics.learningCards + 1,
+				reviewCards: metrics.reviewCards
+			});
+		}
+		// Update based on rating
+		else {
+			// Rating 1 (Again) - card goes to learning
+			if (rating === 1) {
+				// If card was in review, move to learning
+				if (card.interval && card.interval > 1) {
+					setDeckMetrics({
+						newCards: metrics.newCards,
+						learningCards: metrics.learningCards + 1,
+						reviewCards: Math.max(0, metrics.reviewCards - 1)
+					});
+				}
+			}
+			// Rating 2-4 - card is eventually removed from daily count
+			else {
+				// For simplicity, just decrement the appropriate counter
+				if (card.interval && card.interval <= 1) {
+					// Card was in learning
+					setDeckMetrics({
+						newCards: metrics.newCards,
+						learningCards: Math.max(0, metrics.learningCards - 1),
+						reviewCards: metrics.reviewCards
+					});
+				} else {
+					// Card was in review
+					setDeckMetrics({
+						newCards: metrics.newCards,
+						learningCards: metrics.learningCards,
+						reviewCards: Math.max(0, metrics.reviewCards - 1)
+					});
+				}
+			}
+		}
+
+		// Update global stats by decrementing due count
+		if (store.stats && typeof store.stats.due_cards === 'number') {
+			const newDueCards = Math.max(0, store.stats.due_cards - 1);
+			setStore('stats', {
+				...store.stats,
+				due_cards: newDueCards
+			});
+		}
+
 		handleNextCard();
 	}
 
 	return (
 		<div class="container mx-auto px-2 py-6 max-w-md flex flex-col items-center min-h-screen">
+			{/* Deck metrics */}
+			<Show when={deck() && !deck.loading}>
+				<div class="w-full mb-4">
+					<h2 class="text-lg font-semibold mb-1">{deck()?.name}</h2>
+					<div class="flex gap-3 text-sm">
+						<Show when={deckMetrics().newCards > 0}>
+							<span class="text-blue-500">{deckMetrics().newCards} new</span>
+						</Show>
+						<Show when={deckMetrics().learningCards > 0}>
+							<span class="text-yellow-500">{deckMetrics().learningCards} learning</span>
+						</Show>
+						<Show when={deckMetrics().reviewCards > 0}>
+							<span class="text-green-500">{deckMetrics().reviewCards} review</span>
+						</Show>
+					</div>
+				</div>
+			</Show>
+
 			<div class="w-full flex-grow flex flex-col items-center justify-start">
 				<Show when={currentCard()}>
 					<div class="w-full flex flex-col items-center">
@@ -134,9 +235,9 @@ export default function Cards() {
 										</Show>
 									</div>
 									<Show when={currentCard()?.front.kana}>
-           <span class="text-lg font-jp text-muted-foreground">
-            {currentCard()?.front.kana}
-           </span>
+                                       <span class="text-lg font-jp text-muted-foreground">
+                                        {currentCard()?.front.kana}
+                                       </span>
 									</Show>
 								</div>
 								<div class="text-center text-2xl font-medium mb-8">{currentCard()?.back.translation}</div>
@@ -179,7 +280,6 @@ export default function Cards() {
 					</div>
 				</Show>
 
-				{/* ... rest of your component (Loading, No cards, Review buttons) */}
 				<Show when={cards.loading}>
 					<div class="w-full flex flex-col items-center justify-center h-[300px]">
 						<p class="text-muted-foreground">Loading cards...</p>

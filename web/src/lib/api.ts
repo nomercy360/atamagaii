@@ -63,6 +63,10 @@ export interface Deck {
 	created_at: string
 	updated_at: string
 	deleted_at?: string
+	due_cards?: number
+	new_cards?: number
+	learning_cards?: number
+	review_cards?: number
 }
 
 export interface CardFragment {

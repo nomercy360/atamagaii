@@ -5,6 +5,7 @@ import (
 	"atamagaii/internal/db"
 	"atamagaii/internal/testutils"
 	"encoding/json"
+	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"net/http"
 	"testing"
@@ -81,6 +82,10 @@ func TestImportDeckFromFile(t *testing.T) {
 	for _, d := range decks {
 		if d.ID == deck.ID {
 			found = true
+			// Verify that the DueCards field is present and has expected value
+			if d.DueCards < 0 {
+				t.Errorf("Expected non-negative due_cards count, got %d", d.DueCards)
+			}
 			break
 		}
 	}
@@ -247,6 +252,202 @@ func TestGetDueCards(t *testing.T) {
 	errorResp = testutils.ParseResponse[contract.ErrorResponse](t, rec)
 	if errorResp.Error == "" {
 		t.Error("Expected non-empty error message for non-existent deck")
+	}
+}
+
+func TestGetDecksWithDueCards(t *testing.T) {
+	e := testutils.SetupHandlerDependencies(t)
+
+	// Authenticate user
+	resp, err := testutils.AuthHelper(t, e, testutils.TelegramTestUserID, "mkkksim", "Maksim")
+	if err != nil {
+		t.Fatalf("Failed to authenticate: %v", err)
+	}
+
+	// Import a deck
+	reqBody := map[string]string{
+		"name":        "Test Deck for Due Cards",
+		"description": "Testing due cards in deck listing",
+		"file_name":   "vocab_n5.json",
+	}
+	body, _ := json.Marshal(reqBody)
+
+	rec := testutils.PerformRequest(
+		t,
+		e,
+		http.MethodPost,
+		"/v1/decks/import",
+		string(body),
+		resp.Token,
+		http.StatusCreated,
+	)
+
+	deck := testutils.ParseResponse[db.Deck](t, rec)
+
+	// Get decks list
+	rec = testutils.PerformRequest(
+		t,
+		e,
+		http.MethodGet,
+		"/v1/decks",
+		"",
+		resp.Token,
+		http.StatusOK,
+	)
+
+	decks := testutils.ParseResponse[[]db.Deck](t, rec)
+
+	found := false
+	for _, d := range decks {
+		if d.ID == deck.ID {
+			found = true
+			if d.DueCards < 0 {
+				t.Errorf("Expected non-negative due_cards count, got %d", d.DueCards)
+			}
+
+			dueCardsURL := fmt.Sprintf("/v1/cards/due?deck_id=%s", d.ID)
+			dueRec := testutils.PerformRequest(
+				t,
+				e,
+				http.MethodGet,
+				dueCardsURL,
+				"",
+				resp.Token,
+				http.StatusOK,
+			)
+
+			dueCards := testutils.ParseResponse[[]contract.CardResponse](t, dueRec)
+
+			expectedCount := len(dueCards)
+			if expectedCount > d.NewCardsPerDay {
+				expectedCount = d.NewCardsPerDay
+			}
+
+			if d.DueCards != expectedCount {
+				t.Errorf("Expected due_cards count to be %d, got %d", expectedCount, d.DueCards)
+			}
+
+			break
+		}
+	}
+
+	if !found {
+		t.Error("Newly created deck not found in the deck list")
+	}
+}
+
+func TestDeckMetrics(t *testing.T) {
+	e := testutils.SetupHandlerDependencies(t)
+
+	// Authenticate user
+	resp, err := testutils.AuthHelper(t, e, testutils.TelegramTestUserID, "mkkksim", "Maksim")
+	if err != nil {
+		t.Fatalf("Failed to authenticate: %v", err)
+	}
+
+	// Import a deck
+	reqBody := map[string]string{
+		"name":        "Test Deck for Metrics",
+		"description": "Testing card metrics in deck",
+		"file_name":   "vocab_n5.json",
+	}
+	body, _ := json.Marshal(reqBody)
+
+	rec := testutils.PerformRequest(
+		t,
+		e,
+		http.MethodPost,
+		"/v1/decks/import",
+		string(body),
+		resp.Token,
+		http.StatusCreated,
+	)
+
+	importedDeck := testutils.ParseResponse[db.Deck](t, rec)
+
+	// Get the deck to verify metrics are populated
+	rec = testutils.PerformRequest(
+		t,
+		e,
+		http.MethodGet,
+		"/v1/decks/"+importedDeck.ID,
+		"",
+		resp.Token,
+		http.StatusOK,
+	)
+
+	deck := testutils.ParseResponse[db.Deck](t, rec)
+
+	// Verify metrics exist
+	if deck.NewCards <= 0 {
+		t.Errorf("Expected deck to have new cards, got %d", deck.NewCards)
+	}
+
+	// Learning and Review cards should be 0 initially
+	if deck.LearningCards != 0 {
+		t.Errorf("Expected learning cards to be 0 initially, got %d", deck.LearningCards)
+	}
+
+	if deck.ReviewCards != 0 {
+		t.Errorf("Expected review cards to be 0 initially, got %d", deck.ReviewCards)
+	}
+
+	// Get due cards
+	rec = testutils.PerformRequest(
+		t,
+		e,
+		http.MethodGet,
+		"/v1/cards/due?deck_id="+deck.ID+"&limit=1",
+		"",
+		resp.Token,
+		http.StatusOK,
+	)
+
+	dueCards := testutils.ParseResponse[[]contract.CardResponse](t, rec)
+	if len(dueCards) == 0 {
+		t.Fatal("Expected at least one due card")
+	}
+
+	// Review a card to move it to learning status
+	reviewReq := map[string]interface{}{
+		"card_id":       dueCards[0].ID,
+		"rating":        2, // Hard - should move to learning
+		"time_spent_ms": 3000,
+	}
+	reviewBody, _ := json.Marshal(reviewReq)
+
+	testutils.PerformRequest(
+		t,
+		e,
+		http.MethodPost,
+		"/v1/cards/"+dueCards[0].ID+"/review",
+		string(reviewBody),
+		resp.Token,
+		http.StatusOK,
+	)
+
+	// Get the deck again to check updated metrics
+	rec = testutils.PerformRequest(
+		t,
+		e,
+		http.MethodGet,
+		"/v1/decks/"+deck.ID,
+		"",
+		resp.Token,
+		http.StatusOK,
+	)
+
+	updatedDeck := testutils.ParseResponse[db.Deck](t, rec)
+
+	// Verify new card count decreased
+	if updatedDeck.NewCards >= deck.NewCards {
+		t.Errorf("Expected new cards to decrease after review, was %d, now %d",
+			deck.NewCards, updatedDeck.NewCards)
+	}
+
+	// Verify learning cards increased
+	if updatedDeck.LearningCards < 1 {
+		t.Errorf("Expected learning cards to increase after review, got %d", updatedDeck.LearningCards)
 	}
 }
 

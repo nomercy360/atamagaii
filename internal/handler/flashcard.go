@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 )
 
@@ -111,27 +110,17 @@ func (h *Handler) GetDueCards(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden, "Access denied")
 	}
 
-	limitStr := c.QueryParam("limit")
-	limit := 20 // Default limit
-	if limitStr != "" {
-		var err error
-		limit, err = strconv.Atoi(limitStr)
-		if err != nil || limit <= 0 {
-			limit = 20
-		}
-	}
+	limit := deck.NewCardsPerDay * 10
 
 	cards, err := h.db.GetCardsWithProgress(userID, deckID, limit)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch due cards").WithInternal(err)
 	}
 
-	// Convert to response format with properly unmarshaled JSON
 	responses := make([]contract.CardResponse, 0, len(cards))
 	for _, card := range cards {
 		var response contract.CardResponse
 
-		// Copy basic card data
 		response.ID = card.ID
 		response.DeckID = card.DeckID
 		response.CreatedAt = card.CreatedAt.Format(time.RFC3339)
@@ -142,7 +131,6 @@ func (h *Handler) GetDueCards(c echo.Context) error {
 			response.DeletedAt = &deletedAt
 		}
 
-		// Copy progress data
 		response.Interval = card.Interval
 		response.Ease = card.Ease
 		response.ReviewCount = card.ReviewCount
@@ -158,13 +146,11 @@ func (h *Handler) GetDueCards(c echo.Context) error {
 			response.LastReviewedAt = &lastReviewedAt
 		}
 
-		// Unmarshal front
 		var front contract.CardFront
 		if err := json.Unmarshal([]byte(card.Front), &front); err == nil {
 			response.Front = front
 		}
 
-		// Unmarshal back
 		var back contract.CardBack
 		if err := json.Unmarshal([]byte(card.Back), &back); err == nil {
 			response.Back = back

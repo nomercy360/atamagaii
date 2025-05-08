@@ -20,12 +20,13 @@ type Card struct {
 
 type CardWithProgress struct {
 	Card
-	NextReview     *time.Time `db:"next_review" json:"next_review,omitempty"`
-	Interval       *int       `db:"interval" json:"interval,omitempty"`
-	Ease           *float64   `db:"ease" json:"ease,omitempty"`
-	ReviewCount    *int       `db:"review_count" json:"review_count,omitempty"`
-	LapsCount      *int       `db:"laps_count" json:"laps_count,omitempty"`
-	LastReviewedAt *time.Time `db:"last_reviewed_at" json:"last_reviewed_at,omitempty"`
+	NextReview      *time.Time `db:"next_review" json:"next_review,omitempty"`
+	Interval        *int       `db:"interval" json:"interval,omitempty"`
+	Ease            *float64   `db:"ease" json:"ease,omitempty"`
+	ReviewCount     *int       `db:"review_count" json:"review_count,omitempty"`
+	LapsCount       *int       `db:"laps_count" json:"laps_count,omitempty"`
+	LastReviewedAt  *time.Time `db:"last_reviewed_at" json:"last_reviewed_at,omitempty"`
+	FirstReviewedAt *time.Time `db:"first_reviewed_at" json:"first_reviewed_at,omitempty"`
 }
 
 type VocabularyItem struct {
@@ -113,27 +114,60 @@ func (s *Storage) AddCardsInBatch(deckID string, fronts, backs []string) error {
 }
 
 func (s *Storage) GetCardsWithProgress(userID string, deckID string, limit int) ([]CardWithProgress, error) {
-	// If no specific limit is provided, get the deck's new_cards_per_day setting
-	if limit <= 0 {
-		deck, err := s.GetDeck(deckID)
-		if err != nil {
-			return nil, fmt.Errorf("error getting deck settings: %w", err)
-		}
-		limit = deck.NewCardsPerDay
+	deck, err := s.GetDeck(deckID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting deck settings: %w", err)
+	}
+
+	today := time.Now().Truncate(24 * time.Hour)
+
+	countNewStartedTodayQuery := `
+		SELECT COUNT(*) 
+		FROM card_progress p
+		JOIN cards c ON p.card_id = c.id
+		WHERE p.user_id = ? 
+		AND c.deck_id = ?
+		AND c.deleted_at IS NULL
+		AND p.first_reviewed_at >= ?
+	`
+
+	var newCardsStartedToday int
+	err = s.db.QueryRow(countNewStartedTodayQuery, userID, deckID, today).Scan(&newCardsStartedToday)
+	if err != nil {
+		return nil, fmt.Errorf("error counting new cards started today: %w", err)
+	}
+
+	newCardsRemaining := deck.NewCardsPerDay - newCardsStartedToday
+	if newCardsRemaining < 0 {
+		newCardsRemaining = 0
 	}
 
 	query := `
+		WITH new_card_pool AS (
+			SELECT c2.id
+			FROM cards c2
+			LEFT JOIN card_progress p2
+				ON c2.id = p2.card_id AND p2.user_id = ?
+			WHERE c2.deck_id = ? AND c2.deleted_at IS NULL AND p2.card_id IS NULL
+			ORDER BY c2.id
+			LIMIT ?
+		)
 		SELECT c.id, c.deck_id, c.front, c.back, c.created_at, c.updated_at, c.deleted_at,
-		       p.next_review, p.interval, p.ease, p.review_count, p.laps_count, p.last_reviewed_at
+		       p.next_review, p.interval, p.ease, p.review_count, p.laps_count, p.last_reviewed_at, p.first_reviewed_at
 		FROM cards c
 		LEFT JOIN card_progress p ON c.id = p.card_id AND p.user_id = ?
 		JOIN decks d ON c.deck_id = d.id AND d.user_id = ?
 		WHERE c.deck_id = ? AND c.deleted_at IS NULL
-		AND (p.next_review IS NULL OR p.next_review <= CURRENT_TIMESTAMP)
+		AND (
+			(p.next_review IS NOT NULL AND p.next_review <= CURRENT_TIMESTAMP)
+			OR
+			(p.card_id IS NULL AND c.id IN (SELECT id FROM new_card_pool))
+		)
 		ORDER BY p.next_review IS NULL DESC, p.next_review ASC
 		LIMIT ?
 	`
-	rows, err := s.db.Query(query, userID, userID, deckID, limit)
+
+	rows, err := s.db.Query(query, userID, deckID, newCardsRemaining, userID, userID, deckID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("error getting cards with progress: %w", err)
 	}
@@ -156,6 +190,7 @@ func (s *Storage) GetCardsWithProgress(userID string, deckID string, limit int) 
 			&card.ReviewCount,
 			&card.LapsCount,
 			&card.LastReviewedAt,
+			&card.FirstReviewedAt,
 		); err != nil {
 			return nil, fmt.Errorf("error scanning card with progress: %w", err)
 		}
