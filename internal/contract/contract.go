@@ -57,18 +57,18 @@ type CardBack struct {
 }
 
 type CardResponse struct {
-	ID              string     `json:"id"`
-	DeckID          string     `json:"deck_id"`
-	Front           CardFront  `json:"front"`
-	Back            CardBack   `json:"back"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
-	DeletedAt       *time.Time `json:"deleted_at,omitempty"`
-	NextReview      *time.Time `json:"next_review,omitempty"`
-	Interval        *int       `json:"interval,omitempty"`
-	Ease            *float64   `json:"ease,omitempty"`
-	ReviewCount     *int       `json:"review_count,omitempty"`
-	LapsCount       *int       `json:"laps_count,omitempty"`
-	LastReviewedAt  *time.Time `json:"last_reviewed_at,omitempty"`
-	FirstReviewedAt *time.Time `json:"first_reviewed_at,omitempty"`
+	ID              string        `json:"id"`
+	DeckID          string        `json:"deck_id"`
+	Front           CardFront     `json:"front"`
+	Back            CardBack      `json:"back"`
+	CreatedAt       time.Time     `json:"created_at"`
+	UpdatedAt       time.Time     `json:"updated_at"`
+	DeletedAt       *time.Time    `json:"deleted_at,omitempty"`
+	NextReview      *time.Time    `json:"next_review,omitempty"`
+	Interval        time.Duration `json:"interval,omitempty"`
+	Ease            *float64      `json:"ease,omitempty"`
+	ReviewCount     *int          `json:"review_count,omitempty"`
+	LapsCount       *int          `json:"laps_count,omitempty"`
+	LastReviewedAt  *time.Time    `json:"last_reviewed_at,omitempty"`
+	FirstReviewedAt *time.Time    `json:"first_reviewed_at,omitempty"`
 }

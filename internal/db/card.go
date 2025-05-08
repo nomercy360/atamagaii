@@ -20,13 +20,13 @@ type Card struct {
 
 type CardWithProgress struct {
 	Card
-	NextReview      *time.Time `db:"next_review" json:"next_review,omitempty"`
-	Interval        *int       `db:"interval" json:"interval,omitempty"`
-	Ease            *float64   `db:"ease" json:"ease,omitempty"`
-	ReviewCount     *int       `db:"review_count" json:"review_count,omitempty"`
-	LapsCount       *int       `db:"laps_count" json:"laps_count,omitempty"`
-	LastReviewedAt  *time.Time `db:"last_reviewed_at" json:"last_reviewed_at,omitempty"`
-	FirstReviewedAt *time.Time `db:"first_reviewed_at" json:"first_reviewed_at,omitempty"`
+	NextReview      *time.Time    `db:"next_review" json:"next_review,omitempty"`
+	Interval        time.Duration `db:"interval" json:"interval,omitempty"`
+	Ease            *float64      `db:"ease" json:"ease,omitempty"`
+	ReviewCount     *int          `db:"review_count" json:"review_count,omitempty"`
+	LapsCount       *int          `db:"laps_count" json:"laps_count,omitempty"`
+	LastReviewedAt  *time.Time    `db:"last_reviewed_at" json:"last_reviewed_at,omitempty"`
+	FirstReviewedAt *time.Time    `db:"first_reviewed_at" json:"first_reviewed_at,omitempty"`
 }
 
 type VocabularyItem struct {
@@ -215,6 +215,7 @@ func (s *Storage) GetReviewCards(userID string, deckID string, limit int) ([]Car
 	var cards []CardWithProgress
 	for rows.Next() {
 		var card CardWithProgress
+		var intervalStr string
 		if err := rows.Scan(
 			&card.ID,
 			&card.DeckID,
@@ -224,7 +225,7 @@ func (s *Storage) GetReviewCards(userID string, deckID string, limit int) ([]Car
 			&card.UpdatedAt,
 			&card.DeletedAt,
 			&card.NextReview,
-			&card.Interval,
+			&intervalStr,
 			&card.Ease,
 			&card.ReviewCount,
 			&card.LapsCount,
@@ -233,6 +234,14 @@ func (s *Storage) GetReviewCards(userID string, deckID string, limit int) ([]Car
 		); err != nil {
 			return nil, fmt.Errorf("error scanning review card: %w", err)
 		}
+
+		// Parse the interval string to time.Duration
+		interval, err := time.ParseDuration(intervalStr)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing interval duration: %w", err)
+		}
+		card.Interval = interval
+
 		cards = append(cards, card)
 	}
 

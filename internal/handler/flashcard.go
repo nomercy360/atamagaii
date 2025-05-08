@@ -200,10 +200,9 @@ func (h *Handler) ReviewCard(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to process review: "+err.Error())
 	}
 
-	// Retrieve updated progress
 	progress, err := h.db.GetCardProgress(userID, cardID)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch updated progress")
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch updated progress").WithInternal(err)
 	}
 
 	return c.JSON(http.StatusOK, progress)

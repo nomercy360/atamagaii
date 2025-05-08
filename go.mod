@@ -1,6 +1,8 @@
 module atamagaii
 
-go 1.24
+go 1.23.0
+
+toolchain go1.24.2
 
 require (
 	github.com/go-playground/validator/v10 v10.26.0
