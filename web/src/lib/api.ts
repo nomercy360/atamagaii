@@ -73,6 +73,7 @@ export interface CardFragment {
 export interface CardExample {
 	sentence: CardFragment[]
 	translation: string
+	audio_url: string
 }
 
 export interface CardFront {
@@ -82,6 +83,7 @@ export interface CardFront {
 
 export interface CardBack {
 	translation: string
+	audio_url: string
 	examples: CardExample[]
 }
 

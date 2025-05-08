@@ -41,6 +41,7 @@ type CardFront struct {
 type CardBackExample struct {
 	Sentence    []CardBackFragment `json:"sentence"`
 	Translation string             `json:"translation"`
+	AudioURL    string             `json:"audio_url"`
 }
 
 type CardBackFragment struct {
@@ -50,6 +51,7 @@ type CardBackFragment struct {
 
 type CardBack struct {
 	Translation string            `json:"translation"`
+	AudioURL    string            `json:"audio_url"`
 	Examples    []CardBackExample `json:"examples"`
 }
 

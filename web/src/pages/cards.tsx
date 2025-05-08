@@ -1,6 +1,7 @@
 import { createSignal, createResource, For, Show } from 'solid-js'
 import { apiRequest, Card } from '~/lib/api'
 import { useParams, useNavigate } from '@solidjs/router'
+import AudioButton from '~/components/audio-button'
 
 export default function Cards() {
 	const params = useParams()
@@ -91,7 +92,16 @@ export default function Cards() {
 							<div
 								class={`flex flex-col items-center justify-center p-4 ${flipped() ? 'rotate-y-0 opacity-100' : 'rotate-y-180 opacity-0'} transition-all duration-300`}>
 								<div class="text-4xl font-bold mb-6 flex flex-col items-center">
-									{currentCard()?.front.kanji}
+									<div class="flex items-center gap-2">
+										{currentCard()?.front.kanji}
+										<Show when={currentCard()?.back.audio_url}>
+											<AudioButton 
+												audioUrl={currentCard()?.back.audio_url || ''} 
+												size="sm" 
+												label="Play word pronunciation"
+											/>
+										</Show>
+									</div>
 									<Show when={currentCard()?.front.kana}>
 										<span class="text-lg font-jp text-muted-foreground">
 											{currentCard()?.front.kana}
@@ -104,22 +114,31 @@ export default function Cards() {
 									<For each={currentCard()?.back.examples}>
 										{(example) => (
 											<div class="bg-muted rounded-md p-2">
-												<p class="mb-1">
-													<For each={example.sentence}>
-														{(fragment) => (
-															<span class="text-2xl font-jp">
-																{fragment.furigana ? (
-																	<ruby>
-																		{fragment.fragment}
-																		<rt class="text-xs text-primary">{fragment.furigana}</rt>
-																	</ruby>
-																) : (
-																	fragment.fragment
-																)}
-															</span>
-														)}
-													</For>
-												</p>
+												<div class="flex items-start justify-between mb-1">
+													<p class="flex-grow text-2xl font-jp">
+														<For each={example.sentence}>
+															{(fragment) => (
+																<span>
+																	{fragment.furigana ? (
+																		<ruby>
+																			{fragment.fragment}
+																			<rt class="text-xs text-primary">{fragment.furigana}</rt>
+																		</ruby>
+																	) : (
+																		fragment.fragment
+																	)}
+																</span>
+															)}
+														</For>
+													</p>
+													<Show when={example.audio_url}>
+														<AudioButton 
+															audioUrl={example.audio_url || ''} 
+															size="sm"
+															label="Play example audio"
+														/>
+													</Show>
+												</div>
 												<p class="text-xs text-muted-foreground">{example.translation}</p>
 											</div>
 										)}
