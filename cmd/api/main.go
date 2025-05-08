@@ -2,13 +2,12 @@ package main
 
 import (
 	"atamagaii/internal/db"
-	"atamagaii/internal/handlers"
+	"atamagaii/internal/handler"
 	"atamagaii/internal/middleware"
 	"context"
 	"fmt"
 	"github.com/go-playground/validator/v10"
 	telegram "github.com/go-telegram/bot"
-	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"gopkg.in/yaml.v3"
 	"log"
@@ -49,6 +48,17 @@ func ValidateConfig(cfg *Config) error {
 	return validate.Struct(cfg)
 }
 
+type CustomValidator struct {
+	validator *validator.Validate
+}
+
+func (cv *CustomValidator) Validate(i interface{}) error {
+	if err := cv.validator.Struct(i); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	return nil
+}
+
 func main() {
 	configFilePath := "config.yml"
 	configFilePathEnv := os.Getenv("CONFIG_FILE_PATH")
@@ -75,7 +85,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	handler := handlers.NewHandler(bot, storage, cfg.JWTSecretKey, cfg.TelegramBotToken)
+	handler := handler.New(bot, storage, cfg.JWTSecretKey, cfg.TelegramBotToken)
 
 	log.Printf("Authorized on account %d", bot.ID())
 
@@ -84,6 +94,8 @@ func main() {
 	logr := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	middleware.Setup(e, logr)
+
+	e.Validator = &CustomValidator{validator: validator.New()}
 
 	webhookURL := fmt.Sprintf("%s/webhook", cfg.ExternalURL)
 	if ok, err := bot.SetWebhook(context.Background(), &telegram.SetWebhookParams{
@@ -95,13 +107,7 @@ func main() {
 		log.Fatalf("Failed to set webhook: %v", err)
 	}
 
-	// Register all routes
 	handler.RegisterRoutes(e)
-
-	v1 := e.Group("/v1")
-	authCfg := middleware.GetAuthConfig(cfg.JWTSecretKey)
-
-	v1.Use(echojwt.WithConfig(authCfg))
 
 	port := "8080"
 	log.Printf("Starting server on port %s", port)

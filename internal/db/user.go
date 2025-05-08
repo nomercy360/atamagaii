@@ -27,7 +27,7 @@ const (
 
 func (s *Storage) GetUser(telegramID int64) (*User, error) {
 	var user User
-	query := `SELECT id, telegram_id, username, avatar_url, name, created_at, updated_at FROM users WHERE telegram_id = ?`
+	query := `SELECT id, telegram_id, username, avatar_url, name, level, points, created_at, updated_at FROM users WHERE telegram_id = ?`
 	err := s.db.QueryRow(query, telegramID).Scan(
 		&user.ID,
 		&user.TelegramID,
@@ -69,7 +69,7 @@ func (s *Storage) UpdateUser(user *User) error {
 		WHERE telegram_id = ?`
 
 	_, err := s.db.Exec(query,
-		user.Username, user.AvatarURL, user.TelegramID)
+		user.Username, user.AvatarURL, user.Name, user.TelegramID)
 	if err != nil {
 		return fmt.Errorf("error updating user: %w", err)
 	}

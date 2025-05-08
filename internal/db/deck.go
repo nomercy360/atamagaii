@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	nanoid "github.com/matoous/go-nanoid/v2"
 	"time"
 )
 
@@ -16,6 +17,31 @@ type Deck struct {
 	CreatedAt   time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt   time.Time  `db:"updated_at" json:"updated_at"`
 	DeletedAt   *time.Time `db:"deleted_at" json:"deleted_at,omitempty"`
+}
+
+func (s *Storage) CreateDeck(userID, name, description, level string) (*Deck, error) {
+	deckID := nanoid.Must()
+	now := time.Now()
+
+	query := `
+		INSERT INTO decks (id, name, description, level, user_id, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`
+
+	_, err := s.db.Exec(query, deckID, name, description, level, userID, now, now)
+	if err != nil {
+		return nil, fmt.Errorf("error creating deck: %w", err)
+	}
+
+	return &Deck{
+		ID:          deckID,
+		Name:        name,
+		Description: description,
+		Level:       level,
+		UserID:      userID,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}, nil
 }
 
 func (s *Storage) GetDecks(userID string) ([]Deck, error) {

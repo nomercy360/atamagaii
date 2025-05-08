@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	nanoid "github.com/matoous/go-nanoid/v2"
 	"time"
 )
 
@@ -25,6 +26,88 @@ type CardWithProgress struct {
 	ReviewCount    int        `db:"review_count" json:"review_count"`
 	LapsCount      int        `db:"laps_count" json:"laps_count"`
 	LastReviewedAt *time.Time `db:"last_reviewed_at" json:"last_reviewed_at,omitempty"`
+}
+
+type VocabularyItem struct {
+	Kanji       string    `json:"kanji"`
+	Kana        string    `json:"kana"`
+	Translation string    `json:"translation"`
+	Examples    []Example `json:"examples"`
+	Level       string    `json:"level"`
+}
+
+type Example struct {
+	Sentence    []Fragment `json:"sentence"`
+	Translation string     `json:"translation"`
+}
+
+type Fragment struct {
+	Fragment string  `json:"fragment"`
+	Furigana *string `json:"furigana"`
+}
+
+func (s *Storage) AddCard(deckID, front, back string) (*Card, error) {
+	cardID := nanoid.Must()
+	now := time.Now()
+
+	query := `
+		INSERT INTO cards (id, deck_id, front, back, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`
+
+	_, err := s.db.Exec(query, cardID, deckID, front, back, now, now)
+	if err != nil {
+		return nil, fmt.Errorf("error adding card: %w", err)
+	}
+
+	return &Card{
+		ID:        cardID,
+		DeckID:    deckID,
+		Front:     front,
+		Back:      back,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}, nil
+}
+
+func (s *Storage) AddCardsInBatch(deckID string, fronts, backs []string) error {
+	if len(fronts) != len(backs) {
+		return fmt.Errorf("number of fronts (%d) does not match number of backs (%d)", len(fronts), len(backs))
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("error starting transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	stmt, err := tx.Prepare(`
+		INSERT INTO cards (id, deck_id, front, back, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`)
+	if err != nil {
+		return fmt.Errorf("error preparing statement: %w", err)
+	}
+	defer stmt.Close()
+
+	now := time.Now()
+	for i := range fronts {
+		cardID := nanoid.Must()
+		_, err = stmt.Exec(cardID, deckID, fronts[i], backs[i], now, now)
+		if err != nil {
+			return fmt.Errorf("error inserting card %d: %w", i, err)
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("error committing transaction: %w", err)
+	}
+
+	return nil
 }
 
 func (s *Storage) GetCardsWithProgress(userID string, deckID string, limit int) ([]CardWithProgress, error) {

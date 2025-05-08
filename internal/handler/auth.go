@@ -1,6 +1,7 @@
-package handlers
+package handler
 
 import (
+	"atamagaii/internal/contract"
 	"atamagaii/internal/db"
 	"errors"
 	"fmt"
@@ -14,30 +15,13 @@ import (
 	"time"
 )
 
-type JWTClaims struct {
-	jwt.RegisteredClaims
-	UID    string `json:"uid,omitempty"`
-	ChatID int64  `json:"chat_id,omitempty"`
-}
-
-type AuthTelegramRequest struct {
-	Query string `json:"query"`
-}
-
-type AuthTelegramResponse struct {
-	Token string  `json:"token"`
-	User  db.User `json:"user"`
-}
-
-func (a AuthTelegramRequest) Validate() error {
-	if a.Query == "" {
-		return fmt.Errorf("query cannot be empty")
-	}
-	return nil
-}
+const (
+	ErrInvalidInitData = "invalid init data"
+	ErrInvalidRequest  = "invalid request"
+)
 
 func (h *Handler) TelegramAuth(c echo.Context) error {
-	var req AuthTelegramRequest
+	var req contract.AuthTelegramRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "failed to bind request")
 	}
@@ -52,12 +36,12 @@ func (h *Handler) TelegramAuth(c echo.Context) error {
 	botToken := h.botToken
 
 	if err := initdata.Validate(req.Query, botToken, expIn); err != nil {
-		return echo.NewHTTPError(http.StatusUnauthorized, "invalid init data from telegram")
+		return echo.NewHTTPError(http.StatusUnauthorized, ErrInvalidInitData)
 	}
 
 	data, err := initdata.Parse(req.Query)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusUnauthorized, "cannot parse init data from telegram")
+		return echo.NewHTTPError(http.StatusUnauthorized, ErrInvalidInitData)
 	}
 
 	username := data.User.Username
@@ -122,7 +106,7 @@ func (h *Handler) TelegramAuth(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to generate JWT").SetInternal(err)
 	}
 
-	resp := AuthTelegramResponse{
+	resp := contract.AuthTelegramResponse{
 		Token: token,
 		User:  *user,
 	}
@@ -131,7 +115,7 @@ func (h *Handler) TelegramAuth(c echo.Context) error {
 }
 
 func generateJWT(userID string, chatID int64, secretKey string) (string, error) {
-	claims := &JWTClaims{
+	claims := &contract.JWTClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 		},

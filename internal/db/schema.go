@@ -25,8 +25,6 @@ func (s *Storage) UpdateSchema() error {
 		user_id TEXT NOT NULL,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-		is_public BOOLEAN DEFAULT FALSE,
-		is_premade BOOLEAN DEFAULT FALSE,
 		deleted_at TIMESTAMP,
 		FOREIGN KEY (user_id) REFERENCES users(id)
 	);
@@ -71,7 +69,7 @@ func (s *Storage) UpdateSchema() error {
 		FOREIGN KEY (card_id) REFERENCES cards(id)
 	);
 
-	CREATE TABLE tasks (
+	CREATE TABLE IF NOT EXISTS tasks (
 		id TEXT PRIMARY KEY,
 		type TEXT,
 		content TEXT,
@@ -79,7 +77,7 @@ func (s *Storage) UpdateSchema() error {
 		difficulty TEXT
 	);
 	
-	CREATE TABLE user_tasks (
+	CREATE TABLE IF NOT EXISTS user_tasks (
 		id TEXT PRIMARY KEY,
 		user_id INTEGER,
 		task_id INTEGER,

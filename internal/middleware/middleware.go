@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"atamagaii/internal/handlers"
+	"atamagaii/internal/contract"
 	"context"
 	"errors"
 	"github.com/golang-jwt/jwt/v5"
@@ -66,20 +66,21 @@ func CustomHTTPErrorHandler(logger *slog.Logger) echo.HTTPErrorHandler {
 	}
 }
 
-func GetAuthConfig(secret string) echojwt.Config {
+func GetUserAuthConfig(secret string) echojwt.Config {
 	return echojwt.Config{
 		NewClaimsFunc: func(_ echo.Context) jwt.Claims {
-			return new(handlers.JWTClaims)
+			return new(contract.JWTClaims)
 		},
 		SigningKey:             []byte(secret),
 		ContinueOnIgnoredError: true,
 		ErrorHandler: func(c echo.Context, err error) error {
+
 			var extErr *echojwt.TokenExtractionError
 			if !errors.As(err, &extErr) {
-				return echo.NewHTTPError(http.StatusUnauthorized, "auth is invalid")
+				return echo.NewHTTPError(http.StatusUnauthorized, "invalid auth token")
 			}
 
-			claims := &handlers.JWTClaims{
+			claims := &contract.JWTClaims{
 				RegisteredClaims: jwt.RegisteredClaims{
 					ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour * 30)),
 				},
@@ -90,7 +91,7 @@ func GetAuthConfig(secret string) echojwt.Config {
 			c.Set("user", token)
 
 			if claims.UID == "" {
-				return echo.NewHTTPError(http.StatusUnauthorized, "auth is invalid")
+				return echo.NewHTTPError(http.StatusUnauthorized, "invalid auth token")
 			}
 
 			return nil
