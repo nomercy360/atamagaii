@@ -175,4 +175,13 @@ export async function updateDeckSettings(deckId: string, settings: UpdateDeckSet
 	})
 }
 
+export async function deleteDeck(deckId: string): Promise<{
+	data: null
+	error: string | null
+}> {
+	return apiRequest(`/decks/${deckId}`, {
+		method: 'DELETE',
+	})
+}
+
 

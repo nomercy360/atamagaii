@@ -34,11 +34,13 @@ type VocabularyItem struct {
 	Translation string    `json:"translation"`
 	Examples    []Example `json:"examples"`
 	Level       string    `json:"level"`
+	AudioURL    string    `json:"audio_url"`
 }
 
 type Example struct {
 	Sentence    []Fragment `json:"sentence"`
 	Translation string     `json:"translation"`
+	AudioURL    string     `json:"audio_url"`
 }
 
 type Fragment struct {

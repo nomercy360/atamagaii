@@ -16,7 +16,7 @@ export default function Index() {
 		return data || []
 	})
 
-	const [stats] = createResource<Stats>(async () => {
+	const [stats, { refetch: refetchStats }] = createResource<Stats>(async () => {
 		const { data, error } = await apiRequest<Stats>('/stats')
 		if (error) {
 			console.error('Failed to fetch stats:', error)
@@ -35,6 +35,12 @@ export default function Index() {
 
 	const handleUpdateDeck = (updatedDeck: Deck) => {
 		refetch()
+	}
+	
+	const handleDeleteDeck = () => {
+		// When a deck is deleted, refresh both decks and stats
+		refetch()
+		refetchStats()
 	}
 
 	return (
@@ -137,6 +143,7 @@ export default function Index() {
 				<DeckSettings
 					deck={selectedDeck()!}
 					onUpdate={handleUpdateDeck}
+					onDelete={handleDeleteDeck}
 					onClose={() => setSelectedDeck(null)}
 				/>
 			)}

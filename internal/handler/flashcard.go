@@ -35,6 +35,7 @@ func (h *Handler) AddFlashcardRoutes(g *echo.Group) {
 	g.GET("/decks/:id", h.GetDeck)
 	g.POST("/decks/import", h.CreateDeckFromFile)
 	g.PUT("/decks/:id/settings", h.UpdateDeckSettings)
+	g.DELETE("/decks/:id", h.DeleteDeck)
 
 	g.GET("/cards/due", h.GetDueCards)
 
@@ -231,23 +232,7 @@ func (h *Handler) GetStats(c echo.Context) error {
 		return err
 	}
 
-	deckID := c.QueryParam("deck_id")
-	if deckID != "" {
-
-		deck, err := h.db.GetDeck(deckID)
-		if err != nil {
-			if errors.Is(err, db.ErrNotFound) {
-				return echo.NewHTTPError(http.StatusNotFound, "Deck not found")
-			}
-			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch deck")
-		}
-
-		if deck.UserID != userID {
-			return echo.NewHTTPError(http.StatusForbidden, "Access denied")
-		}
-	}
-
-	dueCount, err := h.db.GetDueCardCount(userID, deckID)
+	dueCount, err := h.db.GetDueCardCount(userID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch statistics")
 	}
@@ -259,8 +244,6 @@ func (h *Handler) GetStats(c echo.Context) error {
 	return c.JSON(http.StatusOK, stats)
 }
 
-// CreateDeckFromFile creates a new deck for a user by importing a vocabulary file
-// UpdateDeckSettings updates a deck's settings such as new cards per day
 func (h *Handler) UpdateDeckSettings(c echo.Context) error {
 	userID, err := GetUserIDFromToken(c)
 	if err != nil {
@@ -306,6 +289,37 @@ func (h *Handler) UpdateDeckSettings(c echo.Context) error {
 	return c.JSON(http.StatusOK, updatedDeck)
 }
 
+func (h *Handler) DeleteDeck(c echo.Context) error {
+	userID, err := GetUserIDFromToken(c)
+	if err != nil {
+		return err
+	}
+
+	deckID := c.Param("id")
+	if deckID == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Deck ID is required")
+	}
+
+	// Verify the deck exists and belongs to the user
+	deck, err := h.db.GetDeck(deckID)
+	if err != nil {
+		if errors.Is(err, db.ErrNotFound) {
+			return echo.NewHTTPError(http.StatusNotFound, "Deck not found")
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch deck")
+	}
+
+	if deck.UserID != userID {
+		return echo.NewHTTPError(http.StatusForbidden, "Access denied")
+	}
+
+	if err := h.db.DeleteDeck(deckID); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete deck: "+err.Error())
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
+}
+
 func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 	userID, err := GetUserIDFromToken(c)
 	if err != nil {
@@ -321,8 +335,6 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	// Get the vocabulary file path
-	// Find the project root directory first
 	rootDir := "."
 
 	// Try to locate the materials directory by checking a few common locations
@@ -391,7 +403,6 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 	backs := make([]string, len(vocabularyItems))
 
 	for i, item := range vocabularyItems {
-		// Build the front of the card (Japanese)
 		frontContent := map[string]interface{}{
 			"kanji": item.Kanji,
 			"kana":  item.Kana,
@@ -399,16 +410,15 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 		frontJSON, _ := json.Marshal(frontContent)
 		fronts[i] = string(frontJSON)
 
-		// Build the back of the card (translation and examples)
 		backContent := map[string]interface{}{
 			"translation": item.Translation,
 			"examples":    item.Examples,
+			"audio_url":   item.AudioURL,
 		}
 		backJSON, _ := json.Marshal(backContent)
 		backs[i] = string(backJSON)
 	}
 
-	// Batch add all cards to the deck
 	if err := h.db.AddCardsInBatch(deck.ID, fronts, backs); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to add cards to deck: %v", err))
 	}

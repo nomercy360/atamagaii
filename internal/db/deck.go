@@ -144,3 +144,55 @@ func (s *Storage) UpdateDeckNewCardsPerDay(deckID string, newCardsPerDay int) er
 
 	return nil
 }
+
+// DeleteDeck marks a deck as deleted by setting the deleted_at timestamp
+func (s *Storage) DeleteDeck(deckID string) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("error starting transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	now := time.Now()
+	
+	// First mark the deck as deleted
+	deckQuery := `
+		UPDATE decks
+		SET deleted_at = ?, updated_at = ?
+		WHERE id = ? AND deleted_at IS NULL
+	`
+	result, err := tx.Exec(deckQuery, now, now, deckID)
+	if err != nil {
+		return fmt.Errorf("error marking deck as deleted: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error checking rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return ErrNotFound
+	}
+
+	// Then mark all cards in the deck as deleted
+	cardsQuery := `
+		UPDATE cards
+		SET deleted_at = ?, updated_at = ?
+		WHERE deck_id = ? AND deleted_at IS NULL
+	`
+	_, err = tx.Exec(cardsQuery, now, now, deckID)
+	if err != nil {
+		return fmt.Errorf("error marking cards as deleted: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("error committing transaction: %w", err)
+	}
+
+	return nil
+}

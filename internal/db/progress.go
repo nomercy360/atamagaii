@@ -237,41 +237,37 @@ func (s *Storage) GetCardProgress(userID, cardID string) (*CardProgress, error) 
 	return &progress, nil
 }
 
-// GetDueCardCount returns the number of cards due for review
-func (s *Storage) GetDueCardCount(userID, deckID string) (int, error) {
-	var query string
-	var args []interface{}
-
-	if deckID != "" {
-		// Count for a specific deck
-		query = `
-			SELECT COUNT(*)
-			FROM cards c
-			LEFT JOIN card_progress p ON c.id = p.card_id AND p.user_id = ?
-			JOIN decks d ON c.deck_id = d.id
-			WHERE c.deck_id = ? AND c.deleted_at IS NULL AND d.user_id = ?
-			AND (p.next_review IS NULL OR p.next_review <= CURRENT_TIMESTAMP)
-		`
-		args = []interface{}{userID, deckID, userID}
-	} else {
-		// Count across all decks for the user
-		query = `
-			SELECT COUNT(*)
-			FROM cards c
-			LEFT JOIN card_progress p ON c.id = p.card_id AND p.user_id = ?
-			JOIN decks d ON c.deck_id = d.id AND d.user_id = ?
-			WHERE c.deleted_at IS NULL
-			AND (p.next_review IS NULL OR p.next_review <= CURRENT_TIMESTAMP)
-		`
-		args = []interface{}{userID, userID}
+func (s *Storage) GetDueCardCount(userID string) (int, error) {
+	decks, err := s.GetDecks(userID)
+	if err != nil {
+		return 0, fmt.Errorf("error fetching decks for due card counting: %w", err)
 	}
 
-	var count int
-	if err := s.db.QueryRow(query, args...).Scan(&count); err != nil {
-		return 0, fmt.Errorf("error counting due cards: %w", err)
+	var totalDueCount int
+	for _, deck := range decks {
+		query := `
+				SELECT COUNT(*)
+				FROM cards c
+				LEFT JOIN card_progress p ON c.id = p.card_id AND p.user_id = ?
+				JOIN decks d ON c.deck_id = d.id
+				WHERE c.deck_id = ? AND c.deleted_at IS NULL AND d.user_id = ?
+				AND (p.next_review IS NULL OR p.next_review <= CURRENT_TIMESTAMP)
+			`
+
+		var deckTotalDue int
+		if err := s.db.QueryRow(query, userID, deck.ID, userID).Scan(&deckTotalDue); err != nil {
+			return 0, fmt.Errorf("error counting due cards for deck %s: %w", deck.ID, err)
+		}
+
+		deckDueCount := deckTotalDue
+		if deckDueCount > deck.NewCardsPerDay {
+			deckDueCount = deck.NewCardsPerDay
+		}
+
+		totalDueCount += deckDueCount
 	}
 
-	return count, nil
+	return totalDueCount, nil
 }
 
 // ResetProgress resets progress for a user's cards
