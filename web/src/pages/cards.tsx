@@ -3,16 +3,44 @@ import { apiRequest, Card } from '~/lib/api'
 import { useParams, useNavigate } from '@solidjs/router'
 import AudioButton from '~/components/audio-button'
 
+const getFrontFaceClasses = (isFlipped: boolean, isTrans: boolean) => {
+	let opacityClass = '';
+	if (isTrans) {
+		opacityClass = 'opacity-0';
+	} else {
+		opacityClass = isFlipped ? 'opacity-0' : 'opacity-100';
+	}
+
+	const rotationClass = isFlipped ? 'rotate-y-180' : 'rotate-y-0';
+	const pointerEventsClass = (isTrans || isFlipped) ? 'pointer-events-none' : '';
+
+	return `absolute inset-0 w-full flex flex-col items-center justify-center p-4 ${rotationClass} ${opacityClass} ${pointerEventsClass} transition-all duration-300 transform-gpu backface-hidden`;
+};
+
+const getBackFaceClasses = (isFlipped: boolean, isTrans: boolean) => {
+	let opacityClass = '';
+	if (isTrans) {
+		opacityClass = 'opacity-0';
+	} else {
+		opacityClass = isFlipped ? 'opacity-100' : 'opacity-0';
+	}
+
+	const rotationClass = isFlipped ? 'rotate-y-0' : 'rotate-y-180';
+	const pointerEventsClass = (isTrans || !isFlipped) ? 'pointer-events-none' : '';
+
+	return `absolute inset-0 w-full flex flex-col items-center justify-center p-4 ${rotationClass} ${opacityClass} ${pointerEventsClass} transition-all duration-300 transform-gpu backface-hidden`;
+};
+
 export default function Cards() {
 	const params = useParams()
 	const navigate = useNavigate()
 	const [cardIndex, setCardIndex] = createSignal(0)
 	const [flipped, setFlipped] = createSignal(false)
+	const [isTransitioning, setIsTransitioning] = createSignal(false)
 
 	const [cards] = createResource<Card[]>(
 		async () => {
 			if (!params.deckId) return []
-
 			const { data, error } = await apiRequest<Card[]>(`/cards/due?deck_id=${params.deckId}`)
 			if (error) {
 				console.error(`Failed to fetch cards for deck ${params.deckId}:`, error)
@@ -29,16 +57,23 @@ export default function Cards() {
 	}
 
 	const handleCardFlip = () => {
+		if (isTransitioning()) return;
 		setFlipped(!flipped())
 	}
 
 	const handleNextCard = () => {
-		setFlipped(false)
-		setCardIndex(prevIndex => prevIndex + 1)
+		setIsTransitioning(true);
+		setTimeout(() => {
+			setFlipped(false);
+			setCardIndex(prevIndex => prevIndex + 1);
+			setTimeout(() => {
+				setIsTransitioning(false);
+			}, 50);
+		}, 300);
 	}
 
 	const handleReview = async (cardId: string, rating: number) => {
-		const timeSpent = 5000 // Example time in ms
+		const timeSpent = 5000;
 		const { error } = await apiRequest(`/cards/${cardId}/review`, {
 			method: 'POST',
 			body: JSON.stringify({
@@ -46,14 +81,12 @@ export default function Cards() {
 				rating,
 				time_spent_ms: timeSpent,
 			}),
-		})
-
+		});
 		if (error) {
-			console.error('Failed to submit review:', error)
-			return
+			console.error('Failed to submit review:', error);
+			return;
 		}
-
-		handleNextCard()
+		handleNextCard();
 	}
 
 	return (
@@ -62,11 +95,10 @@ export default function Cards() {
 				<Show when={currentCard()}>
 					<div class="w-full flex flex-col items-center">
 						<div
-							class="w-full bg-card rounded-xl shadow-lg cursor-pointer relative perspective transition-all"
+							class={`w-full bg-card rounded-xl shadow-lg cursor-pointer relative perspective transition-all min-h-96 ${isTransitioning() ? 'pointer-events-none' : ''}`}
 							onClick={handleCardFlip}
 						>
-							<div
-								class={`absolute inset-0 w-full flex flex-col items-center justify-center p-4 ${flipped() ? 'rotate-y-180 opacity-0' : 'rotate-y-0 opacity-100'} transition-all duration-300`}>
+							<div class={getFrontFaceClasses(flipped(), isTransitioning())}>
 								<div class="text-4xl font-bold mb-4 font-jp">
 									{currentCard()?.front.kanji ? currentCard()?.front.kanji : currentCard()?.front.kana}
 								</div>
@@ -89,26 +121,24 @@ export default function Cards() {
 								</Show>
 							</div>
 
-							<div
-								class={`flex flex-col items-center justify-center p-4 ${flipped() ? 'rotate-y-0 opacity-100' : 'rotate-y-180 opacity-0'} transition-all duration-300`}>
+							<div class={getBackFaceClasses(flipped(), isTransitioning())}>
 								<div class="text-4xl font-bold mb-6 flex flex-col items-center">
 									<div class="flex items-center gap-2">
 										{currentCard()?.front.kanji}
 										<Show when={currentCard()?.back.audio_url}>
-											<AudioButton 
-												audioUrl={currentCard()?.back.audio_url || ''} 
-												size="sm" 
+											<AudioButton
+												audioUrl={currentCard()?.back.audio_url || ''}
+												size="sm"
 												label="Play word pronunciation"
 											/>
 										</Show>
 									</div>
 									<Show when={currentCard()?.front.kana}>
-										<span class="text-lg font-jp text-muted-foreground">
-											{currentCard()?.front.kana}
-										</span>
+           <span class="text-lg font-jp text-muted-foreground">
+            {currentCard()?.front.kana}
+           </span>
 									</Show>
 								</div>
-
 								<div class="text-center text-2xl font-medium mb-8">{currentCard()?.back.translation}</div>
 								<div class="text-sm space-y-2 w-full">
 									<For each={currentCard()?.back.examples}>
@@ -132,8 +162,8 @@ export default function Cards() {
 														</For>
 													</p>
 													<Show when={example.audio_url}>
-														<AudioButton 
-															audioUrl={example.audio_url || ''} 
+														<AudioButton
+															audioUrl={example.audio_url || ''}
 															size="sm"
 															label="Play example audio"
 														/>
@@ -149,6 +179,7 @@ export default function Cards() {
 					</div>
 				</Show>
 
+				{/* ... rest of your component (Loading, No cards, Review buttons) */}
 				<Show when={cards.loading}>
 					<div class="w-full flex flex-col items-center justify-center h-[300px]">
 						<p class="text-muted-foreground">Loading cards...</p>
@@ -168,7 +199,7 @@ export default function Cards() {
 				</Show>
 			</div>
 
-			<Show when={flipped() && currentCard()}>
+			<Show when={flipped() && currentCard() && !isTransitioning()}>
 				<div class="fixed bottom-0 left-0 right-0 bg-background border-t border-border pb-8">
 					<div class="mx-auto px-4 py-4">
 						<div class="grid grid-cols-4 gap-2">
