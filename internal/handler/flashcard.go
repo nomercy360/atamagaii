@@ -13,9 +13,8 @@ import (
 )
 
 type ReviewCardRequest struct {
-	CardID      string `json:"card_id" validate:"required"`
-	Rating      int    `json:"rating" validate:"required,min=1,max=4"`
-	TimeSpentMs int    `json:"time_spent_ms" validate:"required"`
+	Rating      int `json:"rating" validate:"required,min=1,max=4"`
+	TimeSpentMs int `json:"time_spent_ms" validate:"required"`
 }
 
 type CreateDeckFromFileRequest struct {
