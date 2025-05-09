@@ -13,7 +13,7 @@ import (
 )
 
 type ReviewCardRequest struct {
-	Rating      int `json:"rating" validate:"required,min=1,max=4"`
+	Rating      int `json:"rating" validate:"required,min=1,max=2"`
 	TimeSpentMs int `json:"time_spent_ms" validate:"required"`
 }
 
@@ -35,6 +35,7 @@ func (h *Handler) AddFlashcardRoutes(g *echo.Group) {
 	g.DELETE("/decks/:id", h.DeleteDeck)
 
 	g.GET("/cards/due", h.GetDueCards)
+	g.GET("/cards/:id", h.GetCard)
 
 	g.POST("/cards/:id/review", h.ReviewCard)
 	g.GET("/stats", h.GetStats)
@@ -165,7 +166,7 @@ func (h *Handler) ReviewCard(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Card ID is required")
 	}
 
-	existingCard, err := h.db.GetCard(cardID, userID)
+	card, err := h.db.GetCard(cardID, userID)
 	if err != nil {
 		if errors.Is(err, db.ErrNotFound) {
 			return echo.NewHTTPError(http.StatusNotFound, "Card not found")
@@ -173,7 +174,7 @@ func (h *Handler) ReviewCard(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch card")
 	}
 
-	deck, err := h.db.GetDeck(existingCard.DeckID)
+	deck, err := h.db.GetDeck(card.DeckID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to verify card ownership")
 	}
@@ -191,7 +192,7 @@ func (h *Handler) ReviewCard(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	if err := h.db.ReviewCard(userID, cardID, req.Rating, req.TimeSpentMs); err != nil {
+	if err := h.db.ReviewCard(card, req.Rating, req.TimeSpentMs); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to process review: "+err.Error())
 	}
 
@@ -223,6 +224,33 @@ func (h *Handler) GetStats(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, stats)
+}
+
+func (h *Handler) GetCard(c echo.Context) error {
+	userID, err := GetUserIDFromToken(c)
+	if err != nil {
+		return err
+	}
+
+	cardID := c.Param("id")
+	if cardID == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Card ID is required")
+	}
+
+	card, err := h.db.GetCard(cardID, userID)
+	if err != nil {
+		if errors.Is(err, db.ErrNotFound) {
+			return echo.NewHTTPError(http.StatusNotFound, "Card not found")
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch card").WithInternal(err)
+	}
+
+	response, err := formatCardResponse(*card)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to format card response").WithInternal(err)
+	}
+
+	return c.JSON(http.StatusOK, response)
 }
 
 func (h *Handler) UpdateDeckSettings(c echo.Context) error {

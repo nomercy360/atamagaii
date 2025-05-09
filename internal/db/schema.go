@@ -62,7 +62,7 @@ func (s *Storage) UpdateSchema() error {
 		prev_ease REAL NOT NULL,
 		new_ease REAL NOT NULL,
 		FOREIGN KEY (user_id) REFERENCES users(id),
-		FOREIGN KEY (card_id) REFERENCES cards(id)
+		FOREIGN KEY (card_id, user_id) REFERENCES cards(id, user_id)
 	);
 
 	CREATE TABLE IF NOT EXISTS tasks (
