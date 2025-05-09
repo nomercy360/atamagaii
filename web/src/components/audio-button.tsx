@@ -8,45 +8,37 @@ interface AudioButtonProps {
 
 export default function AudioButton(props: AudioButtonProps) {
   const [isPlaying, setIsPlaying] = createSignal(false)
-  const [audioElement] = createSignal(new Audio())
-  
+
   const handlePlay = (e: MouseEvent) => {
-    // Make sure to stop propagation to prevent card flipping
     e.stopPropagation()
     e.preventDefault()
-    
-    const audio = audioElement()
-    
+
     if (isPlaying()) {
-      audio.pause()
-      audio.currentTime = 0
       setIsPlaying(false)
       return
     }
-    
-    audio.src = props.audioUrl
-    audio.onended = () => setIsPlaying(false)
-    audio.oncanplaythrough = () => {
-      audio.play().catch(error => {
-        console.error('Error playing audio:', error)
-        setIsPlaying(false)
-      })
-    }
-    
+
+    const audio = new Audio(props.audioUrl)
     setIsPlaying(true)
+
+    audio.onended = () => setIsPlaying(false)
+    audio.play().catch(error => {
+      console.error('Error playing audio:', error)
+      setIsPlaying(false)
+    })
   }
-  
+
   const sizeClasses = {
     sm: 'w-5 h-5 text-xs',
     md: 'w-6 h-6 text-sm',
     lg: 'w-8 h-8 text-base'
   }
-  
+
   const size = props.size || 'md'
-  
+
   return (
-    <button 
-      onClick={handlePlay} 
+    <button
+      onClick={handlePlay}
       onMouseDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
       class={`${sizeClasses[size]} p-1 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors relative z-10`}
