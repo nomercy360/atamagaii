@@ -285,21 +285,10 @@ export default function Cards() {
 
 	return (
 		<div class="container mx-auto px-2 py-6 max-w-md flex flex-col items-center min-h-screen">
-			{/* Deck metrics */}
+			{/* Deck name */}
 			<Show when={deck() && !deck.loading}>
 				<div class="w-full mb-4">
 					<h2 class="text-lg font-semibold mb-1">{deck()?.name}</h2>
-					<div class="flex gap-3 text-sm">
-						<Show when={deckMetrics().newCards > 0}>
-							<span class="text-blue-500">{deckMetrics().newCards} new</span>
-						</Show>
-						<Show when={deckMetrics().learningCards > 0}>
-							<span class="text-yellow-500">{deckMetrics().learningCards} learning</span>
-						</Show>
-						<Show when={deckMetrics().reviewCards > 0}>
-							<span class="text-green-500">{deckMetrics().reviewCards} review</span>
-						</Show>
-					</div>
 				</div>
 			</Show>
 
@@ -410,6 +399,7 @@ export default function Cards() {
 				</Show>
 			</div>
 
+			{/* Review buttons - show only when card is flipped */}
 			<Show when={flipped() && currentCard() && !isTransitioning()}>
 				<div class="fixed bottom-0 left-0 right-0 bg-background border-t border-border pb-8">
 					<div class="mx-auto px-4 py-4">
@@ -438,6 +428,31 @@ export default function Cards() {
 							>
 								Easy
 							</button>
+						</div>
+					</div>
+				</div>
+			</Show>
+			
+			{/* Deck metrics - show only when card is not flipped */}
+			<Show when={!flipped() && currentCard() && !isTransitioning() && deck() && !deck.loading}>
+				<div class="fixed bottom-0 left-0 right-0 bg-background border-t border-border pb-8">
+					<div class="mx-auto px-4 py-4">
+						<div class="flex justify-center gap-3">
+							<Show when={deckMetrics().newCards > 0}>
+								<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+									{deckMetrics().newCards} new
+								</span>
+							</Show>
+							<Show when={deckMetrics().learningCards > 0}>
+								<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+									{deckMetrics().learningCards} learning
+								</span>
+							</Show>
+							<Show when={deckMetrics().reviewCards > 0}>
+								<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+									{deckMetrics().reviewCards} review
+								</span>
+							</Show>
 						</div>
 					</div>
 				</div>
