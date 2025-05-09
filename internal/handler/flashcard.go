@@ -85,7 +85,7 @@ func (h *Handler) GetDeck(c echo.Context) error {
 	return c.JSON(http.StatusOK, deck)
 }
 
-func formatCardResponse(card db.CardWithProgress) (contract.CardResponse, error) {
+func formatCardResponse(card db.Card) (contract.CardResponse, error) {
 	response := contract.CardResponse{
 		ID:              card.ID,
 		DeckID:          card.DeckID,
@@ -137,7 +137,7 @@ func (h *Handler) GetDueCards(c echo.Context) error {
 
 	limit := 3
 
-	cards, err := h.db.GetCardsWithProgress(userID, deckID, limit)
+	cards, err := h.db.GetCardsForReview(userID, deckID, limit)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch due cards").WithInternal(err)
 	}
@@ -165,7 +165,7 @@ func (h *Handler) ReviewCard(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Card ID is required")
 	}
 
-	existingCard, err := h.db.GetCard(cardID)
+	existingCard, err := h.db.GetCard(cardID, userID)
 	if err != nil {
 		if errors.Is(err, db.ErrNotFound) {
 			return echo.NewHTTPError(http.StatusNotFound, "Card not found")
@@ -195,19 +195,13 @@ func (h *Handler) ReviewCard(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to process review: "+err.Error())
 	}
 
-	progress, err := h.db.GetCardProgress(userID, cardID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch updated progress").WithInternal(err)
-	}
-
 	stats, err := h.db.GetDeckStatistics(userID, deck.ID, deck.NewCardsPerDay)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch stats").WithInternal(err)
 	}
 
 	resp := contract.ReviewCardResponse{
-		Stats:    stats,
-		Progress: progress,
+		Stats: stats,
 	}
 
 	return c.JSON(http.StatusOK, resp)
@@ -403,7 +397,7 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 		fieldsArray[i] = string(fieldsJSON)
 	}
 
-	if err := h.db.AddCardsInBatch(deck.ID, fieldsArray); err != nil {
+	if err := h.db.AddCardsInBatch(userID, deck.ID, fieldsArray); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to add cards to deck: %v", err))
 	}
 

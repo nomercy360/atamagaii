@@ -184,7 +184,7 @@ export interface CardReviewResponse {
 		learning_cards: number
 		review_cards: number
 	}
-	progress: CardProgress
+	// The backend now returns a Card object directly instead of CardProgress
 }
 
 export interface UpdateDeckSettingsRequest {

@@ -227,11 +227,10 @@ func (s *Storage) GetDeckStatistics(userID string, deckID string, newCardsPerDay
 
 	dueDueQuery := `
         SELECT
-            COALESCE(SUM(CASE WHEN (cp.state = 'learning' OR cp.state = 'relearning') AND cp.next_review <= ? THEN 1 ELSE 0 END), 0) as learning_due_count,
-            COALESCE(SUM(CASE WHEN cp.state = 'review' AND cp.next_review <= ? THEN 1 ELSE 0 END), 0) as review_due_count
-        FROM card_progress cp
-        JOIN cards c ON cp.card_id = c.id
-        WHERE cp.user_id = ? AND c.deck_id = ? AND c.deleted_at IS NULL;
+            COALESCE(SUM(CASE WHEN (c.state = 'learning' OR c.state = 'relearning') AND c.next_review <= ? THEN 1 ELSE 0 END), 0) as learning_due_count,
+            COALESCE(SUM(CASE WHEN c.state = 'review' AND c.next_review <= ? THEN 1 ELSE 0 END), 0) as review_due_count
+        FROM cards c
+        WHERE c.user_id = ? AND c.deck_id = ? AND c.deleted_at IS NULL;
     `
 
 	err := s.db.QueryRow(dueDueQuery, todayEnd, todayEnd, userID, deckID).Scan(
@@ -245,12 +244,11 @@ func (s *Storage) GetDeckStatistics(userID string, deckID string, newCardsPerDay
 	today := time.Now().Truncate(24 * time.Hour)
 	countNewStartedTodayQuery := `
 		SELECT COUNT(*)
-		FROM card_progress p
-		JOIN cards c ON p.card_id = c.id
-		WHERE p.user_id = ?
+		FROM cards c
+		WHERE c.user_id = ?
 		AND c.deck_id = ?
 		AND c.deleted_at IS NULL
-		AND p.first_reviewed_at >= ?
+		AND c.first_reviewed_at >= ?
 	`
 
 	var newCardsStartedToday int
@@ -267,9 +265,11 @@ func (s *Storage) GetDeckStatistics(userID string, deckID string, newCardsPerDay
 	countTotalNewCardsQuery := `
 		SELECT COUNT(*)
 		FROM cards c
-		LEFT JOIN card_progress p ON c.id = p.card_id AND p.user_id = ?
-		WHERE c.deck_id = ? AND c.deleted_at IS NULL
-		AND p.card_id IS NULL
+		WHERE c.user_id = ?
+		AND c.deck_id = ?
+		AND c.deleted_at IS NULL
+		AND c.state = 'new'
+		AND c.review_count = 0
 	`
 
 	var totalNewCards int

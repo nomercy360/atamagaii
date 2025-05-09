@@ -35,18 +35,18 @@ type ErrorResponse struct {
 
 // CardFields represents all fields of a flashcard with properly unmarshaled JSON
 type CardFields struct {
-	Word            string  `json:"word"`
-	Reading         string  `json:"reading"`
-	WordFurigana    string  `json:"word_furigana"`
-	MeaningEn       string  `json:"meaning_en"`
-	MeaningRu       string  `json:"meaning_ru"`
-	ExampleJa       string  `json:"example_ja"`
-	ExampleEn       string  `json:"example_en"`
-	ExampleRu       string  `json:"example_ru"`
-	ExampleFurigana string  `json:"example_furigana"`
-	Frequency       int     `json:"frequency"`
-	AudioWord       string  `json:"audio_word"`
-	AudioExample    string  `json:"audio_example"`
+	Word            string `json:"word"`
+	Reading         string `json:"reading"`
+	WordFurigana    string `json:"word_furigana"`
+	MeaningEn       string `json:"meaning_en"`
+	MeaningRu       string `json:"meaning_ru"`
+	ExampleJa       string `json:"example_ja"`
+	ExampleEn       string `json:"example_en"`
+	ExampleRu       string `json:"example_ru"`
+	ExampleFurigana string `json:"example_furigana"`
+	Frequency       int    `json:"frequency"`
+	AudioWord       string `json:"audio_word"`
+	AudioExample    string `json:"audio_example"`
 }
 
 type CardResponse struct {
@@ -58,9 +58,9 @@ type CardResponse struct {
 	DeletedAt       *time.Time    `json:"deleted_at,omitempty"`
 	NextReview      *time.Time    `json:"next_review,omitempty"`
 	Interval        time.Duration `json:"interval,omitempty"`
-	Ease            *float64      `json:"ease,omitempty"`
-	ReviewCount     *int          `json:"review_count,omitempty"`
-	LapsCount       *int          `json:"laps_count,omitempty"`
+	Ease            float64       `json:"ease,omitempty"`
+	ReviewCount     int           `json:"review_count,omitempty"`
+	LapsCount       int           `json:"laps_count,omitempty"`
 	LastReviewedAt  *time.Time    `json:"last_reviewed_at,omitempty"`
 	FirstReviewedAt *time.Time    `json:"first_reviewed_at,omitempty"`
 	State           string        `json:"state,omitempty"`
@@ -68,6 +68,5 @@ type CardResponse struct {
 }
 
 type ReviewCardResponse struct {
-	Progress *db.CardProgress   `json:"progress"`
-	Stats    *db.DeckStatistics `json:"stats"`
+	Stats *db.DeckStatistics `json:"stats"`
 }

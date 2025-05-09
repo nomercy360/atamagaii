@@ -12,7 +12,6 @@ func (s *Storage) UpdateSchema() error {
 	   username TEXT,
 	   avatar_url TEXT,
 	   name TEXT,
-	   level TEXT DEFAULT 'N5',
 	   points REAL DEFAULT 0
     );
 	-- Decks table
@@ -28,22 +27,14 @@ func (s *Storage) UpdateSchema() error {
 		deleted_at TIMESTAMP,
 		FOREIGN KEY (user_id) REFERENCES users(id)
 	);
-	-- Cards table
+	-- Cards table with integrated progress fields
 	CREATE TABLE IF NOT EXISTS cards (
-		id TEXT PRIMARY KEY,
+		id TEXT,
 		deck_id TEXT NOT NULL,
 		fields TEXT NOT NULL,
-		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-		deleted_at TIMESTAMP,
-		FOREIGN KEY (deck_id) REFERENCES decks(id)
-	);
-	-- Card progress table (user-specific progress for each card)
-	CREATE TABLE IF NOT EXISTS card_progress (
 		user_id TEXT NOT NULL,
-		card_id TEXT NOT NULL,
 		next_review TIMESTAMP,
-		interval TEXT NOT NULL DEFAULT '0s',
+		interval INTEGER NOT NULL DEFAULT 0,
 		ease REAL NOT NULL DEFAULT 2.5,
 		review_count INTEGER NOT NULL DEFAULT 0,
 		laps_count INTEGER NOT NULL DEFAULT 0,
@@ -51,9 +42,12 @@ func (s *Storage) UpdateSchema() error {
 		learning_step INTEGER DEFAULT 0,
 		state TEXT DEFAULT 'new',
 		first_reviewed_at TIMESTAMP,
-		PRIMARY KEY (user_id, card_id),
-		FOREIGN KEY (user_id) REFERENCES users(id),
-		FOREIGN KEY (card_id) REFERENCES cards(id)
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		deleted_at TIMESTAMP,
+		PRIMARY KEY (id, user_id),
+		FOREIGN KEY (deck_id) REFERENCES decks(id),
+		FOREIGN KEY (user_id) REFERENCES users(id)
 	);
 	-- Reviews history table
 	CREATE TABLE IF NOT EXISTS reviews (
@@ -91,7 +85,7 @@ func (s *Storage) UpdateSchema() error {
 	);
 
 	-- Create index on next_review to speed up due card queries
-	CREATE INDEX IF NOT EXISTS idx_card_progress_next_review ON card_progress(next_review);
+	CREATE INDEX IF NOT EXISTS idx_cards_next_review ON cards(next_review, user_id);
 	
 	-- Create index on deck_id to speed up deck queries
 	CREATE INDEX IF NOT EXISTS idx_cards_deck_id ON cards(deck_id);

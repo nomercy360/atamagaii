@@ -319,29 +319,19 @@ export default function Cards() {
 							onClick={handleCardFlip}
 						>
 							<div class={getFrontFaceClasses(flipped(), isTransitioning())}>
-								<div class="text-5xl font-bold mb-4 font-jp">
-									{currentCard()?.fields.word_furigana ? (
-										<span innerHTML={parseFurigana(currentCard()?.fields.word_furigana || '')}></span>
-									) : (
-										currentCard()?.fields.word || currentCard()?.fields.reading
-									)}
+								<div class="text-5xl font-semibold mb-4 font-jp">
+									{currentCard()?.fields.word}
 								</div>
 								<Show
 									when={currentCard()?.fields.example_ja}>
-									<div class="text-sm font-jp bg-muted rounded-md p-3 mb-2 max-w-full">
-										<p class="mb-1 text-2xl">
-											{currentCard()?.fields.example_furigana ? (
-												<span innerHTML={parseFurigana(currentCard()?.fields.example_furigana || '')}></span>
-											) : (
-												currentCard()?.fields.example_ja
-											)}
-										</p>
+									<div class="text-2xl font-jp p-3 mb-2 max-w-full">
+										{currentCard()?.fields.example_ja}
 									</div>
 								</Show>
 							</div>
 
 							<div class={getBackFaceClasses(flipped(), isTransitioning())}>
-								<div class="text-5xl font-bold mb-6 flex flex-col items-center">
+								<div class="text-5xl font-semibold font-jp mb-6 flex flex-col items-center">
 									<div class="flex items-center gap-2 pl-8">
 										{currentCard()?.fields.word_furigana ? (
 											<span innerHTML={parseFurigana(currentCard()?.fields.word_furigana || '')}></span>
