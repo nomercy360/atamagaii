@@ -9,7 +9,12 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"net/http"
 	"testing"
+	"time"
 )
+
+func daysToDuration(days float64) time.Duration {
+	return time.Duration(days * 24 * float64(time.Hour))
+}
 
 func TestImportDeckFromFile(t *testing.T) {
 	e := testutils.SetupHandlerDependencies(t)

@@ -103,17 +103,11 @@ func formatCardResponse(card db.CardWithProgress) (contract.CardResponse, error)
 		LearningStep:    card.LearningStep,
 	}
 
-	var front contract.CardFront
-	if err := json.Unmarshal([]byte(card.Front), &front); err != nil {
-		return response, fmt.Errorf("error unmarshalling card front: %w", err)
+	var fields contract.CardFields
+	if err := json.Unmarshal([]byte(card.Fields), &fields); err != nil {
+		return response, fmt.Errorf("error unmarshalling card fields: %w", err)
 	}
-	response.Front = front
-
-	var back contract.CardBack
-	if err := json.Unmarshal([]byte(card.Back), &back); err != nil {
-		return response, fmt.Errorf("error unmarshalling card back: %w", err)
-	}
-	response.Back = back
+	response.Fields = fields
 
 	return response, nil
 }
@@ -392,27 +386,21 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 	}
 
 	// Prepare card data
-	fronts := make([]string, len(vocabularyItems))
-	backs := make([]string, len(vocabularyItems))
+	fieldsArray := make([]string, len(vocabularyItems))
 
 	for i, item := range vocabularyItems {
-		frontContent := map[string]interface{}{
-			"kanji": item.Kanji,
-			"kana":  item.Kana,
-		}
-		frontJSON, _ := json.Marshal(frontContent)
-		fronts[i] = string(frontJSON)
-
-		backContent := map[string]interface{}{
+		fieldsContent := map[string]interface{}{
+			"kanji":       item.Kanji,
+			"kana":        item.Kana,
 			"translation": item.Translation,
 			"examples":    item.Examples,
 			"audio_url":   item.AudioURL,
 		}
-		backJSON, _ := json.Marshal(backContent)
-		backs[i] = string(backJSON)
+		fieldsJSON, _ := json.Marshal(fieldsContent)
+		fieldsArray[i] = string(fieldsJSON)
 	}
 
-	if err := h.db.AddCardsInBatch(deck.ID, fronts, backs); err != nil {
+	if err := h.db.AddCardsInBatch(deck.ID, fieldsArray); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to add cards to deck: %v", err))
 	}
 

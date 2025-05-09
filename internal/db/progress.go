@@ -10,37 +10,30 @@ import (
 	"time"
 )
 
-// Constants for the SRS algorithm (Anki SM-2 inspired)
 const (
 	MinEase     float64 = 1.3 // Minimum ease factor
 	MaxEase     float64 = 2.5 // Maximum ease factor
 	DefaultEase float64 = 2.5 // Initial ease factor for new cards
 
 	// Ease factor adjustments based on rating
-	EaseAdjAgain float64 = -0.20 // Penalty for "Again"
-	EaseAdjHard  float64 = -0.15 // Penalty for "Hard"
-	EaseAdjGood  float64 = 0.0   // No change for "Good" (SM-2 standard)
-	EaseAdjEasy  float64 = +0.15 // Bonus for "Easy"
+	EaseAdjIDontKnow      float64 = -0.20 // Penalty for "Again" (like original "Again")
+	EaseAdjIKnow          float64 = 0.0   // No change for "Good" (like original "Good")
+	MaxReviewIntervalDays int     = 36500 // Maximum interval in days (Increased to ~100 years as often preferred)
 
-	// Interval multipliers
-	HardIntervalMultiplier      float64 = 1.2 // For "Hard" in review: Interval_new = Interval_old * HardIntervalMultiplier
-	EasyBonusIntervalMultiplier float64 = 1.3 // For "Easy" in review: Interval_new = Interval_old * Ease * EasyBonusIntervalMultiplier
-
-	MaxReviewIntervalDays int = 365 // Maximum interval in days
-
-	// Learning steps (durations) - used for initial learning and relearning
+	// LearningStep1Duration Learning steps (durations) - used for initial learning and relearning
 	LearningStep1Duration time.Duration = 1 * time.Minute
 	LearningStep2Duration time.Duration = 10 * time.Minute
-	// Number of learning/relearning steps before graduation (e.g., 2 steps: 0 and 1)
-	TotalLearningSteps int = 2
-
-	// Graduation intervals (when moving from Learning/Relearning to Review state)
-	GraduateToReviewIntervalGoodDays float64 = 1.0 // Days, for "Good"
-	GraduateToReviewIntervalEasyDays float64 = 4.0 // Days, for "Easy" from initial learning
-	// Special interval for "Easy" out of relearning, often shorter to confirm retention
-	GraduateFromRelearningToReviewIntervalEasyDays float64 = 2.0 // Days
+	// TotalLearningSteps Number of learning/relearning steps before graduation (e.g., 2 steps: 0 and 1)
+	TotalLearningSteps int = 2 // Means steps 0 and 1. After step 1 + IKnow, card graduates.
+	// GraduateToReviewIntervalDays Graduation interval (when moving from Learning/Relearning to Review state)
+	GraduateToReviewIntervalDays float64 = 1.0 // Days, for "Good"
 
 	FuzzPercentage float64 = 0.05 // 5% fuzz for review intervals > 1 day
+)
+
+const (
+	RatingAgain = 1
+	RatingGood  = 2
 )
 
 type CardState string
@@ -56,11 +49,11 @@ type Review struct {
 	ID           string        `db:"id" json:"id"`
 	UserID       string        `db:"user_id" json:"user_id"`
 	CardID       string        `db:"card_id" json:"card_id"`
-	Rating       int           `db:"rating" json:"rating"` // 1=Again, 2=Hard, 3=Good, 4=Easy
+	Rating       int           `db:"rating" json:"rating"` // 1=IDontKnow, 2=IKnow
 	ReviewedAt   time.Time     `db:"reviewed_at" json:"reviewed_at"`
 	TimeSpentMs  int           `db:"time_spent_ms" json:"time_spent_ms"`
-	PrevInterval time.Duration `db:"prev_interval" json:"prev_interval"`
-	NewInterval  time.Duration `db:"new_interval" json:"new_interval"`
+	PrevInterval time.Duration `db:"prev_interval" json:"prev_interval"` // Stored as string in DB
+	NewInterval  time.Duration `db:"new_interval" json:"new_interval"`   // Stored as string in DB
 	PrevEase     float64       `db:"prev_ease" json:"prev_ease"`
 	NewEase      float64       `db:"new_ease" json:"new_ease"`
 }
@@ -69,19 +62,19 @@ type CardProgress struct {
 	UserID          string        `db:"user_id" json:"user_id"`
 	CardID          string        `db:"card_id" json:"card_id"`
 	NextReview      *time.Time    `db:"next_review" json:"next_review,omitempty"`
-	Interval        time.Duration `db:"interval" json:"interval"`         // Stored as nanoseconds, but represents logical interval
-	Ease            float64       `db:"ease" json:"ease"`                 // Anki-like ease factor
-	ReviewCount     int           `db:"review_count" json:"review_count"` // Total reviews (all ratings)
-	LapsCount       int           `db:"laps_count" json:"laps_count"`     // Times forgotten (rated "Again" in Review/Relearning)
+	Interval        time.Duration `db:"interval" json:"interval"` // Stored as nanoseconds (or string if DB type is text)
+	Ease            float64       `db:"ease" json:"ease"`
+	ReviewCount     int           `db:"review_count" json:"review_count"`
+	LapsCount       int           `db:"laps_count" json:"laps_count"`
 	LastReviewedAt  *time.Time    `db:"last_reviewed_at" json:"last_reviewed_at,omitempty"`
 	FirstReviewedAt *time.Time    `db:"first_reviewed_at" json:"first_reviewed_at,omitempty"`
-	State           CardState     `db:"state" json:"state"`                 // new, learning, review, relearning
-	LearningStep    int           `db:"learning_step" json:"learning_step"` // Tracks current learning/relearning step (0-indexed)
+	State           CardState     `db:"state" json:"state"`
+	LearningStep    int           `db:"learning_step" json:"learning_step"`
 }
 
 func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int) error {
-	if rating < 1 || rating > 4 {
-		return errors.New("invalid rating: must be between 1 and 4")
+	if rating != RatingAgain && rating != RatingGood {
+		return errors.New("invalid rating: must be 1 (Again) or 2 (Good)")
 	}
 
 	progress, err := s.GetCardProgress(userID, cardID)
@@ -93,8 +86,8 @@ func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int)
 			CardID:       cardID,
 			Ease:         DefaultEase,
 			State:        StateNew,
-			LearningStep: 0, // Start at step 0
-			Interval:     0, // Will be set by first review
+			LearningStep: 0,
+			Interval:     0,
 		}
 	} else if err != nil {
 		return fmt.Errorf("error fetching card progress: %w", err)
@@ -103,185 +96,142 @@ func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int)
 	now := time.Now()
 	prevInterval := progress.Interval
 	prevEase := progress.Ease
-	currentState := progress.State // Capture state before modification for logic
+	currentState := progress.State
 
-	// --- Handle State: New or Learning ---
 	if currentState == StateNew || currentState == StateLearning {
-		progress.State = StateLearning // Ensure state is learning
+		progress.State = StateLearning
 		switch rating {
-		case 1: // Again
+		case RatingAgain:
 			progress.LearningStep = 0 // Reset to first learning step
 			progress.Interval = LearningStep1Duration
-			progress.Ease = math.Max(MinEase, progress.Ease+EaseAdjAgain)
-		case 2: // Hard
-			// For learning phase, "Hard" often behaves like "Again" or repeats current step with penalty.
-			// Simpler: reset to first step, like "Again", but with potentially different ease penalty.
-			progress.LearningStep = 0
-			progress.Interval = LearningStep1Duration
-			progress.Ease = math.Max(MinEase, progress.Ease+EaseAdjHard)
-		case 3: // Good
+			progress.Ease = math.Max(MinEase, progress.Ease+EaseAdjIDontKnow)
+		case RatingGood:
 			progress.LearningStep++
-			progress.Ease = math.Max(MinEase, progress.Ease+EaseAdjGood) // Usually no change or slight positive
-			if progress.LearningStep == 1 {                              // Advanced from step 0 to step 1
-				progress.Interval = LearningStep2Duration
-			} else { // Graduated from all learning steps (e.g., step 1 to graduation)
+			progress.Ease = math.Max(MinEase, progress.Ease+EaseAdjIKnow) // Typically no change or slight positive
+			if progress.LearningStep < TotalLearningSteps {
+				// Example: TotalLearningSteps = 2. Steps are 0, 1.
+				// If current step was 0, now 1.
+				if progress.LearningStep == 1 {
+					progress.Interval = LearningStep2Duration
+				}
+				// Add more 'else if' for more learning steps if TotalLearningSteps > 2
+			} else { // Graduated from all learning steps
 				progress.State = StateReview
-				progress.Interval = time.Duration(GraduateToReviewIntervalGoodDays*24) * time.Hour
+				progress.Interval = time.Duration(GraduateToReviewIntervalDays*24) * time.Hour
 				progress.LearningStep = 0 // Reset for potential future relearning
 			}
-		case 4: // Easy
-			progress.State = StateReview // Graduate immediately
-			progress.Interval = time.Duration(GraduateToReviewIntervalEasyDays*24) * time.Hour
-			progress.Ease = math.Min(MaxEase, progress.Ease+EaseAdjEasy)
-			progress.LearningStep = 0 // Reset for potential future relearning
+		default:
+			return fmt.Errorf("internal error: unhandled rating %d in new/learning state", rating)
 		}
 	} else if currentState == StateReview {
-		// --- Handle State: Review ---
 		switch rating {
-		case 1: // Again (Lapsed)
+		case RatingAgain:
 			progress.State = StateRelearning
 			progress.LapsCount++
-			progress.Ease = math.Max(MinEase, progress.Ease+EaseAdjAgain)
+			progress.Ease = math.Max(MinEase, progress.Ease+EaseAdjIDontKnow)
 			progress.LearningStep = 0 // Start relearning steps
 			progress.Interval = LearningStep1Duration
-		case 2: // Hard
-			progress.Ease = math.Max(MinEase, progress.Ease+EaseAdjHard)
-			// Interval_new = Interval_old * HardIntervalMultiplier
-			// Ensure interval is at least 1 day
-			currentIntervalSec := math.Max(progress.Interval.Seconds(), 24*3600) // Min 1 day for calc base
-			newIntervalSec := currentIntervalSec * HardIntervalMultiplier
-			progress.Interval = time.Duration(newIntervalSec) * time.Second
-		case 3: // Good
-			progress.Ease = math.Max(MinEase, progress.Ease+EaseAdjGood)
+		case RatingGood:
+			progress.Ease = math.Max(MinEase, progress.Ease+EaseAdjIKnow)
 			// Interval_new = Interval_old * Ease
-			// Ensure interval is at least 1 day
 			currentIntervalSec := math.Max(progress.Interval.Seconds(), 24*3600) // Min 1 day for calc base
 			newIntervalSec := currentIntervalSec * progress.Ease
 			progress.Interval = time.Duration(newIntervalSec) * time.Second
-		case 4: // Easy
-			progress.Ease = math.Min(MaxEase, progress.Ease+EaseAdjEasy)
-			// Interval_new = Interval_old * Ease * EasyBonusIntervalMultiplier
-			// Ensure interval is at least 1 day
-			currentIntervalSec := math.Max(progress.Interval.Seconds(), 24*3600) // Min 1 day for calc base
-			newIntervalSec := currentIntervalSec * progress.Ease * EasyBonusIntervalMultiplier
-			progress.Interval = time.Duration(newIntervalSec) * time.Second
+		default:
+			return fmt.Errorf("internal error: unhandled rating %d in review state", rating)
 		}
 	} else if currentState == StateRelearning {
-		// --- Handle State: Relearning ---
-		// (Similar to learning, but graduation intervals might differ, and ease already penalized on lapse)
 		switch rating {
-		case 1: // Again
+		case RatingAgain:
 			progress.LearningStep = 0 // Reset to first relearning step
 			progress.Interval = LearningStep1Duration
-			// Ease already penalized when lapsed. Further penalty could be too much,
-			// but some systems do apply a smaller one here or just reset step.
-			// progress.Ease = math.Max(MinEase, progress.Ease + EaseAdjAgain * 0.5) // Optional: smaller hit
-		case 2: // Hard
-			progress.LearningStep = 0 // Reset to first relearning step (or repeat current)
-			progress.Interval = LearningStep1Duration
-			// progress.Ease = math.Max(MinEase, progress.Ease + EaseAdjHard * 0.5) // Optional
-		case 3: // Good
+			// Ease already penalized when lapsed. No further ease penalty here for simplicity.
+		case RatingGood:
 			progress.LearningStep++
-			if progress.LearningStep == 1 { // Advanced from relearning step 0 to step 1
-				progress.Interval = LearningStep2Duration
+			if progress.LearningStep < TotalLearningSteps {
+				if progress.LearningStep == 1 { // Advanced from relearning step 0 to step 1
+					progress.Interval = LearningStep2Duration
+				}
 			} else { // Graduated from all relearning steps
 				progress.State = StateReview
-				progress.Interval = time.Duration(GraduateToReviewIntervalGoodDays*24) * time.Hour // Standard good graduation
+				progress.Interval = time.Duration(GraduateToReviewIntervalDays*24) * time.Hour // Standard graduation
 				progress.LearningStep = 0
 			}
-		case 4: // Easy
-			progress.State = StateReview // Graduate immediately from relearning
-			progress.Interval = time.Duration(GraduateFromRelearningToReviewIntervalEasyDays*24) * time.Hour
-			progress.Ease = math.Min(MaxEase, progress.Ease+EaseAdjEasy) // Give an ease boost
-			progress.LearningStep = 0
+		default:
+			return fmt.Errorf("internal error: unhandled rating %d in relearning state", rating)
 		}
 	}
 
-	// --- Common adjustments for intervals (Review State) ---
 	if progress.State == StateReview {
-		// Ensure minimum interval of 1 day for review cards if calculation resulted in less
-		// (except for cards just graduating to 1 day).
-		// The calculations for Hard/Good/Easy in Review already use a 1-day base if current interval is less.
-		// So, this explicit check might only be needed if those calculations could yield <1 day from a >1 day base.
-		if progress.Interval < 24*time.Hour {
-			isRecentGraduation := (currentState == StateLearning || currentState == StateRelearning) &&
-				(progress.Interval == time.Duration(GraduateToReviewIntervalGoodDays*24)*time.Hour)
-			if !isRecentGraduation { // Don't override a fresh 1-day graduation interval upwards
-				progress.Interval = 24 * time.Hour
-			}
+		// Ensure minimum interval of 1 day for review cards if calculation resulted in less.
+		// Check if this card just graduated to StateReview with the standard 1-day interval.
+		isRecentGraduationToReview := (currentState == StateLearning || currentState == StateRelearning) &&
+			(progress.Interval == time.Duration(GraduateToReviewIntervalDays*24)*time.Hour)
+
+		if progress.Interval < 24*time.Hour && !isRecentGraduationToReview {
+			progress.Interval = 24 * time.Hour
 		}
 
-		// Apply fuzz factor for intervals > 1 day to prevent clumping
-		if progress.Interval > 24*time.Hour && FuzzPercentage > 0 {
-			fuzzAmount := time.Duration(float64(progress.Interval.Nanoseconds()) * FuzzPercentage)
-			if fuzzAmount > 0 {
-				// Generate random offset: [-fuzzAmount, +fuzzAmount)
-				randomOffset := time.Duration(rand.Int63n(2*fuzzAmount.Nanoseconds()) - fuzzAmount.Nanoseconds())
+		if progress.Interval > 24*time.Hour {
+			fuzzAmountNano := float64(progress.Interval.Nanoseconds()) * FuzzPercentage
+			if fuzzAmountNano > 0 {
+				randomOffset := time.Duration(rand.Int63n(int64(2*fuzzAmountNano)) - int64(fuzzAmountNano))
 				progress.Interval += randomOffset
-				// Ensure interval didn't become too short due to negative fuzz
-				if progress.Interval < 24*time.Hour {
+				if progress.Interval < 24*time.Hour { // Ensure fuzz doesn't make it too short
 					progress.Interval = 24 * time.Hour
 				}
 			}
 		}
 
-		// Cap interval at maximum
 		maxIntervalDuration := time.Duration(MaxReviewIntervalDays) * 24 * time.Hour
 		if progress.Interval > maxIntervalDuration {
 			progress.Interval = maxIntervalDuration
 		}
 	}
 
-	// Set next review time
-	// For learning/relearning steps (short intervals), add directly.
-	// For review intervals (days), it's good practice to schedule for the start of the day
-	// or ensure it's at least 'now + interval'. Here, 'now + interval' is used.
 	nextReviewTime := now.Add(progress.Interval)
 	progress.NextReview = &nextReviewTime
 
-	// Update general progress fields
 	progress.ReviewCount++
 	progress.LastReviewedAt = &now
-	if progress.FirstReviewedAt == nil || isNew { // Ensure first reviewed is set for new cards
+	if isNew || progress.FirstReviewedAt == nil {
 		progress.FirstReviewedAt = &now
 	}
 
-	// --- Database Operations (Transaction) ---
 	tx, err := s.db.Begin()
 	if err != nil {
 		return fmt.Errorf("error starting transaction: %w", err)
 	}
-	defer tx.Rollback() // Rollback if not committed
+	defer tx.Rollback()
 
-	// Create review history entry
 	reviewQuery := `
 		INSERT INTO reviews (id, user_id, card_id, rating, reviewed_at, time_spent_ms, prev_interval, new_interval, prev_ease, new_ease)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
+
+	prevIntervalNs := prevInterval.Nanoseconds()
+	newIntervalNs := progress.Interval.Nanoseconds()
+
 	_, err = tx.Exec(reviewQuery,
-		nanoid.Must(), // Consider error handling for nanoid if strict
-		userID,
-		cardID,
-		rating,
+		nanoid.Must(), userID, cardID,
+		rating, // Store the actual user rating (1 or 2)
 		now,
 		timeSpentMs,
-		prevInterval.String(),      // Store as string
-		progress.Interval.String(), // Store as string
-		prevEase,
-		progress.Ease,
+		prevIntervalNs,
+		newIntervalNs,
+		prevEase, progress.Ease,
 	)
 	if err != nil {
 		return fmt.Errorf("error creating review: %w", err)
 	}
 
-	// Update or insert progress
 	if isNew {
 		progressQuery := `
 			INSERT INTO card_progress (user_id, card_id, next_review, interval, ease, review_count, laps_count, last_reviewed_at, first_reviewed_at, state, learning_step)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`
 		_, err = tx.Exec(progressQuery,
-			userID, cardID, progress.NextReview, progress.Interval.String(), progress.Ease,
+			userID, cardID, progress.NextReview, progress.Interval.Nanoseconds(), progress.Ease,
 			progress.ReviewCount, progress.LapsCount, progress.LastReviewedAt,
 			progress.FirstReviewedAt, progress.State, progress.LearningStep,
 		)
@@ -292,7 +242,7 @@ func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int)
 			WHERE user_id = ? AND card_id = ?
 		`
 		_, err = tx.Exec(progressQuery,
-			progress.NextReview, progress.Interval.String(), progress.Ease, progress.ReviewCount,
+			progress.NextReview, progress.Interval.Nanoseconds(), progress.Ease, progress.ReviewCount,
 			progress.LapsCount, progress.LastReviewedAt, progress.State, progress.LearningStep,
 			userID, cardID,
 		)
@@ -317,12 +267,12 @@ func (s *Storage) GetCardProgress(userID, cardID string) (*CardProgress, error) 
 	`
 
 	var progress CardProgress
-	var intervalStr string
+	var intervalNs int64
 	err := s.db.QueryRow(query, userID, cardID).Scan(
 		&progress.UserID,
 		&progress.CardID,
 		&progress.NextReview,
-		&intervalStr,
+		&intervalNs,
 		&progress.Ease,
 		&progress.ReviewCount,
 		&progress.LapsCount,
@@ -333,33 +283,31 @@ func (s *Storage) GetCardProgress(userID, cardID string) (*CardProgress, error) 
 	)
 
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, err // Return sql.ErrNoRows as is, so ReviewCard can detect new cards
+		}
 		return nil, fmt.Errorf("error getting card progress: %w", err)
 	}
 
-	// Parse the interval string to time.Duration
-	interval, err := time.ParseDuration(intervalStr)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing interval duration: %w", err)
-	}
-	progress.Interval = interval
+	progress.Interval = time.Duration(intervalNs)
 
 	return &progress, nil
 }
 
 func (s *Storage) GetDueCardCount(userID string) (int, error) {
-	decks, err := s.GetDecks(userID)
+	reviewTime := time.Now().Truncate(24 * time.Hour).Add(24*time.Hour - time.Nanosecond)
+	query := `
+		SELECT COUNT(*)
+		FROM card_progress
+		WHERE user_id = ? AND next_review <= ?
+	`
+	var count int
+	err := s.db.QueryRow(query, userID, reviewTime).Scan(&count)
 	if err != nil {
-		return 0, fmt.Errorf("error fetching decks for due card count: %w", err)
+		return 0, fmt.Errorf("error getting due card count: %w", err)
 	}
 
-	var totalDueCount int
-	for _, deck := range decks {
-		// Use the total count from deck metrics (NewCards already limited in UpdateDeckMetrics)
-		dueCount := deck.NewCards + deck.LearningCards + deck.ReviewCards
-		totalDueCount += dueCount
-	}
-
-	return totalDueCount, nil
+	return count, nil
 }
 
 func (s *Storage) ResetProgress(userID string, deckID string) error {
@@ -367,25 +315,37 @@ func (s *Storage) ResetProgress(userID string, deckID string) error {
 	var args []interface{}
 
 	if deckID != "" {
-		query = `
+		query = ` 
 			DELETE FROM card_progress
+			WHERE user_id = ? AND card_id IN (
+				SELECT id FROM cards WHERE deck_id = ? 
+			)
+		`
+		args = []interface{}{userID, deckID}
+
+		reviewQuery := `
+			DELETE FROM reviews
 			WHERE user_id = ? AND card_id IN (
 				SELECT id FROM cards WHERE deck_id = ?
 			)
 		`
-		args = []interface{}{userID, deckID}
+		if _, err := s.db.Exec(reviewQuery, userID, deckID); err != nil {
+			return fmt.Errorf("error resetting review history for deck %s: %w", deckID, err)
+		}
+
 	} else {
-		query = `
-			DELETE FROM card_progress
-			WHERE user_id = ?
-		`
+		query = `DELETE FROM card_progress WHERE user_id = ?`
 		args = []interface{}{userID}
+
+		reviewQuery := `DELETE FROM reviews WHERE user_id = ?`
+		if _, err := s.db.Exec(reviewQuery, userID); err != nil {
+			return fmt.Errorf("error resetting all review history for user %s: %w", userID, err)
+		}
 	}
 
 	_, err := s.db.Exec(query, args...)
 	if err != nil {
 		return fmt.Errorf("error resetting card progress: %w", err)
 	}
-
 	return nil
 }

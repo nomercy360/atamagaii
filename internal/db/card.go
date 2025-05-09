@@ -11,8 +11,7 @@ import (
 type Card struct {
 	ID        string     `db:"id" json:"id"`
 	DeckID    string     `db:"deck_id" json:"deck_id"`
-	Front     string     `db:"front" json:"front"`
-	Back      string     `db:"back" json:"back"`
+	Fields    string     `db:"fields" json:"fields"`
 	CreatedAt time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time  `db:"updated_at" json:"updated_at"`
 	DeletedAt *time.Time `db:"deleted_at" json:"deleted_at,omitempty"`
@@ -51,16 +50,16 @@ type Fragment struct {
 	Furigana *string `json:"furigana"`
 }
 
-func (s *Storage) AddCard(deckID, front, back string) (*Card, error) {
+func (s *Storage) AddCard(deckID, fields string) (*Card, error) {
 	cardID := nanoid.Must()
 	now := time.Now()
 
 	query := `
-		INSERT INTO cards (id, deck_id, front, back, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?)
+		INSERT INTO cards (id, deck_id, fields, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?)
 	`
 
-	_, err := s.db.Exec(query, cardID, deckID, front, back, now, now)
+	_, err := s.db.Exec(query, cardID, deckID, fields, now, now)
 	if err != nil {
 		return nil, fmt.Errorf("error adding card: %w", err)
 	}
@@ -68,18 +67,13 @@ func (s *Storage) AddCard(deckID, front, back string) (*Card, error) {
 	return &Card{
 		ID:        cardID,
 		DeckID:    deckID,
-		Front:     front,
-		Back:      back,
+		Fields:    fields,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}, nil
 }
 
-func (s *Storage) AddCardsInBatch(deckID string, fronts, backs []string) error {
-	if len(fronts) != len(backs) {
-		return fmt.Errorf("number of fronts (%d) does not match number of backs (%d)", len(fronts), len(backs))
-	}
-
+func (s *Storage) AddCardsInBatch(deckID string, fieldsArray []string) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return fmt.Errorf("error starting transaction: %w", err)
@@ -91,8 +85,8 @@ func (s *Storage) AddCardsInBatch(deckID string, fronts, backs []string) error {
 	}()
 
 	stmt, err := tx.Prepare(`
-		INSERT INTO cards (id, deck_id, front, back, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?)
+		INSERT INTO cards (id, deck_id, fields, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return fmt.Errorf("error preparing statement: %w", err)
@@ -100,9 +94,9 @@ func (s *Storage) AddCardsInBatch(deckID string, fronts, backs []string) error {
 	defer stmt.Close()
 
 	now := time.Now()
-	for i := range fronts {
+	for i, fields := range fieldsArray {
 		cardID := nanoid.Must()
-		_, err = stmt.Exec(cardID, deckID, fronts[i], backs[i], now, now)
+		_, err = stmt.Exec(cardID, deckID, fields, now, now)
 		if err != nil {
 			return fmt.Errorf("error inserting card %d: %w", i, err)
 		}
@@ -150,10 +144,9 @@ func (s *Storage) GetNewCards(userID string, deckID string, limit int) ([]CardWi
 
 	query := `
 		SELECT c.id,
-		       c.deck_id, 
-		       c.front,
-		       c.back,
-		       c.created_at, 
+		       c.deck_id,
+		       c.fields,
+		       c.created_at,
 		       c.updated_at,
 		       c.deleted_at
 		FROM cards c
@@ -177,8 +170,7 @@ func (s *Storage) GetNewCards(userID string, deckID string, limit int) ([]CardWi
 		if err := rows.Scan(
 			&card.ID,
 			&card.DeckID,
-			&card.Front,
-			&card.Back,
+			&card.Fields,
 			&card.CreatedAt,
 			&card.UpdatedAt,
 			&card.DeletedAt,
@@ -199,7 +191,7 @@ func (s *Storage) GetDueCards(userID string, deckID string, limit int) ([]CardWi
 	todayEnd := time.Now().Truncate(24 * time.Hour).Add(24*time.Hour - time.Nanosecond)
 
 	query := `
-		SELECT c.id, c.deck_id, c.front, c.back, c.created_at, c.updated_at, c.deleted_at,
+		SELECT c.id, c.deck_id, c.fields, c.created_at, c.updated_at, c.deleted_at,
 		       p.next_review, p.interval, p.ease, p.review_count, p.laps_count, p.last_reviewed_at, p.first_reviewed_at,
 		       p.state, p.learning_step
 		FROM cards c
@@ -220,19 +212,18 @@ func (s *Storage) GetDueCards(userID string, deckID string, limit int) ([]CardWi
 	var cards []CardWithProgress
 	for rows.Next() {
 		var card CardWithProgress
-		var intervalStr string
+		var intervalNs int64
 		var state string
 		var learningStep int
 		if err := rows.Scan(
 			&card.ID,
 			&card.DeckID,
-			&card.Front,
-			&card.Back,
+			&card.Fields,
 			&card.CreatedAt,
 			&card.UpdatedAt,
 			&card.DeletedAt,
 			&card.NextReview,
-			&intervalStr,
+			&intervalNs,
 			&card.Ease,
 			&card.ReviewCount,
 			&card.LapsCount,
@@ -244,14 +235,9 @@ func (s *Storage) GetDueCards(userID string, deckID string, limit int) ([]CardWi
 			return nil, fmt.Errorf("error scanning due card: %w", err)
 		}
 
-		// Parse the interval string to time.Duration
-		interval, err := time.ParseDuration(intervalStr)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing interval duration: %w", err)
-		}
-		card.Interval = interval
-		card.State = state               // Store the state
-		card.LearningStep = learningStep // Store the learning step
+		card.Interval = time.Duration(intervalNs)
+		card.State = state
+		card.LearningStep = learningStep
 
 		cards = append(cards, card)
 	}
@@ -291,7 +277,7 @@ func (s *Storage) GetCardsWithProgress(userID string, deckID string, limit int) 
 
 func (s *Storage) GetCard(cardID string) (*Card, error) {
 	query := `
-		SELECT id, deck_id, front, back, created_at, updated_at, deleted_at
+		SELECT id, deck_id, fields, created_at, updated_at, deleted_at
 		FROM cards
 		WHERE id = ? AND deleted_at IS NULL
 	`
@@ -300,8 +286,7 @@ func (s *Storage) GetCard(cardID string) (*Card, error) {
 	err := s.db.QueryRow(query, cardID).Scan(
 		&card.ID,
 		&card.DeckID,
-		&card.Front,
-		&card.Back,
+		&card.Fields,
 		&card.CreatedAt,
 		&card.UpdatedAt,
 		&card.DeletedAt,

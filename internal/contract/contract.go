@@ -33,34 +33,30 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
-// CardFront represents the front of a flashcard with properly unmarshaled JSON
-type CardFront struct {
-	Kanji string `json:"kanji"`
-	Kana  string `json:"kana"`
-}
-
-type CardBackExample struct {
-	Sentence    []CardBackFragment `json:"sentence"`
+// CardFields represents all fields of a flashcard with properly unmarshaled JSON
+type CardFields struct {
+	Kanji       string             `json:"kanji"`
+	Kana        string             `json:"kana"`
 	Translation string             `json:"translation"`
 	AudioURL    string             `json:"audio_url"`
+	Examples    []CardFieldExample `json:"examples"`
 }
 
-type CardBackFragment struct {
+type CardFieldExample struct {
+	Sentence    []CardFieldFragment `json:"sentence"`
+	Translation string              `json:"translation"`
+	AudioURL    string              `json:"audio_url"`
+}
+
+type CardFieldFragment struct {
 	Fragment string  `json:"fragment"`
 	Furigana *string `json:"furigana"`
-}
-
-type CardBack struct {
-	Translation string            `json:"translation"`
-	AudioURL    string            `json:"audio_url"`
-	Examples    []CardBackExample `json:"examples"`
 }
 
 type CardResponse struct {
 	ID              string        `json:"id"`
 	DeckID          string        `json:"deck_id"`
-	Front           CardFront     `json:"front"`
-	Back            CardBack      `json:"back"`
+	Fields          CardFields    `json:"fields"`
 	CreatedAt       time.Time     `json:"created_at"`
 	UpdatedAt       time.Time     `json:"updated_at"`
 	DeletedAt       *time.Time    `json:"deleted_at,omitempty"`

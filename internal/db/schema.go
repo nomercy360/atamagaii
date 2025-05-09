@@ -32,8 +32,7 @@ func (s *Storage) UpdateSchema() error {
 	CREATE TABLE IF NOT EXISTS cards (
 		id TEXT PRIMARY KEY,
 		deck_id TEXT NOT NULL,
-		front TEXT NOT NULL,
-		back TEXT NOT NULL,
+		fields TEXT NOT NULL,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		deleted_at TIMESTAMP,
