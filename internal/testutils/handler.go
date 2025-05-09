@@ -12,6 +12,7 @@ import (
 	telegram "github.com/go-telegram/bot"
 	"github.com/labstack/echo/v4"
 	initdata "github.com/telegram-mini-apps/init-data-golang"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -24,6 +25,21 @@ import (
 var (
 	dbStorage *db.Storage
 )
+
+// MockStorageProvider implements storage.Provider for testing
+type MockStorageProvider struct{}
+
+// UploadFile implements storage.Provider.UploadFile
+func (m *MockStorageProvider) UploadFile(ctx context.Context, data io.Reader, filename string, contentType string) (string, error) {
+	// Return a mock URL for testing
+	return fmt.Sprintf("https://test-storage.example.com/%s", filename), nil
+}
+
+// GetFileURL implements storage.Provider.GetFileURL
+func (m *MockStorageProvider) GetFileURL(filename string) (string, error) {
+	// Return a mock URL for testing
+	return fmt.Sprintf("https://test-storage.example.com/%s", filename), nil
+}
 
 type CustomValidator struct {
 	validator *validator.Validate
@@ -97,7 +113,10 @@ func SetupHandlerDependencies(t *testing.T) *echo.Echo {
 		}
 	}
 
-	h := handler.New(bot, dbStorage, "hello-world", TestBotToken)
+	// Create a mock storage provider for testing
+	mockStorage := &MockStorageProvider{}
+
+	h := handler.New(bot, dbStorage, "hello-world", TestBotToken, mockStorage)
 
 	e := echo.New()
 

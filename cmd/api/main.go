@@ -4,6 +4,7 @@ import (
 	"atamagaii/internal/db"
 	"atamagaii/internal/handler"
 	"atamagaii/internal/middleware"
+	"atamagaii/internal/storage"
 	"context"
 	"fmt"
 	"github.com/go-playground/validator/v10"
@@ -17,14 +18,15 @@ import (
 )
 
 type Config struct {
-	Host             string `yaml:"host"`
-	Port             int    `yaml:"port"`
-	DBPath           string `yaml:"db_path"`
-	TelegramBotToken string `yaml:"telegram_bot_token"`
-	OpenAIAPIKey     string `yaml:"openai_api_key"`
-	GrokAPIKey       string `yaml:"grok_api_key"`
-	ExternalURL      string `yaml:"external_url"`
-	JWTSecretKey     string `yaml:"jwt_secret_key"`
+	Host             string           `yaml:"host"`
+	Port             int              `yaml:"port"`
+	DBPath           string           `yaml:"db_path"`
+	TelegramBotToken string           `yaml:"telegram_bot_token"`
+	OpenAIAPIKey     string           `yaml:"openai_api_key"`
+	GrokAPIKey       string           `yaml:"grok_api_key"`
+	ExternalURL      string           `yaml:"external_url"`
+	JWTSecretKey     string           `yaml:"jwt_secret_key"`
+	S3Storage        storage.S3Config `yaml:"s3_storage"`
 }
 
 func ReadConfig(filePath string) (*Config, error) {
@@ -75,7 +77,7 @@ func main() {
 		log.Fatalf("invalid configuration: %v", err)
 	}
 
-	storage, err := db.ConnectDB(cfg.DBPath)
+	dbStorage, err := db.ConnectDB(cfg.DBPath)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -85,7 +87,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	h := handler.New(bot, storage, cfg.JWTSecretKey, cfg.TelegramBotToken)
+	// Initialize S3 storage provider
+	var storageProvider storage.Provider
+	storageProvider, err = storage.NewS3Provider(cfg.S3Storage)
+	if err != nil {
+		log.Printf("Warning: Failed to initialize S3 storage: %v", err)
+		// Continue without S3 storage, media uploads will be skipped
+		storageProvider = nil
+	}
+
+	h := handler.New(bot, dbStorage, cfg.JWTSecretKey, cfg.TelegramBotToken, storageProvider)
 
 	log.Printf("Authorized on account %d", bot.ID())
 

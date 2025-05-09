@@ -3,6 +3,7 @@ package handler
 import (
 	"atamagaii/internal/contract"
 	"atamagaii/internal/db"
+	"atamagaii/internal/utils"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -344,69 +345,42 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	rootDir := "."
-
-	// Try to locate the materials directory by checking a few common locations
-	materialsDir := filepath.Join(rootDir, "materials")
-	if _, err := os.Stat(materialsDir); os.IsNotExist(err) {
-		// Try one level up (for tests running from a subdirectory)
-		materialsDir = filepath.Join(rootDir, "..", "materials")
-		if _, err := os.Stat(materialsDir); os.IsNotExist(err) {
-			// Try absolute path based on working directory
-			wd, err := os.Getwd()
-			if err == nil {
-				// Try to find materials in the main project directory
-				for i := 0; i < 3; i++ { // Look up to 3 levels up
-					checkPath := filepath.Join(wd, "materials")
-					if _, err := os.Stat(checkPath); err == nil {
-						materialsDir = checkPath
-						break
-					}
-					// Go up one directory
-					wd = filepath.Dir(wd)
-				}
-			}
-		}
+	materialsDir, err := utils.FindDirUp("materials", 3)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find materials directory")
 	}
 
 	filePath := filepath.Join(materialsDir, req.FileName)
 
-	// Check if the file exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("File %s does not exist (looked in %s)", req.FileName, materialsDir))
 	}
 
-	// Open and read the vocabulary file
 	fileData, err := os.ReadFile(filePath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to read file: %v", err))
 	}
 
-	// Parse the JSON vocabulary data
 	var vocabularyItems []db.VocabularyItem
 	if err := json.Unmarshal(fileData, &vocabularyItems); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to parse vocabulary data: %v", err))
 	}
 
-	// Extract level from filename (assuming format is vocab_nX.json, where X is the level)
 	var level string
 	if len(req.FileName) >= 8 && req.FileName[:7] == "vocab_n" {
-		level = req.FileName[6:8] // Extract "N5", "N4", etc.
+		level = req.FileName[6:8]
 	} else {
 		level = "Unknown"
 	}
 
-	// Create the deck
 	deck, err := h.db.CreateDeck(userID, req.Name, req.Description, level)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to create deck: %v", err))
 	}
 
-	// Prepare card data
 	fieldsArray := make([]string, len(vocabularyItems))
 
 	for i, item := range vocabularyItems {
-		// Map directly using the same field names as in the JSON file
 		fieldsContent := map[string]interface{}{
 			"word":             item.Word,
 			"reading":          item.Reading,

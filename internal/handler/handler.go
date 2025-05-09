@@ -4,6 +4,7 @@ import (
 	"atamagaii/internal/contract"
 	"atamagaii/internal/db"
 	"atamagaii/internal/middleware"
+	"atamagaii/internal/storage"
 	telegram "github.com/go-telegram/bot"
 	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
@@ -12,10 +13,11 @@ import (
 )
 
 type Handler struct {
-	bot       *telegram.Bot
-	db        *db.Storage
-	jwtSecret string
-	botToken  string
+	bot             *telegram.Bot
+	db              *db.Storage
+	jwtSecret       string
+	botToken        string
+	storageProvider storage.Provider
 }
 
 func New(
@@ -23,12 +25,14 @@ func New(
 	db *db.Storage,
 	jwtSecret string,
 	botToken string,
+	storageProvider storage.Provider,
 ) *Handler {
 	return &Handler{
-		bot:       bot,
-		db:        db,
-		jwtSecret: jwtSecret,
-		botToken:  botToken,
+		bot:             bot,
+		db:              db,
+		jwtSecret:       jwtSecret,
+		botToken:        botToken,
+		storageProvider: storageProvider,
 	}
 }
 
@@ -42,6 +46,7 @@ func (h *Handler) RegisterRoutes(e *echo.Echo) {
 	v1.Use(echojwt.WithConfig(middleware.GetUserAuthConfig(h.jwtSecret)))
 
 	h.AddFlashcardRoutes(v1)
+	h.AddAnkiImportRoutes(v1)
 }
 
 func GetUserIDFromToken(c echo.Context) (string, error) {

@@ -40,6 +40,7 @@ type VocabularyItem struct {
 	Frequency       int    `json:"frequency"`
 	AudioWord       string `json:"audio_word"`
 	AudioExample    string `json:"audio_example"`
+	ImageURL        string `json:"image_url,omitempty"`
 }
 
 func (s *Storage) AddCard(userID, deckID, fields string) (*Card, error) {

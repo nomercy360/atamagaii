@@ -33,7 +33,6 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
-// CardFields represents all fields of a flashcard with properly unmarshaled JSON
 type CardFields struct {
 	Word            string `json:"word"`
 	Reading         string `json:"reading"`
@@ -47,8 +46,8 @@ type CardFields struct {
 	Frequency       int    `json:"frequency"`
 	AudioWord       string `json:"audio_word"`
 	AudioExample    string `json:"audio_example"`
+	ImageURL        string `json:"image_url,omitempty"`
 }
-
 type CardResponse struct {
 	ID              string        `json:"id"`
 	DeckID          string        `json:"deck_id"`
