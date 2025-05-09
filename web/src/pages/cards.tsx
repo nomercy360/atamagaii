@@ -238,9 +238,6 @@ export default function Cards() {
 	}
 
 	const handleNextCard = () => {
-		// Provide a subtle impact when transitioning to the next card
-		hapticFeedback('impact', 'soft')
-
 		setIsTransitioning(true)
 		setTimeout(() => {
 			setFlipped(false)
@@ -257,16 +254,8 @@ export default function Cards() {
 		const finalTimeSpent = getCurrentTimeSpent()
 		console.log('Sending review with time_spent_ms:', finalTimeSpent)
 
-		// Provide appropriate haptic feedback based on rating value
-		if (rating === 1) { // Again
-			hapticFeedback('notification', 'error')
-		} else if (rating === 2) { // Hard
-			hapticFeedback('impact', 'medium')
-		} else if (rating === 3) { // Good
-			hapticFeedback('impact', 'light')
-		} else if (rating === 4) { // Easy
-			hapticFeedback('notification', 'success')
-		}
+		// Provide simple haptic feedback on rating - the same for all ratings
+		hapticFeedback('impact', 'light')
 
 		const timeToSend = finalTimeSpent > 0 ? finalTimeSpent : 1000
 
@@ -281,8 +270,6 @@ export default function Cards() {
 
 		if (error) {
 			console.error('Failed to submit review:', error)
-			// Provide error feedback
-			hapticFeedback('notification', 'error')
 			return
 		}
 
