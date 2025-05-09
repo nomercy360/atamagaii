@@ -1,4 +1,4 @@
-import { createSignal, createResource, For, Show, createEffect } from 'solid-js'
+import { createSignal, createResource, For, Show, createEffect, onMount, onCleanup } from 'solid-js'
 import { apiRequest, Card, Deck, Stats } from '~/lib/api'
 import { useParams, useNavigate } from '@solidjs/router'
 import AudioButton from '~/components/audio-button'
@@ -38,6 +38,9 @@ export default function Cards() {
 	const [cardIndex, setCardIndex] = createSignal(0)
 	const [flipped, setFlipped] = createSignal(false)
 	const [isTransitioning, setIsTransitioning] = createSignal(false)
+	const [timeSpentMs, setTimeSpentMs] = createSignal(0)
+	const [startTime, setStartTime] = createSignal<number | null>(null)
+	const [isTimerActive, setIsTimerActive] = createSignal(false)
 	const [deckMetrics, setDeckMetrics] = createSignal<{
 		newCards: number;
 		learningCards: number;
@@ -73,6 +76,14 @@ export default function Cards() {
 				console.error(`Failed to fetch cards for deck ${params.deckId}:`, error)
 				return []
 			}
+
+			// Reset timer when new cards are loaded
+			setTimeout(() => {
+				if (data && data.length > 0) {
+					resetTimer();
+				}
+			}, 0);
+
 			return data || []
 		},
 	)
@@ -83,30 +94,100 @@ export default function Cards() {
 		return cardList[cardIndex() % cardList.length]
 	}
 
+	// Manages the visibility change and page lifecycle events
+	const handleVisibilityChange = () => {
+		if (document.visibilityState === 'hidden') {
+			// When tab is hidden or browser minimized, pause the timer
+			pauseTimer();
+		} else if (document.visibilityState === 'visible' && currentCard()) {
+			// When tab becomes visible again and a card is displayed, resume the timer
+			startTimer();
+		}
+	};
+
+	// Start timing for a card
+	const startTimer = () => {
+		if (!isTimerActive()) {
+			setStartTime(Date.now());
+			setIsTimerActive(true);
+		}
+	};
+
+	// Pause the timer and accumulate elapsed time
+	const pauseTimer = () => {
+		if (isTimerActive() && startTime() !== null) {
+			const elapsedMs = Date.now() - startTime()!;
+			setTimeSpentMs(prev => prev + elapsedMs);
+			setStartTime(null);
+			setIsTimerActive(false);
+		}
+	};
+
+	// Reset the timer for a new card
+	const resetTimer = () => {
+		setTimeSpentMs(0);
+		setStartTime(Date.now());
+		setIsTimerActive(true);
+	};
+
+	// Get the current total time spent (including active timing)
+	const getCurrentTimeSpent = () => {
+		let total = timeSpentMs();
+		if (isTimerActive() && startTime() !== null) {
+			total += Date.now() - startTime()!;
+		}
+		return total;
+	};
+
+	// Setup visibility and lifecycle event listeners
+	onMount(() => {
+		// Start timing when component mounts if a card is available
+		if (currentCard()) {
+			resetTimer();
+		}
+
+		// Add event listeners for visibility changes
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+
+		// Add event listeners for page unload
+		window.addEventListener('beforeunload', pauseTimer);
+	});
+
+	onCleanup(() => {
+		// Clean up event listeners
+		document.removeEventListener('visibilitychange', handleVisibilityChange);
+		window.removeEventListener('beforeunload', pauseTimer);
+		pauseTimer();
+	});
+
 	const handleCardFlip = () => {
 		if (isTransitioning()) return;
-		setFlipped(!flipped())
+		setFlipped(!flipped());
 	}
 
 	const handleNextCard = () => {
+		pauseTimer();
 		setIsTransitioning(true);
 		setTimeout(() => {
 			setFlipped(false);
 			setCardIndex(prevIndex => prevIndex + 1);
 			setTimeout(() => {
 				setIsTransitioning(false);
+				resetTimer();
 			}, 50);
 		}, 300);
 	}
 
 	const handleReview = async (cardId: string, rating: number) => {
-		const timeSpent = 5000;
+		pauseTimer();
+		const finalTimeSpent = getCurrentTimeSpent();
+
 		const { error } = await apiRequest(`/cards/${cardId}/review`, {
 			method: 'POST',
 			body: JSON.stringify({
 				card_id: cardId,
 				rating,
-				time_spent_ms: timeSpent,
+				time_spent_ms: finalTimeSpent,
 			}),
 		});
 		if (error) {

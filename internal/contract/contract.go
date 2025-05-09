@@ -71,4 +71,6 @@ type CardResponse struct {
 	LapsCount       *int          `json:"laps_count,omitempty"`
 	LastReviewedAt  *time.Time    `json:"last_reviewed_at,omitempty"`
 	FirstReviewedAt *time.Time    `json:"first_reviewed_at,omitempty"`
+	State           string        `json:"state,omitempty"`
+	LearningStep    int           `json:"learning_step,omitempty"`
 }

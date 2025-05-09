@@ -27,6 +27,8 @@ type CardWithProgress struct {
 	LapsCount       *int          `db:"laps_count" json:"laps_count,omitempty"`
 	LastReviewedAt  *time.Time    `db:"last_reviewed_at" json:"last_reviewed_at,omitempty"`
 	FirstReviewedAt *time.Time    `db:"first_reviewed_at" json:"first_reviewed_at,omitempty"`
+	State           string        `db:"state" json:"state,omitempty"`
+	LearningStep    int           `db:"learning_step" json:"learning_step,omitempty"`
 }
 
 type VocabularyItem struct {
@@ -193,10 +195,11 @@ func (s *Storage) GetNewCards(userID string, deckID string, limit int) ([]CardWi
 	return cards, nil
 }
 
-func (s *Storage) GetReviewCards(userID string, deckID string, limit int) ([]CardWithProgress, error) {
+func (s *Storage) GetDueCards(userID string, deckID string, limit int) ([]CardWithProgress, error) {
 	query := `
 		SELECT c.id, c.deck_id, c.front, c.back, c.created_at, c.updated_at, c.deleted_at,
-		       p.next_review, p.interval, p.ease, p.review_count, p.laps_count, p.last_reviewed_at, p.first_reviewed_at
+		       p.next_review, p.interval, p.ease, p.review_count, p.laps_count, p.last_reviewed_at, p.first_reviewed_at,
+		       p.state, p.learning_step
 		FROM cards c
 		JOIN card_progress p ON c.id = p.card_id AND p.user_id = ?
 		JOIN decks d ON c.deck_id = d.id AND d.user_id = ?
@@ -208,7 +211,7 @@ func (s *Storage) GetReviewCards(userID string, deckID string, limit int) ([]Car
 
 	rows, err := s.db.Query(query, userID, userID, deckID, limit)
 	if err != nil {
-		return nil, fmt.Errorf("error getting review cards: %w", err)
+		return nil, fmt.Errorf("error getting due cards: %w", err)
 	}
 	defer rows.Close()
 
@@ -216,6 +219,8 @@ func (s *Storage) GetReviewCards(userID string, deckID string, limit int) ([]Car
 	for rows.Next() {
 		var card CardWithProgress
 		var intervalStr string
+		var state string
+		var learningStep int
 		if err := rows.Scan(
 			&card.ID,
 			&card.DeckID,
@@ -231,8 +236,10 @@ func (s *Storage) GetReviewCards(userID string, deckID string, limit int) ([]Car
 			&card.LapsCount,
 			&card.LastReviewedAt,
 			&card.FirstReviewedAt,
+			&state,
+			&learningStep,
 		); err != nil {
-			return nil, fmt.Errorf("error scanning review card: %w", err)
+			return nil, fmt.Errorf("error scanning due card: %w", err)
 		}
 
 		// Parse the interval string to time.Duration
@@ -241,15 +248,22 @@ func (s *Storage) GetReviewCards(userID string, deckID string, limit int) ([]Car
 			return nil, fmt.Errorf("error parsing interval duration: %w", err)
 		}
 		card.Interval = interval
+		card.State = state               // Store the state
+		card.LearningStep = learningStep // Store the learning step
 
 		cards = append(cards, card)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating review card rows: %w", err)
+		return nil, fmt.Errorf("error iterating due card rows: %w", err)
 	}
 
 	return cards, nil
+}
+
+// For backward compatibility
+func (s *Storage) GetReviewCards(userID string, deckID string, limit int) ([]CardWithProgress, error) {
+	return s.GetDueCards(userID, deckID, limit)
 }
 
 func (s *Storage) GetCardsWithProgress(userID string, deckID string, limit int) ([]CardWithProgress, error) {

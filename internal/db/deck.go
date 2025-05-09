@@ -120,7 +120,6 @@ func (s *Storage) GetDeck(deckID string) (*Deck, error) {
 		return nil, fmt.Errorf("error getting deck: %w", err)
 	}
 
-	// We only have the user ID from the deck record, but that's enough to calculate metrics
 	if err := s.UpdateDeckMetrics(&deck, deck.UserID); err != nil {
 		return nil, fmt.Errorf("error updating deck metrics: %w", err)
 	}
@@ -206,12 +205,9 @@ func (s *Storage) DeleteDeck(deckID string) error {
 	return nil
 }
 
-// UpdateDeckMetrics calculates and updates metrics for a deck
 func (s *Storage) UpdateDeckMetrics(deck *Deck, userID string) error {
-	// Get today's date at midnight for tracking new cards started today
 	today := time.Now().Truncate(24 * time.Hour)
 
-	// First, count how many new cards were started today for this deck
 	countNewStartedTodayQuery := `
 		SELECT COUNT(*) 
 		FROM card_progress p
@@ -228,13 +224,11 @@ func (s *Storage) UpdateDeckMetrics(deck *Deck, userID string) error {
 		return fmt.Errorf("error counting new cards started today: %w", err)
 	}
 
-	// Calculate how many additional new cards we can show
 	newCardsRemaining := deck.NewCardsPerDay - newCardsStartedToday
 	if newCardsRemaining < 0 {
 		newCardsRemaining = 0
 	}
 
-	// Query to count new cards (never studied)
 	newCardsQuery := `
 		SELECT COUNT(*)
 		FROM cards c
@@ -247,41 +241,30 @@ func (s *Storage) UpdateDeckMetrics(deck *Deck, userID string) error {
 		return fmt.Errorf("error counting new cards: %w", err)
 	}
 
-	// Limit new cards to the remaining allowance for today
 	deck.NewCards = totalNewCards
 	if deck.NewCards > newCardsRemaining {
 		deck.NewCards = newCardsRemaining
 	}
 
-	// Query to count learning cards (interval < 1 day or failed recently)
 	learningCardsQuery := `
 		SELECT COUNT(*)
 		FROM cards c
 		JOIN card_progress p ON c.id = p.card_id
 		WHERE c.deck_id = ? AND c.deleted_at IS NULL
 		AND p.user_id = ?
-		AND (
-			p.interval <= 1
-			OR (
-				p.next_review <= CURRENT_TIMESTAMP
-				AND p.last_reviewed_at >= datetime('now', '-1 day')
-			)
-		)
+		AND (p.state = 'learning' OR p.state = 'relearning')
 	`
 	if err := s.db.QueryRow(learningCardsQuery, deck.ID, userID).Scan(&deck.LearningCards); err != nil {
 		return fmt.Errorf("error counting learning cards: %w", err)
 	}
 
-	// Query to count review cards (cards from yesterday or earlier)
 	reviewCardsQuery := `
 		SELECT COUNT(*)
 		FROM cards c
 		JOIN card_progress p ON c.id = p.card_id
 		WHERE c.deck_id = ? AND c.deleted_at IS NULL
 		AND p.user_id = ?
-		AND p.interval > 1
-		AND p.next_review <= CURRENT_TIMESTAMP
-		AND p.last_reviewed_at < datetime('now', '-1 day')
+		AND p.state = 'review'
 	`
 	if err := s.db.QueryRow(reviewCardsQuery, deck.ID, userID).Scan(&deck.ReviewCards); err != nil {
 		return fmt.Errorf("error counting review cards: %w", err)

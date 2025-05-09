@@ -99,6 +99,8 @@ func formatCardResponse(card db.CardWithProgress) (contract.CardResponse, error)
 		LapsCount:       card.LapsCount,
 		LastReviewedAt:  card.LastReviewedAt,
 		FirstReviewedAt: card.FirstReviewedAt,
+		State:           card.State,
+		LearningStep:    card.LearningStep,
 	}
 
 	var front contract.CardFront
