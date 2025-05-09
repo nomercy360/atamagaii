@@ -69,33 +69,41 @@ export interface Deck {
 	review_cards?: number
 }
 
-export interface CardFragment {
-	fragment: string
-	furigana: string | null
+export interface CardFields {
+	word: string
+	reading: string
+	word_furigana: string
+	meaning_en: string
+	meaning_ru: string
+	example_ja: string
+	example_en: string
+	example_ru: string
+	example_furigana: string
+	frequency: number
+	audio_word: string
+	audio_example: string
 }
 
-export interface CardExample {
-	sentence: CardFragment[]
-	translation: string
-	audio_url: string
+export interface CardFields {
+	word: string
+	reading: string
+	word_furigana: string
+	meaning_en: string
+	meaning_ru: string
+	example_ja: string
+	example_en: string
+	example_ru: string
+	example_furigana: string
+	frequency: number
+	audio_word: string
+	audio_example: string
 }
 
-export interface CardFront {
-	kanji: string
-	kana: string
-}
-
-export interface CardBack {
-	translation: string
-	audio_url: string
-	examples: CardExample[]
-}
 
 export interface Card {
 	id: string
 	deck_id: string
-	front: CardFront
-	back: CardBack
+	fields: CardFields
 	created_at: string
 	updated_at: string
 	deleted_at?: string
@@ -105,6 +113,9 @@ export interface Card {
 	review_count?: number
 	laps_count?: number
 	last_reviewed_at?: string
+	first_reviewed_at?: string
+	state?: string
+	learning_step?: number
 }
 
 export interface CardProgress {

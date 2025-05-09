@@ -366,17 +366,12 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to parse vocabulary data: %v", err))
 	}
 
-	// Extract level from the first item (assuming all items in a file have the same level)
+	// Extract level from filename (assuming format is vocab_nX.json, where X is the level)
 	var level string
-	if len(vocabularyItems) > 0 {
-		level = vocabularyItems[0].Level
+	if len(req.FileName) >= 8 && req.FileName[:7] == "vocab_n" {
+		level = req.FileName[6:8] // Extract "N5", "N4", etc.
 	} else {
-		// Try to extract level from filename if there are no items
-		if len(req.FileName) >= 8 && req.FileName[:7] == "vocab_n" {
-			level = req.FileName[6:8] // Extract "N5", "N4", etc.
-		} else {
-			level = "Unknown"
-		}
+		level = "Unknown"
 	}
 
 	// Create the deck
@@ -389,12 +384,20 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 	fieldsArray := make([]string, len(vocabularyItems))
 
 	for i, item := range vocabularyItems {
+		// Map directly using the same field names as in the JSON file
 		fieldsContent := map[string]interface{}{
-			"kanji":       item.Kanji,
-			"kana":        item.Kana,
-			"translation": item.Translation,
-			"examples":    item.Examples,
-			"audio_url":   item.AudioURL,
+			"word":             item.Word,
+			"reading":          item.Reading,
+			"word_furigana":    item.WordFurigana,
+			"meaning_en":       item.MeaningEn,
+			"meaning_ru":       item.MeaningRu,
+			"example_ja":       item.ExampleJa,
+			"example_en":       item.ExampleEn,
+			"example_ru":       item.ExampleRu,
+			"example_furigana": item.ExampleFurigana,
+			"frequency":        item.Frequency,
+			"audio_word":       item.AudioWord,
+			"audio_example":    item.AudioExample,
 		}
 		fieldsJSON, _ := json.Marshal(fieldsContent)
 		fieldsArray[i] = string(fieldsJSON)

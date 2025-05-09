@@ -31,23 +31,18 @@ type CardWithProgress struct {
 }
 
 type VocabularyItem struct {
-	Kanji       string    `json:"kanji"`
-	Kana        string    `json:"kana"`
-	Translation string    `json:"translation"`
-	Examples    []Example `json:"examples"`
-	Level       string    `json:"level"`
-	AudioURL    string    `json:"audio_url"`
-}
-
-type Example struct {
-	Sentence    []Fragment `json:"sentence"`
-	Translation string     `json:"translation"`
-	AudioURL    string     `json:"audio_url"`
-}
-
-type Fragment struct {
-	Fragment string  `json:"fragment"`
-	Furigana *string `json:"furigana"`
+	Word           string  `json:"word"`
+	Reading        string  `json:"reading"`
+	WordFurigana   string  `json:"word_furigana"`
+	MeaningEn      string  `json:"meaning_en"`
+	MeaningRu      string  `json:"meaning_ru"`
+	ExampleJa      string  `json:"example_ja"`
+	ExampleEn      string  `json:"example_en"`
+	ExampleRu      string  `json:"example_ru"`
+	ExampleFurigana string  `json:"example_furigana"`
+	Frequency      int     `json:"frequency"`
+	AudioWord      string  `json:"audio_word"`
+	AudioExample   string  `json:"audio_example"`
 }
 
 func (s *Storage) AddCard(deckID, fields string) (*Card, error) {

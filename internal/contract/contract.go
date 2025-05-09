@@ -35,22 +35,18 @@ type ErrorResponse struct {
 
 // CardFields represents all fields of a flashcard with properly unmarshaled JSON
 type CardFields struct {
-	Kanji       string             `json:"kanji"`
-	Kana        string             `json:"kana"`
-	Translation string             `json:"translation"`
-	AudioURL    string             `json:"audio_url"`
-	Examples    []CardFieldExample `json:"examples"`
-}
-
-type CardFieldExample struct {
-	Sentence    []CardFieldFragment `json:"sentence"`
-	Translation string              `json:"translation"`
-	AudioURL    string              `json:"audio_url"`
-}
-
-type CardFieldFragment struct {
-	Fragment string  `json:"fragment"`
-	Furigana *string `json:"furigana"`
+	Word            string  `json:"word"`
+	Reading         string  `json:"reading"`
+	WordFurigana    string  `json:"word_furigana"`
+	MeaningEn       string  `json:"meaning_en"`
+	MeaningRu       string  `json:"meaning_ru"`
+	ExampleJa       string  `json:"example_ja"`
+	ExampleEn       string  `json:"example_en"`
+	ExampleRu       string  `json:"example_ru"`
+	ExampleFurigana string  `json:"example_furigana"`
+	Frequency       int     `json:"frequency"`
+	AudioWord       string  `json:"audio_word"`
+	AudioExample    string  `json:"audio_example"`
 }
 
 type CardResponse struct {

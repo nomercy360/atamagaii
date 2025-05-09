@@ -216,8 +216,8 @@ export default function Cards() {
 
 	const playCardAudio = () => {
 		const card = currentCard()
-		if (card?.back.audio_url) {
-			const audio = new Audio(card.back.audio_url)
+		if (card?.fields.audio_word) {
+			const audio = new Audio(card.fields.audio_word)
 			audio.play().catch(error => {
 				console.error('Error playing audio:', error)
 			})
@@ -308,22 +308,13 @@ export default function Cards() {
 						>
 							<div class={getFrontFaceClasses(flipped(), isTransitioning())}>
 								<div class="text-4xl font-bold mb-4 font-jp">
-									{currentCard()?.front.kanji ? currentCard()?.front.kanji : currentCard()?.front.kana}
+									{currentCard()?.fields.word || currentCard()?.fields.reading}
 								</div>
 								<Show
-									when={currentCard()?.back?.examples && (currentCard() ? currentCard()!.back.examples.length : 0) > 0}>
+									when={currentCard()?.fields.example_ja}>
 									<div class="text-sm bg-muted rounded-md p-3 mb-2 max-w-full">
-										<p class="mb-1">
-											<For each={currentCard()?.back.examples[0]?.sentence || []}>
-												{(fragment) => (
-													<span
-														class={`text-2xl font-jp ${fragment.fragment === currentCard()?.front.kanji ?
-															'text-blue-400 border-b-2 border-blue-400 border-primary' : ''}`}
-													>
-														{fragment.fragment}
-													</span>
-												)}
-											</For>
+										<p class="mb-1 text-2xl font-jp">
+											{currentCard()?.fields.example_ja}
 										</p>
 									</div>
 								</Show>
@@ -332,55 +323,44 @@ export default function Cards() {
 							<div class={getBackFaceClasses(flipped(), isTransitioning())}>
 								<div class="text-4xl font-bold mb-6 flex flex-col items-center">
 									<div class="flex items-center gap-2">
-										{currentCard()?.front.kanji}
-										<Show when={currentCard()?.back.audio_url}>
+										{currentCard()?.fields.word}
+										<Show when={currentCard()?.fields.audio_word}>
 											<AudioButton
-												audioUrl={currentCard()?.back.audio_url || ''}
+												audioUrl={currentCard()?.fields.audio_word || ''}
 												size="sm"
 												label="Play word pronunciation"
 											/>
 										</Show>
 									</div>
-									<Show when={currentCard()?.front.kana}>
+									<Show when={currentCard()?.fields.reading}>
 										 <span class="text-lg font-jp text-muted-foreground">
-												{currentCard()?.front.kana}
+												{currentCard()?.fields.reading}
 										 </span>
 									</Show>
 								</div>
-								<div class="text-center text-2xl font-medium mb-8">{currentCard()?.back.translation}</div>
+								<div class="text-center text-2xl font-medium mb-8">{currentCard()?.fields.meaning_en}</div>
 								<div class="text-sm space-y-2 w-full">
-									<For each={currentCard()?.back.examples}>
-										{(example) => (
-											<div class="bg-muted rounded-md p-2">
-												<div class="flex items-start justify-between mb-1">
-													<p class="flex-grow text-2xl font-jp">
-														<For each={example.sentence}>
-															{(fragment) => (
-																<span>
-																	{fragment.furigana ? (
-																		<ruby>
-																			{fragment.fragment}
-																			<rt class="text-xs text-primary">{fragment.furigana}</rt>
-																		</ruby>
-																	) : (
-																		fragment.fragment
-																	)}
-																</span>
-															)}
-														</For>
-													</p>
-													<Show when={example.audio_url}>
-														<AudioButton
-															audioUrl={example.audio_url || ''}
-															size="sm"
-															label="Play example audio"
-														/>
-													</Show>
-												</div>
-												<p class="text-xs text-muted-foreground">{example.translation}</p>
-											</div>
-										)}
-									</For>
+									<div class="bg-muted rounded-md p-2">
+										<div class="flex items-start justify-between mb-1">
+											<p class="flex-grow text-2xl font-jp">
+												{currentCard()?.fields.word_furigana && (
+													<ruby>
+														{currentCard()?.fields.example_ja}
+														<rt class="text-xs text-primary">{currentCard()?.fields.example_furigana}</rt>
+													</ruby>
+												)}
+											</p>
+											<Show when={currentCard()?.fields.audio_example}>
+												<AudioButton
+													audioUrl={currentCard()?.fields.audio_example || ''}
+													size="sm"
+													label="Play example audio"
+												/>
+											</Show>
+										</div>
+										<p class="text-xs text-muted-foreground">{currentCard()?.fields.example_en}</p>
+										<p class="text-xs text-muted-foreground">{currentCard()?.fields.example_ru}</p>
+									</div>
 								</div>
 							</div>
 						</div>
