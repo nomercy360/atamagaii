@@ -2,7 +2,7 @@ import { createSignal, createResource, For, Show, createEffect, onMount, onClean
 import { apiRequest, Card, CardReviewRequest, CardReviewResponse, Deck, Stats } from '~/lib/api'
 import { useParams, useNavigate } from '@solidjs/router'
 import AudioButton from '~/components/audio-button'
-import { hapticFeedback } from '~/lib/utils'
+import { hapticFeedback, parseFurigana } from '~/lib/utils'
 
 const PREFETCH_BUFFER_THRESHOLD = 2
 
@@ -217,10 +217,22 @@ export default function Cards() {
 	const playCardAudio = () => {
 		const card = currentCard()
 		if (card?.fields.audio_word) {
-			const audio = new Audio(card.fields.audio_word)
-			audio.play().catch(error => {
-				console.error('Error playing audio:', error)
-			})
+			const wordAudio = new Audio(card.fields.audio_word)
+
+			// if (card?.fields.audio_example) {
+			// 	wordAudio.onended = () => {
+			// 		setTimeout(() => {
+			// 			const exampleAudio = new Audio(card.fields.audio_example)
+			// 			exampleAudio.play().catch(error => {
+			// 				console.error('Error playing example audio:', error)
+			// 			})
+			// 		}, 300)
+			// 	}
+			// }
+
+			// wordAudio.play().catch(error => {
+			// 	console.error('Error playing word audio:', error)
+			// })
 		}
 	}
 
@@ -307,23 +319,35 @@ export default function Cards() {
 							onClick={handleCardFlip}
 						>
 							<div class={getFrontFaceClasses(flipped(), isTransitioning())}>
-								<div class="text-4xl font-bold mb-4 font-jp">
-									{currentCard()?.fields.word || currentCard()?.fields.reading}
+								<div class="text-5xl font-bold mb-4 font-jp">
+									{currentCard()?.fields.word_furigana ? (
+										<span innerHTML={parseFurigana(currentCard()?.fields.word_furigana || '')}></span>
+									) : (
+										currentCard()?.fields.word || currentCard()?.fields.reading
+									)}
 								</div>
 								<Show
 									when={currentCard()?.fields.example_ja}>
-									<div class="text-sm bg-muted rounded-md p-3 mb-2 max-w-full">
-										<p class="mb-1 text-2xl font-jp">
-											{currentCard()?.fields.example_ja}
+									<div class="text-sm font-jp bg-muted rounded-md p-3 mb-2 max-w-full">
+										<p class="mb-1 text-2xl">
+											{currentCard()?.fields.example_furigana ? (
+												<span innerHTML={parseFurigana(currentCard()?.fields.example_furigana || '')}></span>
+											) : (
+												currentCard()?.fields.example_ja
+											)}
 										</p>
 									</div>
 								</Show>
 							</div>
 
 							<div class={getBackFaceClasses(flipped(), isTransitioning())}>
-								<div class="text-4xl font-bold mb-6 flex flex-col items-center">
-									<div class="flex items-center gap-2">
-										{currentCard()?.fields.word}
+								<div class="text-5xl font-bold mb-6 flex flex-col items-center">
+									<div class="flex items-center gap-2 pl-8">
+										{currentCard()?.fields.word_furigana ? (
+											<span innerHTML={parseFurigana(currentCard()?.fields.word_furigana || '')}></span>
+										) : (
+											currentCard()?.fields.word
+										)}
 										<Show when={currentCard()?.fields.audio_word}>
 											<AudioButton
 												audioUrl={currentCard()?.fields.audio_word || ''}
@@ -332,7 +356,7 @@ export default function Cards() {
 											/>
 										</Show>
 									</div>
-									<Show when={currentCard()?.fields.reading}>
+									<Show when={currentCard()?.fields.reading && !currentCard()?.fields.word_furigana}>
 										 <span class="text-lg font-jp text-muted-foreground">
 												{currentCard()?.fields.reading}
 										 </span>
@@ -343,11 +367,10 @@ export default function Cards() {
 									<div class="bg-muted rounded-md p-2">
 										<div class="flex items-start justify-between mb-1">
 											<p class="flex-grow text-2xl font-jp">
-												{currentCard()?.fields.word_furigana && (
-													<ruby>
-														{currentCard()?.fields.example_ja}
-														<rt class="text-xs text-primary">{currentCard()?.fields.example_furigana}</rt>
-													</ruby>
+												{currentCard()?.fields.example_furigana ? (
+													<span innerHTML={parseFurigana(currentCard()?.fields.example_furigana || '')}></span>
+												) : (
+													currentCard()?.fields.example_ja
 												)}
 											</p>
 											<Show when={currentCard()?.fields.audio_example}>
@@ -358,7 +381,6 @@ export default function Cards() {
 												/>
 											</Show>
 										</div>
-										<p class="text-xs text-muted-foreground">{currentCard()?.fields.example_en}</p>
 										<p class="text-xs text-muted-foreground">{currentCard()?.fields.example_ru}</p>
 									</div>
 								</div>
@@ -390,30 +412,18 @@ export default function Cards() {
 			<Show when={flipped() && currentCard() && !isTransitioning()}>
 				<div class="fixed bottom-0 left-0 right-0 bg-background border-t border-border pb-8">
 					<div class="mx-auto px-4 py-4">
-						<div class="grid grid-cols-4 gap-2">
+						<div class="grid grid-cols-2 gap-4">
 							<button
 								onClick={() => handleReview(currentCard()!.id, 1)}
-								class="py-3 px-4 bg-error text-error-foreground rounded-md transition-opacity font-medium"
+								class="py-3 px-4 bg-error text-error-foreground rounded-md transition-opacity font-medium text-lg"
 							>
 								Again
 							</button>
 							<button
-								onClick={() => handleReview(currentCard()!.id, 2)}
-								class="py-3 px-4 bg-warning text-warning-foreground rounded-md transition-opacity font-medium"
-							>
-								Hard
-							</button>
-							<button
 								onClick={() => handleReview(currentCard()!.id, 3)}
-								class="py-3 px-4 bg-info text-info-foreground rounded-md transition-opacity font-medium"
+								class="py-3 px-4 bg-info text-info-foreground rounded-md transition-opacity font-medium text-lg"
 							>
 								Good
-							</button>
-							<button
-								onClick={() => handleReview(currentCard()!.id, 4)}
-								class="py-3 px-4 bg-success text-success-foreground rounded-md transition-opacity font-medium"
-							>
-								Easy
 							</button>
 						</div>
 					</div>
@@ -426,17 +436,20 @@ export default function Cards() {
 					<div class="mx-auto px-4 py-4">
 						<div class="flex justify-center gap-3">
 							<Show when={deckMetrics().newCards > 0}>
-								<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+								<span
+									class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
 									{deckMetrics().newCards} new
 								</span>
 							</Show>
 							<Show when={deckMetrics().learningCards > 0}>
-								<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+								<span
+									class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
 									{deckMetrics().learningCards} learning
 								</span>
 							</Show>
 							<Show when={deckMetrics().reviewCards > 0}>
-								<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+								<span
+									class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
 									{deckMetrics().reviewCards} review
 								</span>
 							</Show>

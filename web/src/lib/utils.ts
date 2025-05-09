@@ -6,6 +6,19 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Parses strings with furigana notation and returns HTML ruby markup
+ * Converts text like "漢字[かんじ]" to "<ruby>漢字<rt>かんじ</rt></ruby>"
+ *
+ * @param text - The text with furigana notation to parse
+ * @returns The parsed text with HTML ruby tags
+ */
+export function parseFurigana(text: string): string {
+  return text.replace(/([^\[\]]+?)\[(.+?)\]/g, (_, kanji, kana) => {
+    return `<ruby>${kanji}<rt>${kana}</rt></ruby>`;
+  });
+}
+
+/**
  * Provides haptic feedback through the Telegram WebApp API
  *
  * @param type - Type of haptic feedback to trigger
