@@ -296,7 +296,7 @@ export default function Cards() {
 				<Show when={currentCard()}>
 					<div class="w-full flex flex-col items-center">
 						<div
-							class={`w-full rounded-xl shadow-lg cursor-pointer relative perspective transition-all min-h-96 ${isTransitioning() ? 'pointer-events-none' : ''}`}
+							class={`w-full cursor-pointer relative perspective transition-all min-h-96 ${isTransitioning() ? 'pointer-events-none' : ''}`}
 							onClick={handleCardFlip}
 						>
 							<div class={getFrontFaceClasses(flipped(), isTransitioning())}>
@@ -432,7 +432,7 @@ export default function Cards() {
 					</div>
 				</div>
 			</Show>
-			
+
 			{/* Deck metrics - show only when card is not flipped */}
 			<Show when={!flipped() && currentCard() && !isTransitioning() && deck() && !deck.loading}>
 				<div class="fixed bottom-0 left-0 right-0 bg-background border-t border-border pb-8">
