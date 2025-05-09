@@ -74,3 +74,8 @@ type CardResponse struct {
 	State           string        `json:"state,omitempty"`
 	LearningStep    int           `json:"learning_step,omitempty"`
 }
+
+type ReviewCardResponse struct {
+	Progress *db.CardProgress   `json:"progress"`
+	Stats    *db.DeckStatistics `json:"stats"`
+}

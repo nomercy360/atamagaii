@@ -79,9 +79,14 @@ func (s *Storage) GetDecks(userID string) ([]Deck, error) {
 			return nil, fmt.Errorf("error scanning deck: %w", err)
 		}
 
-		if err := s.UpdateDeckMetrics(&deck, userID); err != nil {
-			return nil, fmt.Errorf("error updating deck metrics: %w", err)
+		stats, err := s.GetDeckStatistics(userID, deck.ID, deck.NewCardsPerDay)
+		if err != nil {
+			return nil, fmt.Errorf("error getting deck statistics: %w", err)
 		}
+
+		deck.NewCards = stats.NewCards
+		deck.LearningCards = stats.LearningCards
+		deck.ReviewCards = stats.ReviewCards
 
 		decks = append(decks, deck)
 	}
@@ -120,9 +125,14 @@ func (s *Storage) GetDeck(deckID string) (*Deck, error) {
 		return nil, fmt.Errorf("error getting deck: %w", err)
 	}
 
-	if err := s.UpdateDeckMetrics(&deck, deck.UserID); err != nil {
-		return nil, fmt.Errorf("error updating deck metrics: %w", err)
+	stats, err := s.GetDeckStatistics(deck.UserID, deck.ID, deck.NewCardsPerDay)
+	if err != nil {
+		return nil, fmt.Errorf("error getting deck statistics: %w", err)
 	}
+
+	deck.NewCards = stats.NewCards
+	deck.LearningCards = stats.LearningCards
+	deck.ReviewCards = stats.ReviewCards
 
 	return &deck, nil
 }
@@ -205,70 +215,74 @@ func (s *Storage) DeleteDeck(deckID string) error {
 	return nil
 }
 
-func (s *Storage) UpdateDeckMetrics(deck *Deck, userID string) error {
-	today := time.Now().Truncate(24 * time.Hour)
+type DeckStatistics struct {
+	NewCards      int `json:"new_cards"`
+	LearningCards int `json:"learning_cards"`
+	ReviewCards   int `json:"review_cards"`
+}
 
+func (s *Storage) GetDeckStatistics(userID string, deckID string, newCardsPerDay int) (*DeckStatistics, error) {
+	stats := &DeckStatistics{}
+	todayEnd := time.Now().Truncate(24 * time.Hour).Add(24*time.Hour - time.Nanosecond)
+
+	dueDueQuery := `
+        SELECT
+            COALESCE(SUM(CASE WHEN (cp.state = 'learning' OR cp.state = 'relearning') AND cp.next_review <= ? THEN 1 ELSE 0 END), 0) as learning_due_count,
+            COALESCE(SUM(CASE WHEN cp.state = 'review' AND cp.next_review <= ? THEN 1 ELSE 0 END), 0) as review_due_count
+        FROM card_progress cp
+        JOIN cards c ON cp.card_id = c.id
+        WHERE cp.user_id = ? AND c.deck_id = ? AND c.deleted_at IS NULL;
+    `
+
+	err := s.db.QueryRow(dueDueQuery, todayEnd, todayEnd, userID, deckID).Scan(
+		&stats.LearningCards,
+		&stats.ReviewCards,
+	)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("error calculating due cards statistics for deck %s: %w", deckID, err)
+	}
+
+	today := time.Now().Truncate(24 * time.Hour)
 	countNewStartedTodayQuery := `
-		SELECT COUNT(*) 
+		SELECT COUNT(*)
 		FROM card_progress p
 		JOIN cards c ON p.card_id = c.id
-		WHERE p.user_id = ? 
+		WHERE p.user_id = ?
 		AND c.deck_id = ?
 		AND c.deleted_at IS NULL
 		AND p.first_reviewed_at >= ?
 	`
 
 	var newCardsStartedToday int
-	err := s.db.QueryRow(countNewStartedTodayQuery, userID, deck.ID, today).Scan(&newCardsStartedToday)
-	if err != nil {
-		return fmt.Errorf("error counting new cards started today: %w", err)
+	err = s.db.QueryRow(countNewStartedTodayQuery, userID, deckID, today).Scan(&newCardsStartedToday)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("error counting new cards started today: %w", err)
 	}
 
-	newCardsRemaining := deck.NewCardsPerDay - newCardsStartedToday
+	newCardsRemaining := newCardsPerDay - newCardsStartedToday
 	if newCardsRemaining < 0 {
 		newCardsRemaining = 0
 	}
 
-	newCardsQuery := `
+	countTotalNewCardsQuery := `
 		SELECT COUNT(*)
 		FROM cards c
 		LEFT JOIN card_progress p ON c.id = p.card_id AND p.user_id = ?
 		WHERE c.deck_id = ? AND c.deleted_at IS NULL
 		AND p.card_id IS NULL
 	`
+
 	var totalNewCards int
-	if err := s.db.QueryRow(newCardsQuery, userID, deck.ID).Scan(&totalNewCards); err != nil {
-		return fmt.Errorf("error counting new cards: %w", err)
+	err = s.db.QueryRow(countTotalNewCardsQuery, userID, deckID).Scan(&totalNewCards)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("error counting total new cards: %w", err)
 	}
 
-	deck.NewCards = totalNewCards
-	if deck.NewCards > newCardsRemaining {
-		deck.NewCards = newCardsRemaining
+	if totalNewCards < newCardsRemaining {
+		stats.NewCards = totalNewCards
+	} else {
+		stats.NewCards = newCardsRemaining
 	}
 
-	learningCardsQuery := `
-		SELECT COUNT(*)
-		FROM cards c
-		JOIN card_progress p ON c.id = p.card_id
-		WHERE c.deck_id = ? AND c.deleted_at IS NULL
-		AND p.user_id = ?
-		AND (p.state = 'learning' OR p.state = 'relearning')
-	`
-	if err := s.db.QueryRow(learningCardsQuery, deck.ID, userID).Scan(&deck.LearningCards); err != nil {
-		return fmt.Errorf("error counting learning cards: %w", err)
-	}
-
-	reviewCardsQuery := `
-		SELECT COUNT(*)
-		FROM cards c
-		JOIN card_progress p ON c.id = p.card_id
-		WHERE c.deck_id = ? AND c.deleted_at IS NULL
-		AND p.user_id = ?
-		AND p.state = 'review'
-	`
-	if err := s.db.QueryRow(reviewCardsQuery, deck.ID, userID).Scan(&deck.ReviewCards); err != nil {
-		return fmt.Errorf("error counting review cards: %w", err)
-	}
-
-	return nil
+	return stats, nil
 }

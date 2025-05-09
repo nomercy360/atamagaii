@@ -196,6 +196,8 @@ func (s *Storage) GetNewCards(userID string, deckID string, limit int) ([]CardWi
 }
 
 func (s *Storage) GetDueCards(userID string, deckID string, limit int) ([]CardWithProgress, error) {
+	todayEnd := time.Now().Truncate(24 * time.Hour).Add(24*time.Hour - time.Nanosecond)
+
 	query := `
 		SELECT c.id, c.deck_id, c.front, c.back, c.created_at, c.updated_at, c.deleted_at,
 		       p.next_review, p.interval, p.ease, p.review_count, p.laps_count, p.last_reviewed_at, p.first_reviewed_at,
@@ -204,12 +206,12 @@ func (s *Storage) GetDueCards(userID string, deckID string, limit int) ([]CardWi
 		JOIN card_progress p ON c.id = p.card_id AND p.user_id = ?
 		JOIN decks d ON c.deck_id = d.id AND d.user_id = ?
 		WHERE c.deck_id = ? AND c.deleted_at IS NULL
-		AND p.next_review IS NOT NULL AND p.next_review <= CURRENT_TIMESTAMP
+		AND p.next_review IS NOT NULL AND p.next_review <= ?
 		ORDER BY p.next_review ASC
 		LIMIT ?
 	`
 
-	rows, err := s.db.Query(query, userID, userID, deckID, limit)
+	rows, err := s.db.Query(query, userID, userID, deckID, todayEnd, limit)
 	if err != nil {
 		return nil, fmt.Errorf("error getting due cards: %w", err)
 	}
@@ -261,7 +263,6 @@ func (s *Storage) GetDueCards(userID string, deckID string, limit int) ([]CardWi
 	return cards, nil
 }
 
-// For backward compatibility
 func (s *Storage) GetReviewCards(userID string, deckID string, limit int) ([]CardWithProgress, error) {
 	return s.GetDueCards(userID, deckID, limit)
 }

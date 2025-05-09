@@ -167,6 +167,15 @@ export interface CardReviewRequest {
 	time_spent_ms: number
 }
 
+export interface CardReviewResponse {
+	stats: {
+		new_cards: number
+		learning_cards: number
+		review_cards: number
+	}
+	progress: CardProgress
+}
+
 export interface UpdateDeckSettingsRequest {
 	new_cards_per_day: number
 }

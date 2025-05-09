@@ -52,7 +52,6 @@ const (
 	StateRelearning CardState = "relearning"
 )
 
-// Review represents a card review event (structure seems fine)
 type Review struct {
 	ID           string        `db:"id" json:"id"`
 	UserID       string        `db:"user_id" json:"user_id"`
@@ -66,7 +65,6 @@ type Review struct {
 	NewEase      float64       `db:"new_ease" json:"new_ease"`
 }
 
-// CardProgress represents the learning progress of a card (structure seems fine)
 type CardProgress struct {
 	UserID          string        `db:"user_id" json:"user_id"`
 	CardID          string        `db:"card_id" json:"card_id"`
@@ -299,6 +297,7 @@ func (s *Storage) ReviewCard(userID, cardID string, rating int, timeSpentMs int)
 			userID, cardID,
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("error updating/inserting card progress: %w", err)
 	}

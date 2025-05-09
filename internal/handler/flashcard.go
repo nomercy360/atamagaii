@@ -141,7 +141,7 @@ func (h *Handler) GetDueCards(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden, "Access denied")
 	}
 
-	limit := deck.NewCardsPerDay * 10
+	limit := 3
 
 	cards, err := h.db.GetCardsWithProgress(userID, deckID, limit)
 	if err != nil {
@@ -206,7 +206,17 @@ func (h *Handler) ReviewCard(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch updated progress").WithInternal(err)
 	}
 
-	return c.JSON(http.StatusOK, progress)
+	stats, err := h.db.GetDeckStatistics(userID, deck.ID, deck.NewCardsPerDay)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch stats").WithInternal(err)
+	}
+
+	resp := contract.ReviewCardResponse{
+		Stats:    stats,
+		Progress: progress,
+	}
+
+	return c.JSON(http.StatusOK, resp)
 }
 
 func (h *Handler) GetStats(c echo.Context) error {

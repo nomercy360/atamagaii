@@ -1,36 +1,37 @@
 import { createSignal, createResource, For, Show, createEffect, onMount, onCleanup } from 'solid-js'
-import { apiRequest, Card, Deck, Stats } from '~/lib/api'
+import { apiRequest, Card, CardReviewRequest, CardReviewResponse, Deck, Stats } from '~/lib/api'
 import { useParams, useNavigate } from '@solidjs/router'
 import AudioButton from '~/components/audio-button'
-import { store, setStore } from '~/store'
+
+const PREFETCH_BUFFER_THRESHOLD = 2
 
 const getFrontFaceClasses = (isFlipped: boolean, isTrans: boolean) => {
-	let opacityClass = '';
+	let opacityClass = ''
 	if (isTrans) {
-		opacityClass = 'opacity-0';
+		opacityClass = 'opacity-0'
 	} else {
-		opacityClass = isFlipped ? 'opacity-0' : 'opacity-100';
+		opacityClass = isFlipped ? 'opacity-0' : 'opacity-100'
 	}
 
-	const rotationClass = isFlipped ? 'rotate-y-180' : 'rotate-y-0';
-	const pointerEventsClass = (isTrans || isFlipped) ? 'pointer-events-none' : '';
+	const rotationClass = isFlipped ? 'rotate-y-180' : 'rotate-y-0'
+	const pointerEventsClass = (isTrans || isFlipped) ? 'pointer-events-none' : ''
 
-	return `absolute inset-0 w-full flex flex-col items-center justify-center p-4 ${rotationClass} ${opacityClass} ${pointerEventsClass} transition-all duration-300 transform-gpu backface-hidden`;
-};
+	return `absolute inset-0 w-full flex flex-col items-center justify-center p-4 ${rotationClass} ${opacityClass} ${pointerEventsClass} transition-all duration-300 transform-gpu backface-hidden`
+}
 
 const getBackFaceClasses = (isFlipped: boolean, isTrans: boolean) => {
-	let opacityClass = '';
+	let opacityClass = ''
 	if (isTrans) {
-		opacityClass = 'opacity-0';
+		opacityClass = 'opacity-0'
 	} else {
-		opacityClass = isFlipped ? 'opacity-100' : 'opacity-0';
+		opacityClass = isFlipped ? 'opacity-100' : 'opacity-0'
 	}
 
-	const rotationClass = isFlipped ? 'rotate-y-0' : 'rotate-y-180';
-	const pointerEventsClass = (isTrans || !isFlipped) ? 'pointer-events-none' : '';
+	const rotationClass = isFlipped ? 'rotate-y-0' : 'rotate-y-180'
+	const pointerEventsClass = (isTrans || !isFlipped) ? 'pointer-events-none' : ''
 
-	return `absolute inset-0 w-full flex flex-col items-center justify-center p-4 ${rotationClass} ${opacityClass} ${pointerEventsClass} transition-all duration-300 transform-gpu backface-hidden`;
-};
+	return `absolute inset-0 w-full flex flex-col items-center justify-center p-4 ${rotationClass} ${opacityClass} ${pointerEventsClass} transition-all duration-300 transform-gpu backface-hidden`
+}
 
 export default function Cards() {
 	const params = useParams()
@@ -47,6 +48,11 @@ export default function Cards() {
 		reviewCards: number;
 	}>({ newCards: 0, learningCards: 0, reviewCards: 0 })
 
+	const [cardBuffer, setCardBuffer] = createSignal<Card[]>([])
+	const [needMoreCards, setNeedMoreCards] = createSignal(true)
+	const [processedCardIds, setProcessedCardIds] = createSignal<Set<string>>(new Set())
+	const [isFetchingMore, setIsFetchingMore] = createSignal(false)
+
 	const [deck, { refetch: refetchDeck }] = createResource<Deck | null>(
 		async () => {
 			if (!params.deckId) return null
@@ -60,7 +66,7 @@ export default function Cards() {
 				setDeckMetrics({
 					newCards: data.new_cards || 0,
 					learningCards: data.learning_cards || 0,
-					reviewCards: data.review_cards || 0
+					reviewCards: data.review_cards || 0,
 				})
 			}
 
@@ -68,189 +74,213 @@ export default function Cards() {
 		},
 	)
 
-	const [cards] = createResource<Card[]>(
-		async () => {
-			if (!params.deckId) return []
-			const { data, error } = await apiRequest<Card[]>(`/cards/due?deck_id=${params.deckId}`)
+	const fetchCards = async (): Promise<Card[]> => {
+		if (!params.deckId || isFetchingMore()) {
+			console.log('Fetch skipped: No deckId or already fetching.')
+			return []
+		}
+
+		console.log('Attempting to fetch cards...')
+		setIsFetchingMore(true)
+
+		try {
+			const { data, error } = await apiRequest<Card[]>(`/cards/due?deck_id=${params.deckId}&limit=3`)
 			if (error) {
 				console.error(`Failed to fetch cards for deck ${params.deckId}:`, error)
+				setIsFetchingMore(false)
 				return []
 			}
 
-			// Reset timer when new cards are loaded
-			setTimeout(() => {
-				if (data && data.length > 0) {
-					resetTimer();
-				}
-			}, 0);
+			const processed = processedCardIds()
+			const newCards = (data || []).filter(card => !processed.has(card.id))
 
-			return data || []
+			if (newCards.length > 0) {
+				setCardBuffer(prev => [...prev, ...newCards])
+				console.log(`Fetched and added ${newCards.length} new cards to buffer.`)
+			} else {
+				console.log('Fetched cards, but no *new* cards to add (either all processed or API returned processed cards).')
+			}
+
+			if (!data || data.length === 0) {
+				console.log('API returned no cards. Setting needMoreCards to false.')
+				setNeedMoreCards(false)
+			}
+
+			setIsFetchingMore(false)
+			return newCards
+		} catch (e) {
+			console.error('Exception during fetchCards:', e)
+			setIsFetchingMore(false)
+			return []
+		}
+	}
+
+	const [cards] = createResource<Card[], boolean>(
+		() => needMoreCards() && cardBuffer().length === 0,
+		async (shouldFetch) => {
+			if (!shouldFetch) {
+				return cardBuffer()
+			}
+			console.log('Resource: Triggering initial fetchCards.')
+			await fetchCards()
+			return cardBuffer()
 		},
 	)
 
+	// Effect to maintain our buffer of at least 2 cards when possible
+	createEffect(() => {
+		const buffer = cardBuffer()
+		const currentIdx = cardIndex()
+		const remaining = buffer.length - currentIdx
+
+		// Log buffer state for debugging
+		console.log(`Card buffer state: ${remaining} remaining (${currentIdx}/${buffer.length})`)
+
+		// If we have 1 or fewer cards left in our buffer, fetch more
+		if (remaining <= 1 && needMoreCards()) {
+			console.log('Fetching more cards for buffer')
+			fetchCards()
+		}
+	})
+
 	const currentCard = () => {
-		const cardList = cards() || []
-		if (cardList.length === 0) return null
-		return cardList[cardIndex() % cardList.length]
+		const buffer = cardBuffer()
+		const idx = cardIndex()
+		if (buffer.length === 0 || idx >= buffer.length) return null
+		return buffer[idx]
 	}
 
-	// Manages the visibility change and page lifecycle events
 	const handleVisibilityChange = () => {
 		if (document.visibilityState === 'hidden') {
-			// When tab is hidden or browser minimized, pause the timer
-			pauseTimer();
+			pauseTimer()
 		} else if (document.visibilityState === 'visible' && currentCard()) {
-			// When tab becomes visible again and a card is displayed, resume the timer
-			startTimer();
+			startTimer()
 		}
-	};
+	}
 
-	// Start timing for a card
 	const startTimer = () => {
 		if (!isTimerActive()) {
-			setStartTime(Date.now());
-			setIsTimerActive(true);
+			setStartTime(Date.now())
+			setIsTimerActive(true)
 		}
-	};
+	}
 
-	// Pause the timer and accumulate elapsed time
 	const pauseTimer = () => {
 		if (isTimerActive() && startTime() !== null) {
-			const elapsedMs = Date.now() - startTime()!;
-			setTimeSpentMs(prev => prev + elapsedMs);
-			setStartTime(null);
-			setIsTimerActive(false);
+			const now = Date.now()
+			const elapsedMs = now - startTime()!
+			const newTotal = timeSpentMs() + elapsedMs
+			setTimeSpentMs(newTotal)
+			setStartTime(null)
+			setIsTimerActive(false)
 		}
-	};
+	}
 
-	// Reset the timer for a new card
 	const resetTimer = () => {
-		setTimeSpentMs(0);
-		setStartTime(Date.now());
-		setIsTimerActive(true);
-	};
+		setTimeSpentMs(0)
+		setStartTime(Date.now())
+		setIsTimerActive(true)
+	}
 
-	// Get the current total time spent (including active timing)
 	const getCurrentTimeSpent = () => {
-		let total = timeSpentMs();
+		let total = timeSpentMs()
 		if (isTimerActive() && startTime() !== null) {
-			total += Date.now() - startTime()!;
+			const now = Date.now()
+			const current = now - startTime()!
+			total += current
+			console.log('Current session time:', current, 'ms, total with previous:', total, 'ms')
+		} else {
+			console.log('Timer inactive, returning accumulated time:', total, 'ms')
 		}
-		return total;
-	};
+		return total
+	}
 
-	// Setup visibility and lifecycle event listeners
 	onMount(() => {
-		// Start timing when component mounts if a card is available
-		if (currentCard()) {
-			resetTimer();
-		}
+		createEffect(() => {
+			if (currentCard() && startTime() === null) {
+				console.log('onMount/Effect: First card available, resetting timer.')
+				resetTimer()
+			}
+		})
 
-		// Add event listeners for visibility changes
-		document.addEventListener('visibilitychange', handleVisibilityChange);
-
-		// Add event listeners for page unload
-		window.addEventListener('beforeunload', pauseTimer);
-	});
+		document.addEventListener('visibilitychange', handleVisibilityChange)
+		window.addEventListener('beforeunload', pauseTimer)
+	})
 
 	onCleanup(() => {
-		// Clean up event listeners
-		document.removeEventListener('visibilitychange', handleVisibilityChange);
-		window.removeEventListener('beforeunload', pauseTimer);
-		pauseTimer();
-	});
+		document.removeEventListener('visibilitychange', handleVisibilityChange)
+		window.removeEventListener('beforeunload', pauseTimer)
+		pauseTimer()
+	})
+
+	const playCardAudio = () => {
+		const card = currentCard()
+		if (card?.back.audio_url) {
+			const audio = new Audio(card.back.audio_url)
+			audio.play().catch(error => {
+				console.error('Error playing audio:', error)
+			})
+		}
+	}
 
 	const handleCardFlip = () => {
-		if (isTransitioning()) return;
-		setFlipped(!flipped());
+		if (isTransitioning()) return
+		// Only allow flipping from front to back, not back to front
+		if (!flipped()) {
+			setFlipped(true)
+			// We'll play the audio after a short delay to ensure the flip animation has started
+			setTimeout(() => playCardAudio(), 150)
+		}
 	}
 
 	const handleNextCard = () => {
-		pauseTimer();
-		setIsTransitioning(true);
+		setIsTransitioning(true)
 		setTimeout(() => {
-			setFlipped(false);
-			setCardIndex(prevIndex => prevIndex + 1);
+			setFlipped(false)
+			setCardIndex(prevIndex => prevIndex + 1)
 			setTimeout(() => {
-				setIsTransitioning(false);
-				resetTimer();
-			}, 50);
-		}, 300);
+				setIsTransitioning(false)
+				resetTimer()
+			}, 50)
+		}, 300)
 	}
 
 	const handleReview = async (cardId: string, rating: number) => {
-		pauseTimer();
-		const finalTimeSpent = getCurrentTimeSpent();
+		pauseTimer()
+		const finalTimeSpent = getCurrentTimeSpent()
+		console.log('Sending review with time_spent_ms:', finalTimeSpent)
 
-		const { error } = await apiRequest(`/cards/${cardId}/review`, {
+		const timeToSend = finalTimeSpent > 0 ? finalTimeSpent : 1000
+
+		const { data, error } = await apiRequest<CardReviewResponse>(`/cards/${cardId}/review`, {
 			method: 'POST',
 			body: JSON.stringify({
 				card_id: cardId,
 				rating,
-				time_spent_ms: finalTimeSpent,
+				time_spent_ms: timeToSend,
 			}),
-		});
+		})
+
 		if (error) {
-			console.error('Failed to submit review:', error);
-			return;
+			console.error('Failed to submit review:', error)
+			return
 		}
 
-		// Update deck metrics locally
-		const metrics = deckMetrics();
-		const card = currentCard();
-
-		// Card is moving from "new" to "learning" state
-		if (!card?.interval) {
+		if (data?.stats) {
 			setDeckMetrics({
-				newCards: Math.max(0, metrics.newCards - 1),
-				learningCards: metrics.learningCards + 1,
-				reviewCards: metrics.reviewCards
-			});
-		}
-		// Update based on rating
-		else {
-			// Rating 1 (Again) - card goes to learning
-			if (rating === 1) {
-				// If card was in review, move to learning
-				if (card.interval && card.interval > 1) {
-					setDeckMetrics({
-						newCards: metrics.newCards,
-						learningCards: metrics.learningCards + 1,
-						reviewCards: Math.max(0, metrics.reviewCards - 1)
-					});
-				}
-			}
-			// Rating 2-4 - card is eventually removed from daily count
-			else {
-				// For simplicity, just decrement the appropriate counter
-				if (card.interval && card.interval <= 1) {
-					// Card was in learning
-					setDeckMetrics({
-						newCards: metrics.newCards,
-						learningCards: Math.max(0, metrics.learningCards - 1),
-						reviewCards: metrics.reviewCards
-					});
-				} else {
-					// Card was in review
-					setDeckMetrics({
-						newCards: metrics.newCards,
-						learningCards: metrics.learningCards,
-						reviewCards: Math.max(0, metrics.reviewCards - 1)
-					});
-				}
-			}
+				newCards: data.stats.new_cards || 0,
+				learningCards: data.stats.learning_cards || 0,
+				reviewCards: data.stats.review_cards || 0,
+			})
 		}
 
-		// Update global stats by decrementing due count
-		if (store.stats && typeof store.stats.due_cards === 'number') {
-			const newDueCards = Math.max(0, store.stats.due_cards - 1);
-			setStore('stats', {
-				...store.stats,
-				due_cards: newDueCards
-			});
-		}
+		setProcessedCardIds(prev => {
+			const updated = new Set(prev)
+			updated.add(cardId)
+			return updated
+		})
 
-		handleNextCard();
+		handleNextCard()
 	}
 
 	return (
@@ -277,7 +307,7 @@ export default function Cards() {
 				<Show when={currentCard()}>
 					<div class="w-full flex flex-col items-center">
 						<div
-							class={`w-full bg-card rounded-xl shadow-lg cursor-pointer relative perspective transition-all min-h-96 ${isTransitioning() ? 'pointer-events-none' : ''}`}
+							class={`w-full rounded-xl shadow-lg cursor-pointer relative perspective transition-all min-h-96 ${isTransitioning() ? 'pointer-events-none' : ''}`}
 							onClick={handleCardFlip}
 						>
 							<div class={getFrontFaceClasses(flipped(), isTransitioning())}>
@@ -316,9 +346,9 @@ export default function Cards() {
 										</Show>
 									</div>
 									<Show when={currentCard()?.front.kana}>
-                                       <span class="text-lg font-jp text-muted-foreground">
-                                        {currentCard()?.front.kana}
-                                       </span>
+										 <span class="text-lg font-jp text-muted-foreground">
+												{currentCard()?.front.kana}
+										 </span>
 									</Show>
 								</div>
 								<div class="text-center text-2xl font-medium mb-8">{currentCard()?.back.translation}</div>
@@ -367,7 +397,7 @@ export default function Cards() {
 					</div>
 				</Show>
 
-				<Show when={!cards.loading && (!cards() || cards()!.length === 0)}>
+				<Show when={!cards.loading && !currentCard()}>
 					<div class="w-full flex flex-col items-center justify-center h-[300px]">
 						<p class="text-muted-foreground">No cards found in this deck.</p>
 						<button
