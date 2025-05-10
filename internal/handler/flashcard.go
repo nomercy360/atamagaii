@@ -3,14 +3,11 @@ package handler
 import (
 	"atamagaii/internal/contract"
 	"atamagaii/internal/db"
-	"atamagaii/internal/utils"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"net/http"
-	"os"
-	"path/filepath"
 )
 
 type ReviewCardRequest struct {

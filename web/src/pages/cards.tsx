@@ -320,24 +320,44 @@ export default function Cards() {
 							onClick={handleCardFlip}
 						>
 							<div class={getFrontFaceClasses(flipped(), isTransitioning())}>
-								<div class="text-5xl font-semibold mb-4 font-jp">
-									<TranscriptionText text={currentCard()?.fields.word || ''} textSize="5xl" />
+								<div class="text-5xl font-semibold mb-4">
+									<TranscriptionText
+										text={currentCard()?.fields.term || currentCard()?.fields.word || ''}
+										textSize="5xl"
+										language={currentCard()?.fields.language_code || 'ja'}
+										transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+									/>
 								</div>
 								<Show
-									when={currentCard()?.fields.example_ja}>
-									<div class="text-2xl font-jp p-3 mb-2 max-w-full">
-										<TranscriptionText text={currentCard()?.fields.example_ja || ''} textSize="2xl" />
+									when={currentCard()?.fields.example_native || currentCard()?.fields.example_ja}>
+									<div class="text-2xl p-3 mb-2 max-w-full">
+										<TranscriptionText 
+											text={currentCard()?.fields.example_native || currentCard()?.fields.example_ja || ''} 
+											textSize="2xl"
+											language={currentCard()?.fields.language_code || 'ja'}
+											transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+										/>
 									</div>
 								</Show>
 							</div>
 
 							<div class={getBackFaceClasses(flipped(), isTransitioning())}>
-								<div class="text-5xl font-semibold font-jp mb-6 flex flex-col items-center">
+								<div class="text-5xl font-semibold mb-6 flex flex-col items-center">
 									<div class="flex items-center gap-2 pl-8">
-										{currentCard()?.fields.word_furigana ? (
-											<TranscriptionText text={currentCard()?.fields.word_furigana!} textSize="5xl" />
+										{currentCard()?.fields.term_with_transcription || currentCard()?.fields.word_furigana ? (
+											<TranscriptionText 
+												text={currentCard()?.fields.term_with_transcription || currentCard()?.fields.word_furigana!} 
+												textSize="5xl"
+												language={currentCard()?.fields.language_code || 'ja'}
+												transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+											/>
 										) : (
-											<TranscriptionText text={currentCard()?.fields.word || ''} textSize="5xl" />
+											<TranscriptionText 
+												text={currentCard()?.fields.term || currentCard()?.fields.word || ''} 
+												textSize="5xl"
+												language={currentCard()?.fields.language_code || 'ja'}
+												transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+											/>
 										)}
 										<Show when={currentCard()?.fields.audio_word}>
 											<AudioButton
@@ -347,9 +367,9 @@ export default function Cards() {
 											/>
 										</Show>
 									</div>
-									<Show when={currentCard()?.fields.reading && !currentCard()?.fields.word_furigana}>
-										 <span class="text-lg font-jp text-muted-foreground">
-												{currentCard()?.fields.reading}
+									<Show when={(currentCard()?.fields.transcription || currentCard()?.fields.reading) && !(currentCard()?.fields.term_with_transcription || currentCard()?.fields.word_furigana)}>
+										 <span class="text-lg text-muted-foreground">
+												{currentCard()?.fields.transcription || currentCard()?.fields.reading}
 										 </span>
 									</Show>
 								</div>
@@ -357,11 +377,21 @@ export default function Cards() {
 								<div class="text-sm space-y-2 w-full">
 									<div class="bg-muted rounded-md p-2">
 										<div class="flex items-start justify-between mb-1">
-											<p class="flex-grow font-jp">
-												{currentCard()?.fields.example_furigana ? (
-													<TranscriptionText text={currentCard()?.fields.example_furigana!} textSize="2xl" />
+											<p class="flex-grow">
+												{currentCard()?.fields.example_with_transcription || currentCard()?.fields.example_furigana ? (
+													<TranscriptionText 
+														text={currentCard()?.fields.example_with_transcription || currentCard()?.fields.example_furigana!} 
+														textSize="2xl"
+														language={currentCard()?.fields.language_code || 'ja'}
+														transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+													/>
 												) : (
-													<TranscriptionText text={currentCard()?.fields.example_ja || ""} textSize="2xl" />
+													<TranscriptionText 
+														text={currentCard()?.fields.example_native || currentCard()?.fields.example_ja || ""} 
+														textSize="2xl"
+														language={currentCard()?.fields.language_code || 'ja'}
+														transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+													/>
 												)}
 											</p>
 											<Show when={currentCard()?.fields.audio_example}>

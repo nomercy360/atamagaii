@@ -34,19 +34,20 @@ type ErrorResponse struct {
 }
 
 type CardFields struct {
-	Word            string `json:"word"`
-	Reading         string `json:"reading"`
-	WordFurigana    string `json:"word_furigana"`
-	MeaningEn       string `json:"meaning_en"`
-	MeaningRu       string `json:"meaning_ru"`
-	ExampleJa       string `json:"example_ja"`
-	ExampleEn       string `json:"example_en"`
-	ExampleRu       string `json:"example_ru"`
-	ExampleFurigana string `json:"example_furigana"`
-	Frequency       int    `json:"frequency"`
-	AudioWord       string `json:"audio_word"`
-	AudioExample    string `json:"audio_example"`
-	ImageURL        string `json:"image_url,omitempty"`
+	Term                     string `json:"term"`
+	Transcription            string `json:"transcription"`
+	TranscriptionType        string `json:"transcription_type"`
+	TermWithTranscription    string `json:"term_with_transcription"`
+	MeaningEn                string `json:"meaning_en"`
+	MeaningRu                string `json:"meaning_ru"`
+	ExampleNative            string `json:"example_ja"`
+	ExampleEn                string `json:"example_en"`
+	ExampleRu                string `json:"example_ru"`
+	ExampleWithTranscription string `json:"example_with_transcription"`
+	Frequency                int    `json:"frequency"`
+	AudioWord                string `json:"audio_word"`
+	AudioExample             string `json:"audio_example"`
+	ImageURL                 string `json:"image_url,omitempty"`
 }
 type CardResponse struct {
 	ID              string        `json:"id"`

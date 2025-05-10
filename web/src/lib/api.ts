@@ -70,33 +70,37 @@ export interface Deck {
 }
 
 export interface CardFields {
-	word: string
-	reading: string
-	word_furigana: string
-	meaning_en: string
-	meaning_ru: string
-	example_ja: string
-	example_en: string
-	example_ru: string
-	example_furigana: string
-	frequency: number
-	audio_word: string
-	audio_example: string
-}
+	// Core terminology fields (language agnostic)
+	term: string                       // Primary term in native script (was "word")
+	transcription: string              // Reading aid (pinyin, romaji, etc.) (was "reading")
+	term_with_transcription: string    // Term with reading aids embedded (was "word_furigana")
 
-export interface CardFields {
-	word: string
-	reading: string
-	word_furigana: string
+	// Meanings in different languages
 	meaning_en: string
 	meaning_ru: string
-	example_ja: string
+
+	// Example sentences
+	example_native: string             // Example in native script (was "example_ja")
+	example_with_transcription: string // Example with reading aids (was "example_furigana")
 	example_en: string
 	example_ru: string
-	example_furigana: string
+
+	// Metadata
 	frequency: number
-	audio_word: string
-	audio_example: string
+	language_code: string              // ISO 639-1 language code (e.g., "ja", "zh", "en")
+	transcription_type: string         // Type of transcription (furigana, pinyin, etc.)
+
+	// Media
+	audio_word: string                 // Audio for term pronunciation
+	audio_example: string              // Audio for example sentence
+	image_url?: string                 // Illustration image
+
+	// Legacy field names (for backward compatibility)
+	word?: string
+	reading?: string
+	word_furigana?: string
+	example_ja?: string
+	example_furigana?: string
 }
 
 
