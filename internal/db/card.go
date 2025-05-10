@@ -28,7 +28,6 @@ type Card struct {
 }
 
 type VocabularyItem struct {
-	// Core term data
 	Term                  string `json:"term"`                    // Primary term in native script
 	Transcription         string `json:"transcription,omitempty"` // Reading aid (pinyin, romaji, etc.)
 	TermWithTranscription string `json:"term_with_transcription"` // Term with reading aids embedded (was WordFurigana)

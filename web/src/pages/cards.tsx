@@ -3,7 +3,7 @@ import { apiRequest, Card, CardReviewResponse, Deck } from '~/lib/api'
 import { useParams, useNavigate } from '@solidjs/router'
 import AudioButton from '~/components/audio-button'
 import { hapticFeedback } from '~/lib/utils'
-import FuriganaText from '~/components/furigana-text'
+import TranscriptionText from '~/components/transcription-text'
 
 const PREFETCH_BUFFER_THRESHOLD = 2
 
@@ -321,12 +321,12 @@ export default function Cards() {
 						>
 							<div class={getFrontFaceClasses(flipped(), isTransitioning())}>
 								<div class="text-5xl font-semibold mb-4 font-jp">
-									<FuriganaText text={currentCard()?.fields.word || ''} textSize="5xl" />
+									<TranscriptionText text={currentCard()?.fields.word || ''} textSize="5xl" />
 								</div>
 								<Show
 									when={currentCard()?.fields.example_ja}>
 									<div class="text-2xl font-jp p-3 mb-2 max-w-full">
-										<FuriganaText text={currentCard()?.fields.example_ja || ''} textSize="2xl" />
+										<TranscriptionText text={currentCard()?.fields.example_ja || ''} textSize="2xl" />
 									</div>
 								</Show>
 							</div>
@@ -335,9 +335,9 @@ export default function Cards() {
 								<div class="text-5xl font-semibold font-jp mb-6 flex flex-col items-center">
 									<div class="flex items-center gap-2 pl-8">
 										{currentCard()?.fields.word_furigana ? (
-											<FuriganaText text={currentCard()?.fields.word_furigana!} textSize="5xl" />
+											<TranscriptionText text={currentCard()?.fields.word_furigana!} textSize="5xl" />
 										) : (
-											<FuriganaText text={currentCard()?.fields.word || ''} textSize="5xl" />
+											<TranscriptionText text={currentCard()?.fields.word || ''} textSize="5xl" />
 										)}
 										<Show when={currentCard()?.fields.audio_word}>
 											<AudioButton
@@ -359,9 +359,9 @@ export default function Cards() {
 										<div class="flex items-start justify-between mb-1">
 											<p class="flex-grow font-jp">
 												{currentCard()?.fields.example_furigana ? (
-													<FuriganaText text={currentCard()?.fields.example_furigana!} textSize="2xl" />
+													<TranscriptionText text={currentCard()?.fields.example_furigana!} textSize="2xl" />
 												) : (
-													<FuriganaText text={currentCard()?.fields.example_ja || ""} textSize="2xl" />
+													<TranscriptionText text={currentCard()?.fields.example_ja || ""} textSize="2xl" />
 												)}
 											</p>
 											<Show when={currentCard()?.fields.audio_example}>
