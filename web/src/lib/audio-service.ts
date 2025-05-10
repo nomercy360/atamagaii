@@ -35,20 +35,28 @@ export const audioService = {
    * Stop all currently playing audio
    */
   stopAll(): void {
+    // Save URLs before stopping to ensure we can notify the correct callbacks
+    const playingUrls = activeAudios().map(item => item.url)
+
     activeAudios().forEach(item => {
       item.audio.pause()
       item.audio.currentTime = 0
       console.log('Stopping audio:', item.url)
     })
-    
-    // Notify all callbacks that audio has stopped
-    audioStateCallbacks.forEach((callback, key) => {
-      const url = key.split(':')[1]
-      callback(false, url)
-    })
-    
+
+    // Clear active audios and set global playing state to false
     setActiveAudios([])
     setIsPlaying(false)
+
+    // Notify all callbacks for previously playing audios that audio has stopped
+    playingUrls.forEach(url => {
+      audioStateCallbacks.forEach((callback, key) => {
+        if (key.includes(url)) {
+          console.log(`Notifying callback that ${url} has stopped`)
+          callback(false, url)
+        }
+      })
+    })
   },
 
   /**
@@ -233,10 +241,18 @@ export const audioService = {
   toggleAudio(url: string, type: 'word' | 'example' = 'word'): Promise<void> {
     // Check if this audio is already playing
     const isThisPlaying = activeAudios().some(item => item.url === url && item.audio.paused === false)
-    
+
     if (isThisPlaying) {
       // If playing, stop it
       this.stopAll()
+
+      // Make sure to explicitly notify callbacks for this specific URL
+      audioStateCallbacks.forEach((callback, key) => {
+        if (key.includes(url)) {
+          callback(false, url)
+        }
+      })
+
       return Promise.resolve()
     } else {
       // If not playing, start it

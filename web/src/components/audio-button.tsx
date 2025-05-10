@@ -1,4 +1,4 @@
-import { createSignal, Show, onMount, onCleanup } from 'solid-js'
+import { createSignal, Show, onMount, onCleanup, createEffect } from 'solid-js'
 import { audioService } from '~/lib/audio-service'
 
 interface AudioButtonProps {
@@ -21,22 +21,46 @@ export default function AudioButton(props: AudioButtonProps) {
 		audioService.toggleAudio(props.audioUrl, type)
 	}
 
-	onMount(() => {
+	const [currentAudioUrl, setCurrentAudioUrl] = createSignal(props.audioUrl)
+	let unregisterCallback: (() => void) | null = null
+
+	const registerCallback = () => {
+		if (unregisterCallback) {
+			unregisterCallback()
+		}
+
+		const url = props.audioUrl
+		if (!url) return
+
+		setCurrentAudioUrl(url)
+
 		const componentId = `audio-button-${Math.random().toString(36).substring(2, 9)}`
 
-		const unregister = audioService.registerStateCallback(
+		unregisterCallback = audioService.registerStateCallback(
 			componentId,
-			props.audioUrl,
-			(playing, url) => {
-				if (url === props.audioUrl) {
+			url,
+			(playing, callbackUrl) => {
+				if (callbackUrl === url) {
 					setIsPlaying(playing)
 				}
-			},
+			}
 		)
+	}
+
+	onMount(() => {
+		registerCallback()
 
 		onCleanup(() => {
-			unregister()
+			if (unregisterCallback) {
+				unregisterCallback()
+			}
 		})
+	})
+
+	createEffect(() => {
+		if (props.audioUrl !== currentAudioUrl()) {
+			registerCallback()
+		}
 	})
 
 	const sizeClasses = {
