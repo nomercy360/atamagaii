@@ -150,6 +150,32 @@ export interface ImportDeckResponse {
     card_count: number
 }
 
+export interface AvailableDeck {
+    id: string
+    name: string
+    description: string
+    level: string
+}
+
+export interface LanguageGroup {
+    code: string
+    name: string
+    decks: AvailableDeck[]
+}
+
+export interface AvailableDecksResponse {
+    languages: LanguageGroup[]
+}
+
+export async function getAvailableDecks(): Promise<{
+    data: AvailableDecksResponse | null
+    error: string | null
+}> {
+    return apiRequest('/decks/available', {
+        method: 'GET',
+    })
+}
+
 export async function importDeck(request: ImportDeckRequest): Promise<{
     data: ImportDeckResponse | null
     error: string | null

@@ -239,6 +239,7 @@ func (s *Storage) GetNewCards(userID string, deckID string, limit int) ([]Card, 
 
 func (s *Storage) GetDueCards(userID string, deckID string, limit int) ([]Card, error) {
 	todayEnd := time.Now().Truncate(24 * time.Hour).Add(24*time.Hour - time.Nanosecond)
+	// todayEnd := time.Now()
 
 	query := `
 		SELECT id, deck_id, fields, user_id, next_review, interval, ease,

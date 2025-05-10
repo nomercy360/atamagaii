@@ -28,6 +28,7 @@ type UpdateDeckSettingsRequest struct {
 func (h *Handler) AddFlashcardRoutes(g *echo.Group) {
 	g.GET("/decks", h.GetDecks)
 	g.GET("/decks/:id", h.GetDeck)
+	g.GET("/decks/available", h.GetAvailableDecks)
 	g.POST("/decks/import", h.CreateDeckFromFile)
 	g.PUT("/decks/:id/settings", h.UpdateDeckSettings)
 	g.DELETE("/decks/:id", h.DeleteDeck)

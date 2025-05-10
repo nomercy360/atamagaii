@@ -52,8 +52,8 @@ export default function Cards() {
 
 	const [cardBuffer, setCardBuffer] = createSignal<Card[]>([])
 	const [needMoreCards, setNeedMoreCards] = createSignal(true)
-	const [processedCardIds, setProcessedCardIds] = createSignal<Set<string>>(new Set())
 	const [isFetchingMore, setIsFetchingMore] = createSignal(false)
+	const [activeAudios, setActiveAudios] = createSignal<HTMLAudioElement[]>([])
 
 	const [deck, { refetch: refetchDeck }] = createResource<Deck | null>(
 		async () => {
@@ -113,19 +113,29 @@ export default function Cards() {
 
 			setFetchFailureCount(0)
 
-			const processed = processedCardIds()
-			const newCards = (data || []).filter(card => !processed.has(card.id))
+			if (!data || data.length === 0) {
+				console.log('API returned no cards. Setting needMoreCards to false.')
+				setNeedMoreCards(false)
+			}
+
+			const newCards = data || []
+
+			// if current card is in the new cards and length is greater than 1, remove it
+
+			if (newCards.length > 1 && currentCard()) {
+				const currentCardId = currentCard()!.id
+				const currentCardIndex = newCards.findIndex(card => card.id === currentCardId)
+				if (currentCardIndex !== -1) {
+					newCards.splice(currentCardIndex, 1)
+					console.log(`Removed current card from new cards: ${currentCardId}`)
+				}
+			}
 
 			if (newCards.length > 0) {
 				setCardBuffer(prev => [...prev, ...newCards])
 				console.log(`Fetched and added ${newCards.length} new cards to buffer.`)
 			} else {
 				console.log('Fetched cards, but no *new* cards to add (either all processed or API returned processed cards).')
-			}
-
-			if (!data || data.length === 0) {
-				console.log('API returned no cards. Setting needMoreCards to false.')
-				setNeedMoreCards(false)
 			}
 
 			setIsFetchingMore(false)
@@ -207,6 +217,14 @@ export default function Cards() {
 		}
 	}
 
+	const stopAllAudio = () => {
+		activeAudios().forEach(audio => {
+			audio.pause()
+			audio.currentTime = 0
+		})
+		setActiveAudios([])
+	}
+
 	const resetTimer = () => {
 		setTimeSpentMs(0)
 		setStartTime(Date.now())
@@ -247,14 +265,23 @@ export default function Cards() {
 	const playCardAudio = () => {
 		const card = currentCard()
 		if (card?.fields.audio_word) {
+			// Stop any currently playing audio
+			stopAllAudio()
+
 			const wordAudio = new Audio(card.fields.audio_word)
+			// Add to active audios list
+			setActiveAudios([wordAudio])
 
 			if (card?.fields.audio_example) {
 				wordAudio.onended = () => {
 					setTimeout(() => {
 						const exampleAudio = new Audio(card.fields.audio_example)
+						// Update active audios when example audio starts
+						setActiveAudios([exampleAudio])
+
 						exampleAudio.play().catch(error => {
 							console.error('Error playing example audio:', error)
+							setActiveAudios(audios => audios.filter(a => a !== exampleAudio))
 						})
 					}, 300)
 				}
@@ -262,6 +289,7 @@ export default function Cards() {
 
 			wordAudio.play().catch(error => {
 				console.error('Error playing word audio:', error)
+				setActiveAudios(audios => audios.filter(a => a !== wordAudio))
 			})
 		}
 	}
@@ -280,6 +308,8 @@ export default function Cards() {
 	}
 
 	const handleNextCard = () => {
+		stopAllAudio()
+
 		setIsTransitioning(true)
 		setTimeout(() => {
 			setFlipped(false)
@@ -293,6 +323,7 @@ export default function Cards() {
 
 	const handleReview = async (cardId: string, rating: number) => {
 		pauseTimer()
+
 		const finalTimeSpent = getCurrentTimeSpent()
 		console.log('Sending review with time_spent_ms:', finalTimeSpent)
 
@@ -322,12 +353,6 @@ export default function Cards() {
 				reviewCards: data.stats.review_cards || 0,
 			})
 		}
-
-		setProcessedCardIds(prev => {
-			const updated = new Set(prev)
-			updated.add(cardId)
-			return updated
-		})
 
 		handleNextCard()
 	}

@@ -1,5 +1,5 @@
-import { createSignal, onCleanup, onMount } from 'solid-js'
-import { importDeck } from '~/lib/api'
+import { createSignal, onCleanup, onMount, For, createResource, Show } from 'solid-js'
+import { importDeck, getAvailableDecks, LanguageGroup, AvailableDeck } from '~/lib/api'
 import { useNavigate } from '@solidjs/router'
 import { useMainButton } from '~/lib/useMainButton'
 import { useBackButton } from '~/lib/useBackButton'
@@ -13,15 +13,23 @@ export default function ImportDeck() {
 	const [name, setName] = createSignal('')
 	const [description, setDescription] = createSignal('')
 	const [selectedFile, setSelectedFile] = createSignal<string | null>(null)
+	const [selectedLanguage, setSelectedLanguage] = createSignal<string | null>(null)
 	const [isLoading, setIsLoading] = createSignal(false)
 	const [error, setError] = createSignal<string | null>(null)
 
-	// Predefined decks available for import
-	const availableDecks = [
-		{ id: 'vocab_n5.json', name: 'N5 Vocabulary', description: 'Basic Japanese vocabulary for JLPT N5 level' },
-		{ id: 'vocab_n4.json', name: 'N4 Vocabulary', description: 'Japanese vocabulary for JLPT N4 level' },
-		{ id: 'vocab_n3.json', name: 'N3 Vocabulary', description: 'Intermediate Japanese vocabulary for JLPT N3 level' },
-	]
+	// Fetch available decks from API
+	const [availableDecksData] = createResource(async () => {
+		const response = await getAvailableDecks()
+		if (response.error) {
+			setError(response.error)
+			return { languages: [] }
+		}
+		// If there's only one language, preselect it
+		if (response.data && response.data.languages.length === 1) {
+			setSelectedLanguage(response.data.languages[0].code)
+		}
+		return response.data
+	})
 
 	onMount(() => {
 		mainButton.setVisible('Import Deck')
@@ -43,9 +51,8 @@ export default function ImportDeck() {
 		}
 	}
 
-	const selectPredefinedDeck = (fileId: string) => {
+	const selectPredefinedDeck = (fileId: string, deck: AvailableDeck) => {
 		setSelectedFile(fileId)
-		const deck = availableDecks.find(d => d.id === fileId)
 		if (deck) {
 			if (!name()) setName(deck.name)
 			if (!description()) setDescription(deck.description)
@@ -138,34 +145,64 @@ export default function ImportDeck() {
 					/>
 				</div>
 
-				<div class="space-y-2">
+				<div class="space-y-4">
 					<label class="text-sm font-medium mb-2 block">
-						Select Deck to Import
+						Select Language
 					</label>
-					<div class="space-y-2">
-						{availableDecks.map(deck => (
-							<button
-								type="button"
-								onClick={() => selectPredefinedDeck(deck.id)}
-								class={`w-full text-left p-3 border ${selectedFile() === deck.id ? 'border-primary bg-primary/10' : 'border-border'} rounded-md bg-card flex items-center`}
-								disabled={isLoading()}
-							>
-								<div
-									class={`w-4 h-4 rounded-full border mr-2 flex items-center justify-center ${selectedFile() === deck.id ? 'border-primary' : 'border-muted-foreground'}`}>
-									{selectedFile() === deck.id && <div class="w-2 h-2 rounded-full bg-primary"></div>}
+					<Show when={!availableDecksData.loading} fallback={<div class="text-sm">Loading available decks...</div>}>
+						<div class="space-y-4">
+							<div class="flex flex-wrap gap-2">
+								<For each={availableDecksData()?.languages || []}>
+									{(language) => (
+										<button
+											type="button"
+											onClick={() => setSelectedLanguage(language.code)}
+											class={`px-3 py-2 rounded-md text-sm font-medium
+												${selectedLanguage() === language.code ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground border border-border'}`}
+											disabled={isLoading()}
+										>
+											{language.name}
+										</button>
+									)}
+								</For>
+							</div>
+
+							<Show when={selectedLanguage()}>
+								<div class="space-y-2">
+									<label class="text-sm font-medium mb-2 block">
+										Select Deck to Import
+									</label>
+									<div class="space-y-2">
+										<For each={availableDecksData()?.languages.find(l => l.code === selectedLanguage())?.decks || []}>
+											{(deck) => (
+												<button
+													type="button"
+													onClick={() => selectPredefinedDeck(deck.id, deck)}
+													class={`w-full text-left p-3 border ${selectedFile() === deck.id ? 'border-primary bg-primary/10' : 'border-border'} rounded-md bg-card flex items-center`}
+													disabled={isLoading()}
+												>
+													<div
+														class={`w-4 h-4 rounded-full border mr-2 flex items-center justify-center ${selectedFile() === deck.id ? 'border-primary' : 'border-muted-foreground'}`}>
+														{selectedFile() === deck.id && <div class="w-2 h-2 rounded-full bg-primary"></div>}
+													</div>
+													<div>
+														<p class="font-medium">{deck.name}</p>
+														<p class="text-xs text-muted-foreground">{deck.description}</p>
+														<p class="text-xs text-muted-foreground mt-1">Level: {deck.level}</p>
+													</div>
+												</button>
+											)}
+										</For>
+									</div>
 								</div>
-								<div>
-									<p class="font-medium">{deck.name}</p>
-									<p class="text-xs text-muted-foreground">{deck.description}</p>
-								</div>
-							</button>
-						))}
-					</div>
+							</Show>
+						</div>
+					</Show>
 				</div>
 			</div>
 
 			<div class="text-sm text-muted-foreground mt-8">
-				<p>Select a predefined deck to import. These decks contain vocabulary organized by JLPT level.</p>
+				<p>Select a language and predefined deck to import. These decks contain vocabulary organized by level.</p>
 			</div>
 		</div>
 	)

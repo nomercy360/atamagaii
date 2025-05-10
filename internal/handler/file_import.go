@@ -9,7 +9,28 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
+
+// AvailableDecksResponse represents the structure of available decks grouped by language
+type AvailableDecksResponse struct {
+	Languages []LanguageGroup `json:"languages"`
+}
+
+// LanguageGroup represents a language with its available decks
+type LanguageGroup struct {
+	Code  string     `json:"code"`
+	Name  string     `json:"name"`
+	Decks []DeckInfo `json:"decks"`
+}
+
+// DeckInfo represents information about an available deck for import
+type DeckInfo struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Level       string `json:"level"`
+}
 
 func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 	userID, err := GetUserIDFromToken(c)
@@ -58,6 +79,12 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 	languageCode := "ja"
 	transcriptionType := "furigana"
 
+	// Determine language and transcription type based on filename
+	if strings.HasPrefix(req.FileName, "georgian_") {
+		languageCode = "ka"
+		transcriptionType = "transliteration"
+	}
+
 	deck, err := h.db.CreateDeck(userID, req.Name, req.Description, level, languageCode, transcriptionType)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to create deck: %v", err))
@@ -92,4 +119,25 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusCreated, deck)
+}
+
+func (h *Handler) GetAvailableDecks(c echo.Context) error {
+	materialsDir, err := utils.FindDirUp("materials", 3)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find materials directory")
+	}
+
+	// Read the available_decks.json file
+	metadataPath := filepath.Join(materialsDir, "available_decks.json")
+	fileData, err := os.ReadFile(metadataPath)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to read available decks metadata: %v", err))
+	}
+
+	var availableDecks AvailableDecksResponse
+	if err := json.Unmarshal(fileData, &availableDecks); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to parse available decks metadata: %v", err))
+	}
+
+	return c.JSON(http.StatusOK, availableDecks)
 }
