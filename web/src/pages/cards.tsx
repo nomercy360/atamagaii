@@ -4,6 +4,7 @@ import { useParams, useNavigate } from '@solidjs/router'
 import AudioButton from '~/components/audio-button'
 import { hapticFeedback } from '~/lib/utils'
 import TranscriptionText from '~/components/transcription-text'
+import { audioService } from '~/lib/audio-service'
 
 const PREFETCH_BUFFER_THRESHOLD = 2
 
@@ -53,7 +54,6 @@ export default function Cards() {
 	const [cardBuffer, setCardBuffer] = createSignal<Card[]>([])
 	const [needMoreCards, setNeedMoreCards] = createSignal(true)
 	const [isFetchingMore, setIsFetchingMore] = createSignal(false)
-	const [activeAudios, setActiveAudios] = createSignal<HTMLAudioElement[]>([])
 
 	const [deck, { refetch: refetchDeck }] = createResource<Deck | null>(
 		async () => {
@@ -218,11 +218,7 @@ export default function Cards() {
 	}
 
 	const stopAllAudio = () => {
-		activeAudios().forEach(audio => {
-			audio.pause()
-			audio.currentTime = 0
-		})
-		setActiveAudios([])
+		audioService.stopAll()
 	}
 
 	const resetTimer = () => {
@@ -265,32 +261,12 @@ export default function Cards() {
 	const playCardAudio = () => {
 		const card = currentCard()
 		if (card?.fields.audio_word) {
-			// Stop any currently playing audio
-			stopAllAudio()
-
-			const wordAudio = new Audio(card.fields.audio_word)
-			// Add to active audios list
-			setActiveAudios([wordAudio])
-
+			// Use audio service to play sequence of word and example audio
 			if (card?.fields.audio_example) {
-				wordAudio.onended = () => {
-					setTimeout(() => {
-						const exampleAudio = new Audio(card.fields.audio_example)
-						// Update active audios when example audio starts
-						setActiveAudios([exampleAudio])
-
-						exampleAudio.play().catch(error => {
-							console.error('Error playing example audio:', error)
-							setActiveAudios(audios => audios.filter(a => a !== exampleAudio))
-						})
-					}, 300)
-				}
+				audioService.playSequence(card.fields.audio_word, card.fields.audio_example, 300)
+			} else {
+				audioService.playAudio(card.fields.audio_word, 'word')
 			}
-
-			wordAudio.play().catch(error => {
-				console.error('Error playing word audio:', error)
-				setActiveAudios(audios => audios.filter(a => a !== wordAudio))
-			})
 		}
 	}
 
@@ -418,6 +394,7 @@ export default function Cards() {
 												audioUrl={currentCard()?.fields.audio_word || ''}
 												size="sm"
 												label="Play word pronunciation"
+												type="word"
 											/>
 										</Show>
 									</div>
@@ -454,6 +431,7 @@ export default function Cards() {
 													audioUrl={currentCard()?.fields.audio_example || ''}
 													size="sm"
 													label="Play example audio"
+													type="example"
 												/>
 											</Show>
 										</div>
