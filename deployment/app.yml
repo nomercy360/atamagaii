@@ -86,6 +86,8 @@ kind: Ingress
 metadata:
   name: atamagaii-api
   namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "200m"
 spec:
   ingressClassName: nginx
   rules:
