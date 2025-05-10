@@ -1,0 +1,40 @@
+{
+  "languages": [
+    {
+      "code": "ja",
+      "name": "Japanese",
+      "decks": [
+        {
+          "id": "vocab_n5.json",
+          "name": "N5 Vocabulary",
+          "description": "Basic Japanese vocabulary for JLPT N5 level",
+          "level": "N5"
+        },
+        {
+          "id": "vocab_n4.json",
+          "name": "N4 Vocabulary",
+          "description": "Japanese vocabulary for JLPT N4 level",
+          "level": "N4"
+        },
+        {
+          "id": "vocab_n3.json",
+          "name": "N3 Vocabulary",
+          "description": "Intermediate Japanese vocabulary for JLPT N3 level",
+          "level": "N3"
+        }
+      ]
+    },
+    {
+      "code": "ka",
+      "name": "Georgian",
+      "decks": [
+        {
+          "id": "georgian_cards_with_audio.json",
+          "name": "Georgian Vocabulary",
+          "description": "Basic Georgian vocabulary with audio",
+          "level": "Beginner"
+        }
+      ]
+    }
+  ]
+}
