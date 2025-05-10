@@ -11,7 +11,7 @@ export interface FuriganaTextProps {
 type FuriganaSegment =
 	| { type: 'ruby'; base: string; text: string }
 	| { type: 'text'; content: string }
-	| { type: 'bold'; content: string };
+	| { type: 'bold'; content: string; segments?: FuriganaSegment[] };
 
 // Helper function to parse the text into segments
 const parseTextToSegments = (text: string): FuriganaSegment[] => {
@@ -20,32 +20,102 @@ const parseTextToSegments = (text: string): FuriganaSegment[] => {
 		return segments
 	}
 
+	// Step 1: Handle HTML tags like <b> separately to prevent interference with furigana parsing
+	const htmlTags = new Map<string, { type: string, content: string }>()
+	let tagCounter = 0
+
+	// Replace bold tags with placeholders
+	let processedText = text.replace(/<b>(.+?)<\/b>/g, (_, content) => {
+		const placeholder = `__HTML_TAG_${tagCounter}__`
+		htmlTags.set(placeholder, { type: 'bold', content })
+		tagCounter++
+		return placeholder
+	})
+
+	// Step 2: Process furigana notation in the text
 	let lastIndex = 0
-	// Regex: Match a non-greedy base text (one or more chars not '[')
-	// followed by reading in brackets '[reading]'
-	const regex = /([一-龯]+)\[([^\]]+)]/g // Non-greedy base: ([^\[]+?)
+	// Match kanji characters followed by readings in brackets
+	const furiganaRegex = /([一-龯]+)\[([^\]]+)]/g
 	let match
 
-	while ((match = regex.exec(text)) !== null) {
-		// Add preceding non-furigana text if any
-		// This is text from the end of the last match to the start of the current match
+	while ((match = furiganaRegex.exec(processedText)) !== null) {
+		// Add text before the current furigana match
 		if (match.index > lastIndex) {
-			segments.push({ type: 'text', content: text.substring(lastIndex, match.index) })
+			const precedingText = processedText.substring(lastIndex, match.index)
+			processPlainTextWithTags(precedingText, segments, htmlTags)
 		}
-		// Add furigana part
+
+		// Add the furigana segment
 		segments.push({ type: 'ruby', base: match[1], text: match[2] })
-		lastIndex = regex.lastIndex // Update lastIndex to the end of the current match
+		lastIndex = furiganaRegex.lastIndex
 	}
 
-	// Add any remaining non-furigana text from the end of the string
-	if (lastIndex < text.length) {
-		segments.push({ type: 'text', content: text.substring(lastIndex) })
+	// Add any remaining text after the last furigana match
+	if (lastIndex < processedText.length) {
+		const remainingText = processedText.substring(lastIndex)
+		processPlainTextWithTags(remainingText, segments, htmlTags)
 	}
 
 	return segments
 }
 
-// Constant map for rt sizes based on text size
+// Handle plain text that might contain HTML tag placeholders
+const processPlainTextWithTags = (
+	text: string,
+	segments: FuriganaSegment[],
+	htmlTags: Map<string, { type: string, content: string }>
+) => {
+	const tagRegex = /__HTML_TAG_(\d+)__/g
+	let lastIndex = 0
+	let match
+
+	while ((match = tagRegex.exec(text)) !== null) {
+		// Add plain text before the tag placeholder
+		if (match.index > lastIndex) {
+			segments.push({
+				type: 'text',
+				content: text.substring(lastIndex, match.index)
+			})
+		}
+
+		// Process the tag
+		const placeholder = match[0]
+		const tagInfo = htmlTags.get(placeholder)
+
+		if (tagInfo) {
+			if (tagInfo.type === 'bold') {
+				// For bold tags, check if there's furigana inside
+				if (tagInfo.content.includes('[') && tagInfo.content.match(/([一-龯]+)\[([^\]]+)]/)) {
+					// Parse the bold content separately to handle nested furigana
+					const boldSegments = parseTextToSegments(tagInfo.content)
+					segments.push({
+						type: 'bold',
+						content: '', // Empty as we'll use the segments instead
+						segments: boldSegments
+					})
+				} else {
+					// Regular bold text without furigana
+					segments.push({
+						type: 'bold',
+						content: tagInfo.content
+					})
+				}
+			}
+		}
+
+		lastIndex = match.index + placeholder.length
+	}
+
+	// Add any remaining text
+	if (lastIndex < text.length) {
+		segments.push({
+			type: 'text',
+			content: text.substring(lastIndex)
+		})
+	}
+}
+
+// Size map for furigana rt elements
 const RT_SIZE_MAP = {
 	'xs': 'text-[0.5rem]',
 	'sm': 'text-[0.55rem]',
@@ -60,9 +130,10 @@ const RT_SIZE_MAP = {
 
 /**
  * FuriganaText component for displaying Japanese text with furigana readings
- *
- * Format should be: kanji[reading] (e.g., "会[あ]う", "明日[あした]")
- * Example: "明日[あした]、友[とも]だちに会[あ]います。"
+ * Supports both furigana notation and HTML tags:
+ * - Furigana format: kanji[reading] (e.g., "会[あ]う", "明日[あした]")
+ * - HTML tags: Currently supports <b> for bold text
+ * - Can handle nested tags and furigana
  */
 export default function FuriganaText(props: FuriganaTextProps): JSX.Element {
 	const [local, others] = splitProps(props, ['text', 'class', 'textSize', 'rtClass'])
@@ -79,8 +150,36 @@ export default function FuriganaText(props: FuriganaTextProps): JSX.Element {
 		return `${defaultRtClass()} ${local.rtClass || ''}`
 	})
 
-	// Parse the input text into segments. Reactive.
+	// Parse the input text into segments
 	const segments = createMemo(() => parseTextToSegments(local.text))
+
+	// Recursive renderer for segments (to handle nested structures)
+	const renderSegment = (segment: FuriganaSegment): JSX.Element => {
+		if (segment.type === 'ruby') {
+			return (
+				<ruby>
+					{segment.base}
+					<rt class={finalRtClasses()}>{segment.text}</rt>
+				</ruby>
+			)
+		} else if (segment.type === 'bold') {
+			if (segment.segments) {
+				// If it has nested segments, render those within the bold context
+				return (
+					<span class="font-bold">
+						<For each={segment.segments}>
+							{(nestedSegment) => renderSegment(nestedSegment)}
+						</For>
+					</span>
+				)
+			}
+			// Simple bold text
+			return <span class="font-bold">{segment.content}</span>
+		} else {
+			// Plain text
+			return <>{segment.content}</>
+		}
+	}
 
 	return (
 		<p
@@ -88,19 +187,7 @@ export default function FuriganaText(props: FuriganaTextProps): JSX.Element {
 			{...others}
 		>
 			<For each={segments()}>
-				{(segment) => {
-					if (segment.type === 'ruby') {
-						return (
-							<ruby>
-								{segment.base}
-								<rt class={finalRtClasses()}>{segment.text}</rt>
-							</ruby>
-						)
-					} else {
-						// Plain text content, needs to be wrapped in <> for JSX fragment if it's just a string
-						return <>{segment.content}</>
-					}
-				}}
+				{(segment) => renderSegment(segment)}
 			</For>
 		</p>
 	)

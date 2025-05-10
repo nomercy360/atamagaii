@@ -321,12 +321,12 @@ export default function Cards() {
 						>
 							<div class={getFrontFaceClasses(flipped(), isTransitioning())}>
 								<div class="text-5xl font-semibold mb-4 font-jp">
-									{currentCard()?.fields.word}
+									<FuriganaText text={currentCard()?.fields.word || ''} textSize="5xl" />
 								</div>
 								<Show
 									when={currentCard()?.fields.example_ja}>
 									<div class="text-2xl font-jp p-3 mb-2 max-w-full">
-										{currentCard()?.fields.example_ja}
+										<FuriganaText text={currentCard()?.fields.example_ja || ''} textSize="2xl" />
 									</div>
 								</Show>
 							</div>
@@ -337,7 +337,7 @@ export default function Cards() {
 										{currentCard()?.fields.word_furigana ? (
 											<FuriganaText text={currentCard()?.fields.word_furigana!} textSize="5xl" />
 										) : (
-											currentCard()?.fields.word
+											<FuriganaText text={currentCard()?.fields.word || ''} textSize="5xl" />
 										)}
 										<Show when={currentCard()?.fields.audio_word}>
 											<AudioButton
@@ -361,7 +361,7 @@ export default function Cards() {
 												{currentCard()?.fields.example_furigana ? (
 													<FuriganaText text={currentCard()?.fields.example_furigana!} textSize="2xl" />
 												) : (
-													currentCard()?.fields.example_ja
+													<FuriganaText text={currentCard()?.fields.example_ja || ""} textSize="2xl" />
 												)}
 											</p>
 											<Show when={currentCard()?.fields.audio_example}>
