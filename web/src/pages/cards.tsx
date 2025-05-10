@@ -76,9 +76,18 @@ export default function Cards() {
 		},
 	)
 
+	const [fetchFailureCount, setFetchFailureCount] = createSignal<number>(0)
+	const MAX_FETCH_FAILURES = 1
+
 	const fetchCards = async (): Promise<Card[]> => {
 		if (!params.deckId || isFetchingMore()) {
 			console.log('Fetch skipped: No deckId or already fetching.')
+			return []
+		}
+
+		if (fetchFailureCount() >= MAX_FETCH_FAILURES) {
+			console.log(`Skipping fetch - reached max failure count (${MAX_FETCH_FAILURES})`)
+			setNeedMoreCards(false)
 			return []
 		}
 
@@ -90,8 +99,19 @@ export default function Cards() {
 			if (error) {
 				console.error(`Failed to fetch cards for deck ${params.deckId}:`, error)
 				setIsFetchingMore(false)
+
+				const newCount = fetchFailureCount() + 1
+				setFetchFailureCount(newCount)
+
+				if (newCount >= MAX_FETCH_FAILURES) {
+					console.log(`Max failure count reached (${MAX_FETCH_FAILURES}), stopping automatic retries`)
+					setNeedMoreCards(false) // Prevent further fetch attempts
+				}
+
 				return []
 			}
+
+			setFetchFailureCount(0)
 
 			const processed = processedCardIds()
 			const newCards = (data || []).filter(card => !processed.has(card.id))
@@ -113,6 +133,15 @@ export default function Cards() {
 		} catch (e) {
 			console.error('Exception during fetchCards:', e)
 			setIsFetchingMore(false)
+
+			const newCount = fetchFailureCount() + 1
+			setFetchFailureCount(newCount)
+
+			if (newCount >= MAX_FETCH_FAILURES) {
+				console.log(`Max failure count reached (${MAX_FETCH_FAILURES}), stopping automatic retries`)
+				setNeedMoreCards(false)
+			}
+
 			return []
 		}
 	}
@@ -322,17 +351,17 @@ export default function Cards() {
 							<div class={getFrontFaceClasses(flipped(), isTransitioning())}>
 								<div class="text-5xl font-semibold mb-4">
 									<TranscriptionText
-										text={currentCard()?.fields.term || currentCard()?.fields.word || ''}
+										text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
 										textSize="5xl"
 										language={currentCard()?.fields.language_code || 'ja'}
 										transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 									/>
 								</div>
 								<Show
-									when={currentCard()?.fields.example_native || currentCard()?.fields.example_ja}>
+									when={currentCard()?.fields.example_native || currentCard()?.fields.example_native}>
 									<div class="text-2xl p-3 mb-2 max-w-full">
-										<TranscriptionText 
-											text={currentCard()?.fields.example_native || currentCard()?.fields.example_ja || ''} 
+										<TranscriptionText
+											text={currentCard()?.fields.example_native || currentCard()?.fields.example_native || ''}
 											textSize="2xl"
 											language={currentCard()?.fields.language_code || 'ja'}
 											transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
@@ -344,16 +373,16 @@ export default function Cards() {
 							<div class={getBackFaceClasses(flipped(), isTransitioning())}>
 								<div class="text-5xl font-semibold mb-6 flex flex-col items-center">
 									<div class="flex items-center gap-2 pl-8">
-										{currentCard()?.fields.term_with_transcription || currentCard()?.fields.word_furigana ? (
-											<TranscriptionText 
-												text={currentCard()?.fields.term_with_transcription || currentCard()?.fields.word_furigana!} 
+										{currentCard()?.fields.term_with_transcription || currentCard()?.fields.term_with_transcription ? (
+											<TranscriptionText
+												text={currentCard()?.fields.term_with_transcription || currentCard()?.fields.term_with_transcription!}
 												textSize="5xl"
 												language={currentCard()?.fields.language_code || 'ja'}
 												transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 											/>
 										) : (
-											<TranscriptionText 
-												text={currentCard()?.fields.term || currentCard()?.fields.word || ''} 
+											<TranscriptionText
+												text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
 												textSize="5xl"
 												language={currentCard()?.fields.language_code || 'ja'}
 												transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
@@ -367,27 +396,28 @@ export default function Cards() {
 											/>
 										</Show>
 									</div>
-									<Show when={(currentCard()?.fields.transcription || currentCard()?.fields.reading) && !(currentCard()?.fields.term_with_transcription || currentCard()?.fields.word_furigana)}>
+									<Show
+										when={(currentCard()?.fields.transcription || currentCard()?.fields.transcription) && !(currentCard()?.fields.term_with_transcription || currentCard()?.fields.term_with_transcription)}>
 										 <span class="text-lg text-muted-foreground">
-												{currentCard()?.fields.transcription || currentCard()?.fields.reading}
+												{currentCard()?.fields.transcription || currentCard()?.fields.transcription}
 										 </span>
 									</Show>
 								</div>
-								<div class="text-center text-2xl font-medium mb-8">{currentCard()?.fields.meaning_en}</div>
+								<div class="text-center text-2xl font-medium mb-8">{currentCard()?.fields.meaning_ru}</div>
 								<div class="text-sm space-y-2 w-full">
 									<div class="bg-muted rounded-md p-2">
 										<div class="flex items-start justify-between mb-1">
 											<p class="flex-grow">
-												{currentCard()?.fields.example_with_transcription || currentCard()?.fields.example_furigana ? (
-													<TranscriptionText 
-														text={currentCard()?.fields.example_with_transcription || currentCard()?.fields.example_furigana!} 
+												{currentCard()?.fields.example_with_transcription || currentCard()?.fields.example_with_transcription ? (
+													<TranscriptionText
+														text={currentCard()?.fields.example_with_transcription || currentCard()?.fields.example_with_transcription!}
 														textSize="2xl"
 														language={currentCard()?.fields.language_code || 'ja'}
 														transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 													/>
 												) : (
-													<TranscriptionText 
-														text={currentCard()?.fields.example_native || currentCard()?.fields.example_ja || ""} 
+													<TranscriptionText
+														text={currentCard()?.fields.example_native || currentCard()?.fields.example_native || ''}
 														textSize="2xl"
 														language={currentCard()?.fields.language_code || 'ja'}
 														transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
@@ -418,7 +448,22 @@ export default function Cards() {
 
 				<Show when={!cards.loading && !currentCard()}>
 					<div class="w-full flex flex-col items-center justify-center h-[300px]">
-						<p class="text-muted-foreground">No cards found in this deck.</p>
+						<Show when={fetchFailureCount() >= MAX_FETCH_FAILURES}>
+							<p class="text-muted-foreground mb-2">Failed to load cards. Please try again later.</p>
+							<button
+								onClick={() => {
+									setFetchFailureCount(0)
+									setNeedMoreCards(true)
+									fetchCards()
+								}}
+								class="mb-4 px-4 py-2 bg-primary text-primary-foreground rounded-md"
+							>
+								Retry
+							</button>
+						</Show>
+						<Show when={fetchFailureCount() < MAX_FETCH_FAILURES}>
+							<p class="text-muted-foreground">No cards found in this deck.</p>
+						</Show>
 						<button
 							onClick={() => navigate('/')}
 							class="mt-4 text-primary"
