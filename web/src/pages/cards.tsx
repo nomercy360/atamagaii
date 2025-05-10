@@ -220,20 +220,20 @@ export default function Cards() {
 		if (card?.fields.audio_word) {
 			const wordAudio = new Audio(card.fields.audio_word)
 
-			// if (card?.fields.audio_example) {
-			// 	wordAudio.onended = () => {
-			// 		setTimeout(() => {
-			// 			const exampleAudio = new Audio(card.fields.audio_example)
-			// 			exampleAudio.play().catch(error => {
-			// 				console.error('Error playing example audio:', error)
-			// 			})
-			// 		}, 300)
-			// 	}
-			// }
+			if (card?.fields.audio_example) {
+				wordAudio.onended = () => {
+					setTimeout(() => {
+						const exampleAudio = new Audio(card.fields.audio_example)
+						exampleAudio.play().catch(error => {
+							console.error('Error playing example audio:', error)
+						})
+					}, 300)
+				}
+			}
 
-			// wordAudio.play().catch(error => {
-			// 	console.error('Error playing word audio:', error)
-			// })
+			wordAudio.play().catch(error => {
+				console.error('Error playing word audio:', error)
+			})
 		}
 	}
 
@@ -411,7 +411,7 @@ export default function Cards() {
 								Again
 							</button>
 							<button
-								onClick={() => handleReview(currentCard()!.id, 3)}
+								onClick={() => handleReview(currentCard()!.id, 2)}
 								class="py-3 px-4 bg-info text-info-foreground rounded-md transition-opacity font-medium text-lg"
 							>
 								Good
