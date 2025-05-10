@@ -5,13 +5,6 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs))
 }
 
-
-export function parseFurigana(text: string) {
-	return text.replace(/([^\[\]]+?)\[(.+?)]/g, (_, kanji, kana) => {
-		return `<ruby>${kanji}<rt class="text-sm font-normal">${kana}</rt></ruby>`
-	})
-}
-
 export function hapticFeedback(
 	type: 'impact' | 'notification' | 'selection',
 	style?: 'light' | 'medium' | 'heavy' | 'soft' | 'rigid' | 'error' | 'success' | 'warning',
@@ -52,3 +45,4 @@ export function hapticFeedback(
 		console.error('Error triggering haptic feedback:', error)
 	}
 }
+

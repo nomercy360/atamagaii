@@ -71,18 +71,7 @@ func (s *S3Provider) UploadFile(ctx context.Context, data io.Reader, filename st
 		return "", fmt.Errorf("failed to read file data: %w", err)
 	}
 
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(s.config.Region))
-	if err != nil {
-		return "", fmt.Errorf("failed to load config: %w", err)
-	}
-
-	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		if s.config.Endpoint != "" {
-			o.BaseEndpoint = aws.String(s.config.Endpoint)
-		}
-	})
-
-	if _, err := client.PutObject(ctx, &s3.PutObjectInput{
+	if _, err := s.client.Upload(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.config.BucketName),
 		Key:         aws.String(filename),
 		Body:        bytes.NewReader(fileBytes),

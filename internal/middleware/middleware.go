@@ -100,7 +100,7 @@ func GetUserAuthConfig(secret string) echojwt.Config {
 }
 
 func Setup(e *echo.Echo, logger *slog.Logger) {
-	e.Use(echoMiddleware.Recover())
+	// e.Use(echoMiddleware.Recover())
 	e.Use(echoMiddleware.CORSWithConfig(echoMiddleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{echo.GET, echo.PUT, echo.POST, echo.DELETE},
@@ -128,7 +128,5 @@ func Setup(e *echo.Echo, logger *slog.Logger) {
 		},
 	}))
 	e.HTTPErrorHandler = CustomHTTPErrorHandler(logger)
-	e.Use(echoMiddleware.TimeoutWithConfig(echoMiddleware.TimeoutConfig{
-		Timeout: 20 * time.Second,
-	}))
+	e.Use(echoMiddleware.TimeoutWithConfig(echoMiddleware.TimeoutConfig{Timeout: 120 * time.Second}))
 }

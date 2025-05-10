@@ -87,12 +87,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Initialize S3 storage provider
 	var storageProvider storage.Provider
 	storageProvider, err = storage.NewS3Provider(cfg.S3Storage)
 	if err != nil {
 		log.Printf("Warning: Failed to initialize S3 storage: %v", err)
-		// Continue without S3 storage, media uploads will be skipped
 		storageProvider = nil
 	}
 

@@ -1,8 +1,9 @@
-import { createSignal, createResource, For, Show, createEffect, onMount, onCleanup } from 'solid-js'
-import { apiRequest, Card, CardReviewRequest, CardReviewResponse, Deck, Stats } from '~/lib/api'
+import { createSignal, createResource, Show, createEffect, onMount, onCleanup } from 'solid-js'
+import { apiRequest, Card, CardReviewResponse, Deck } from '~/lib/api'
 import { useParams, useNavigate } from '@solidjs/router'
 import AudioButton from '~/components/audio-button'
-import { hapticFeedback, parseFurigana } from '~/lib/utils'
+import { hapticFeedback } from '~/lib/utils'
+import FuriganaText from '~/components/furigana-text'
 
 const PREFETCH_BUFFER_THRESHOLD = 2
 
@@ -334,7 +335,7 @@ export default function Cards() {
 								<div class="text-5xl font-semibold font-jp mb-6 flex flex-col items-center">
 									<div class="flex items-center gap-2 pl-8">
 										{currentCard()?.fields.word_furigana ? (
-											<span innerHTML={parseFurigana(currentCard()?.fields.word_furigana || '')}></span>
+											<FuriganaText text={currentCard()?.fields.word_furigana!} textSize="5xl" />
 										) : (
 											currentCard()?.fields.word
 										)}
@@ -356,9 +357,9 @@ export default function Cards() {
 								<div class="text-sm space-y-2 w-full">
 									<div class="bg-muted rounded-md p-2">
 										<div class="flex items-start justify-between mb-1">
-											<p class="flex-grow text-2xl font-jp">
+											<p class="flex-grow font-jp">
 												{currentCard()?.fields.example_furigana ? (
-													<span innerHTML={parseFurigana(currentCard()?.fields.example_furigana || '')}></span>
+													<FuriganaText text={currentCard()?.fields.example_furigana!} textSize="2xl" />
 												) : (
 													currentCard()?.fields.example_ja
 												)}
