@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -160,33 +161,115 @@ func (p *Processor) GetMediaFiles(ankiExport *Export, tempDir string) ([]MediaFi
 }
 
 func (p *Processor) UploadMediaFiles(ctx context.Context, mediaFiles []MediaFile) (map[string]string, error) {
+	var mu sync.Mutex
 	mediaURLs := make(map[string]string)
 	var uploadErrors []string
 
-	for _, media := range mediaFiles {
+	// Create a worker pool with bounded concurrency
+	workerCount := 5 // Default to 5 concurrent uploads
+	if len(mediaFiles) < workerCount {
+		workerCount = len(mediaFiles)
+	}
 
-		if _, err := os.Stat(media.FilePath); os.IsNotExist(err) {
-			uploadErrors = append(uploadErrors, fmt.Sprintf("media file not found: %s", media.FilePath))
-			continue
+	// Allow for configuration (useful for testing)
+	if workers, exists := ctx.Value("uploadWorkers").(int); exists && workers > 0 {
+		workerCount = workers
+		if len(mediaFiles) < workerCount {
+			workerCount = len(mediaFiles)
 		}
+	}
 
-		file, err := os.Open(media.FilePath)
-		if err != nil {
-			uploadErrors = append(uploadErrors, fmt.Sprintf("failed to open media file %s: %v", media.FileName, err))
-			continue
+	type uploadResult struct {
+		fileName string
+		url      string
+		err      string
+	}
+
+	// Create a channel for tasks
+	taskCh := make(chan MediaFile, len(mediaFiles))
+	resultCh := make(chan uploadResult, len(mediaFiles))
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Start worker goroutines
+	var wg sync.WaitGroup
+	for i := 0; i < workerCount; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for media := range taskCh {
+				// Handle possible context cancellation
+				if ctx.Err() != nil {
+					return
+				}
+
+				result := uploadResult{fileName: media.FileName}
+
+				// Check if file exists
+				if _, err := os.Stat(media.FilePath); os.IsNotExist(err) {
+					result.err = fmt.Sprintf("media file not found: %s", media.FilePath)
+					resultCh <- result
+					continue
+				}
+
+				// Open file
+				file, err := os.Open(media.FilePath)
+				if err != nil {
+					result.err = fmt.Sprintf("failed to open media file %s: %v", media.FileName, err)
+					resultCh <- result
+					continue
+				}
+
+				// Create a unique filename with timestamp to avoid collisions
+				timestamp := time.Now().UnixNano()
+				uniqueFilename := fmt.Sprintf("anki_import/%d_%s", timestamp, media.FileName)
+
+				// Upload file
+				url, err := p.storage.UploadFile(ctx, file, uniqueFilename, media.ContentType)
+				file.Close()
+				if err != nil {
+					result.err = fmt.Sprintf("failed to upload media file %s: %v", media.FileName, err)
+					resultCh <- result
+					continue
+				}
+
+				result.url = url
+				resultCh <- result
+			}
+		}()
+	}
+
+	// Send tasks to workers
+	go func() {
+		for _, media := range mediaFiles {
+			select {
+			case taskCh <- media:
+			case <-ctx.Done():
+				return
+			}
 		}
+		close(taskCh)
+	}()
 
-		timestamp := time.Now().UnixNano()
-		uniqueFilename := fmt.Sprintf("anki_import/%d_%s", timestamp, media.FileName)
+	// Collect results
+	go func() {
+		wg.Wait()
+		close(resultCh)
+	}()
 
-		url, err := p.storage.UploadFile(ctx, file, uniqueFilename, media.ContentType)
-		file.Close()
-		if err != nil {
-			uploadErrors = append(uploadErrors, fmt.Sprintf("failed to upload media file %s: %v", media.FileName, err))
-			continue
+	// Process results
+	for result := range resultCh {
+		if result.err != "" {
+			mu.Lock()
+			uploadErrors = append(uploadErrors, result.err)
+			mu.Unlock()
+		} else {
+			mu.Lock()
+			mediaURLs[result.fileName] = result.url
+			mu.Unlock()
 		}
-
-		mediaURLs[media.FileName] = url
 	}
 
 	if len(uploadErrors) > 0 {
