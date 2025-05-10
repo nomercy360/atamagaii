@@ -373,7 +373,11 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 		level = "Unknown"
 	}
 
-	deck, err := h.db.CreateDeck(userID, req.Name, req.Description, level)
+	// Default to Japanese for predefined vocabulary
+	languageCode := "ja"
+	transcriptionType := "furigana"
+
+	deck, err := h.db.CreateDeck(userID, req.Name, req.Description, level, languageCode, transcriptionType)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to create deck: %v", err))
 	}
@@ -382,18 +386,21 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 
 	for i, item := range vocabularyItems {
 		fieldsContent := map[string]interface{}{
-			"word":             item.Word,
-			"reading":          item.Reading,
-			"word_furigana":    item.WordFurigana,
-			"meaning_en":       item.MeaningEn,
-			"meaning_ru":       item.MeaningRu,
-			"example_ja":       item.ExampleJa,
-			"example_en":       item.ExampleEn,
-			"example_ru":       item.ExampleRu,
-			"example_furigana": item.ExampleFurigana,
-			"frequency":        item.Frequency,
-			"audio_word":       item.AudioWord,
-			"audio_example":    item.AudioExample,
+			"term":                       item.Term,
+			"transcription":              item.Transcription,
+			"term_with_transcription":    item.TermWithTranscription,
+			"meaning_en":                 item.MeaningEn,
+			"meaning_ru":                 item.MeaningRu,
+			"example_native":             item.ExampleNative,
+			"example_en":                 item.ExampleEn,
+			"example_ru":                 item.ExampleRu,
+			"example_with_transcription": item.ExampleWithTranscription,
+			"frequency":                  item.Frequency,
+			"language_code":              languageCode,
+			"transcription_type":         transcriptionType,
+			"audio_word":                 item.AudioWord,
+			"audio_example":              item.AudioExample,
+			"image_url":                  item.ImageURL,
 		}
 		fieldsJSON, _ := json.Marshal(fieldsContent)
 		fieldsArray[i] = string(fieldsJSON)

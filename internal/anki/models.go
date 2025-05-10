@@ -43,8 +43,10 @@ type MediaFile struct {
 
 // ImportResult contains the results of an Anki import operation
 type ImportResult struct {
-	DeckName      string
-	CardsAdded    int
-	MediaUploaded int
-	Errors        []string
+	DeckName          string
+	CardsAdded        int
+	MediaUploaded     int
+	LanguageCode      string
+	TranscriptionType string
+	Errors            []string
 }

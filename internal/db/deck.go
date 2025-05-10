@@ -9,51 +9,76 @@ import (
 )
 
 type Deck struct {
-	ID             string     `db:"id" json:"id"`
-	Name           string     `db:"name" json:"name"`
-	Description    string     `db:"description" json:"description"`
-	Level          string     `db:"level" json:"level"`
-	NewCardsPerDay int        `db:"new_cards_per_day" json:"new_cards_per_day"`
-	UserID         string     `db:"user_id" json:"user_id"`
-	CreatedAt      time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt      time.Time  `db:"updated_at" json:"updated_at"`
-	DeletedAt      *time.Time `db:"deleted_at" json:"deleted_at,omitempty"`
-	NewCards       int        `json:"new_cards,omitempty" db:"-"`
-	LearningCards  int        `json:"learning_cards,omitempty" db:"-"`
-	ReviewCards    int        `json:"review_cards,omitempty" db:"-"`
+	ID                string     `db:"id" json:"id"`
+	Name              string     `db:"name" json:"name"`
+	Description       string     `db:"description" json:"description"`
+	Level             string     `db:"level" json:"level"`
+	LanguageCode      string     `db:"language_code" json:"language_code"`           // ISO 639-1 language code (e.g., "ja", "en", "th")
+	TranscriptionType string     `db:"transcription_type" json:"transcription_type"` // Type of transcription/reading aids
+	NewCardsPerDay    int        `db:"new_cards_per_day" json:"new_cards_per_day"`
+	UserID            string     `db:"user_id" json:"user_id"`
+	CreatedAt         time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt         time.Time  `db:"updated_at" json:"updated_at"`
+	DeletedAt         *time.Time `db:"deleted_at" json:"deleted_at,omitempty"`
+	NewCards          int        `json:"new_cards,omitempty" db:"-"`
+	LearningCards     int        `json:"learning_cards,omitempty" db:"-"`
+	ReviewCards       int        `json:"review_cards,omitempty" db:"-"`
 }
 
-func (s *Storage) CreateDeck(userID, name, description, level string) (*Deck, error) {
+func (s *Storage) CreateDeck(userID, name, description, level string, languageCode string, transcriptionType string) (*Deck, error) {
 	deckID := nanoid.Must()
 	now := time.Now()
 	defaultNewCardsPerDay := 20
 
+	// Default to Japanese if no language code specified
+	if languageCode == "" {
+		languageCode = "ja"
+	}
+
+	// Default transcription type based on language
+	if transcriptionType == "" {
+		switch languageCode {
+		case "ja":
+			transcriptionType = "furigana"
+		case "zh":
+			transcriptionType = "pinyin"
+		case "th":
+			transcriptionType = "thai_romanization"
+		case "ka":
+			transcriptionType = "mkhedruli"
+		default:
+			transcriptionType = "none"
+		}
+	}
+
 	query := `
-		INSERT INTO decks (id, name, description, level, new_cards_per_day, user_id, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO decks (id, name, description, level, language_code, transcription_type, new_cards_per_day, user_id, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
-	_, err := s.db.Exec(query, deckID, name, description, level, defaultNewCardsPerDay, userID, now, now)
+	_, err := s.db.Exec(query, deckID, name, description, level, languageCode, transcriptionType, defaultNewCardsPerDay, userID, now, now)
 	if err != nil {
 		return nil, fmt.Errorf("error creating deck: %w", err)
 	}
 
 	return &Deck{
-		ID:             deckID,
-		Name:           name,
-		Description:    description,
-		Level:          level,
-		NewCardsPerDay: defaultNewCardsPerDay,
-		UserID:         userID,
-		CreatedAt:      now,
-		UpdatedAt:      now,
+		ID:                deckID,
+		Name:              name,
+		Description:       description,
+		Level:             level,
+		LanguageCode:      languageCode,
+		TranscriptionType: transcriptionType,
+		NewCardsPerDay:    defaultNewCardsPerDay,
+		UserID:            userID,
+		CreatedAt:         now,
+		UpdatedAt:         now,
 	}, nil
 }
 
 func (s *Storage) GetDecks(userID string) ([]Deck, error) {
 	query := `
-		SELECT id, name, description, level, new_cards_per_day, user_id, created_at, updated_at, deleted_at
-		FROM decks 
+		SELECT id, name, description, level, language_code, transcription_type, new_cards_per_day, user_id, created_at, updated_at, deleted_at
+		FROM decks
 		WHERE user_id = ? AND deleted_at IS NULL
 	`
 	rows, err := s.db.Query(query, userID)
@@ -70,6 +95,8 @@ func (s *Storage) GetDecks(userID string) ([]Deck, error) {
 			&deck.Name,
 			&deck.Description,
 			&deck.Level,
+			&deck.LanguageCode,
+			&deck.TranscriptionType,
 			&deck.NewCardsPerDay,
 			&deck.UserID,
 			&deck.CreatedAt,
@@ -99,8 +126,8 @@ func (s *Storage) GetDecks(userID string) ([]Deck, error) {
 }
 
 func (s *Storage) GetDeck(deckID string) (*Deck, error) {
-	query := ` 
-		SELECT id, name, description, level, new_cards_per_day, user_id, created_at, updated_at, deleted_at
+	query := `
+		SELECT id, name, description, level, language_code, transcription_type, new_cards_per_day, user_id, created_at, updated_at, deleted_at
 		FROM decks
 		WHERE id = ? AND deleted_at IS NULL
 	`
@@ -111,6 +138,8 @@ func (s *Storage) GetDeck(deckID string) (*Deck, error) {
 		&deck.Name,
 		&deck.Description,
 		&deck.Level,
+		&deck.LanguageCode,
+		&deck.TranscriptionType,
 		&deck.NewCardsPerDay,
 		&deck.UserID,
 		&deck.CreatedAt,

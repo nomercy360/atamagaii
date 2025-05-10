@@ -109,25 +109,33 @@ func (p *Processor) ExtractExport(zipFile string) (*Export, string, error) {
 	return &ankiExport, tempDir, nil
 }
 
-func (p *Processor) GetMediaFiles(ankiExport *Export, tempDir string) ([]MediaFile, error) {
+func (p *Processor) GetMediaFiles(ankiExport *Export, tempDir string) ([]MediaFile, []string) {
 	var mediaFiles []MediaFile
+	var missingFiles []string
 
 	mediaDir := filepath.Join(tempDir, "media")
 
 	if _, err := os.Stat(mediaDir); os.IsNotExist(err) {
+
 		entries, err := os.ReadDir(tempDir)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read temp directory: %w", err)
+			return mediaFiles, []string{fmt.Sprintf("failed to read temp directory: %v", err)}
 		}
 
+		mediaDirFound := false
 		for _, entry := range entries {
 			if entry.IsDir() && entry.Name() != "__MACOSX" {
 				nestedMediaDir := filepath.Join(tempDir, entry.Name(), "media")
 				if _, err := os.Stat(nestedMediaDir); err == nil {
 					mediaDir = nestedMediaDir
+					mediaDirFound = true
 					break
 				}
 			}
+		}
+
+		if !mediaDirFound && len(ankiExport.MediaFiles) > 0 {
+			return mediaFiles, []string{fmt.Sprintf("media directory not found in export at %s", tempDir)}
 		}
 	}
 
@@ -135,7 +143,8 @@ func (p *Processor) GetMediaFiles(ankiExport *Export, tempDir string) ([]MediaFi
 		filePath := filepath.Join(mediaDir, fileName)
 
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			return nil, fmt.Errorf("media file not found: %s", filePath)
+			missingFiles = append(missingFiles, fmt.Sprintf("media file not found: %s", filePath))
+			continue
 		}
 
 		contentType := ""
@@ -146,7 +155,6 @@ func (p *Processor) GetMediaFiles(ankiExport *Export, tempDir string) ([]MediaFi
 		} else if strings.HasSuffix(fileName, ".png") {
 			contentType = "image/png"
 		} else {
-
 			contentType = "application/octet-stream"
 		}
 
@@ -157,7 +165,7 @@ func (p *Processor) GetMediaFiles(ankiExport *Export, tempDir string) ([]MediaFi
 		})
 	}
 
-	return mediaFiles, nil
+	return mediaFiles, missingFiles
 }
 
 func (p *Processor) UploadMediaFiles(ctx context.Context, mediaFiles []MediaFile) (map[string]string, error) {
@@ -165,13 +173,11 @@ func (p *Processor) UploadMediaFiles(ctx context.Context, mediaFiles []MediaFile
 	mediaURLs := make(map[string]string)
 	var uploadErrors []string
 
-	// Create a worker pool with bounded concurrency
-	workerCount := 5 // Default to 5 concurrent uploads
+	workerCount := 5
 	if len(mediaFiles) < workerCount {
 		workerCount = len(mediaFiles)
 	}
 
-	// Allow for configuration (useful for testing)
 	if workers, exists := ctx.Value("uploadWorkers").(int); exists && workers > 0 {
 		workerCount = workers
 		if len(mediaFiles) < workerCount {
@@ -185,14 +191,12 @@ func (p *Processor) UploadMediaFiles(ctx context.Context, mediaFiles []MediaFile
 		err      string
 	}
 
-	// Create a channel for tasks
 	taskCh := make(chan MediaFile, len(mediaFiles))
 	resultCh := make(chan uploadResult, len(mediaFiles))
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// Start worker goroutines
 	var wg sync.WaitGroup
 	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
@@ -200,21 +204,19 @@ func (p *Processor) UploadMediaFiles(ctx context.Context, mediaFiles []MediaFile
 			defer wg.Done()
 
 			for media := range taskCh {
-				// Handle possible context cancellation
+
 				if ctx.Err() != nil {
 					return
 				}
 
 				result := uploadResult{fileName: media.FileName}
 
-				// Check if file exists
 				if _, err := os.Stat(media.FilePath); os.IsNotExist(err) {
 					result.err = fmt.Sprintf("media file not found: %s", media.FilePath)
 					resultCh <- result
 					continue
 				}
 
-				// Open file
 				file, err := os.Open(media.FilePath)
 				if err != nil {
 					result.err = fmt.Sprintf("failed to open media file %s: %v", media.FileName, err)
@@ -222,11 +224,9 @@ func (p *Processor) UploadMediaFiles(ctx context.Context, mediaFiles []MediaFile
 					continue
 				}
 
-				// Create a unique filename with timestamp to avoid collisions
 				timestamp := time.Now().UnixNano()
 				uniqueFilename := fmt.Sprintf("anki_import/%d_%s", timestamp, media.FileName)
 
-				// Upload file
 				url, err := p.storage.UploadFile(ctx, file, uniqueFilename, media.ContentType)
 				file.Close()
 				if err != nil {
@@ -241,7 +241,6 @@ func (p *Processor) UploadMediaFiles(ctx context.Context, mediaFiles []MediaFile
 		}()
 	}
 
-	// Send tasks to workers
 	go func() {
 		for _, media := range mediaFiles {
 			select {
@@ -253,13 +252,11 @@ func (p *Processor) UploadMediaFiles(ctx context.Context, mediaFiles []MediaFile
 		close(taskCh)
 	}()
 
-	// Collect results
 	go func() {
 		wg.Wait()
 		close(resultCh)
 	}()
 
-	// Process results
 	for result := range resultCh {
 		if result.err != "" {
 			mu.Lock()
@@ -279,6 +276,87 @@ func (p *Processor) UploadMediaFiles(ctx context.Context, mediaFiles []MediaFile
 	return mediaURLs, nil
 }
 
+func (p *Processor) detectLanguageFromNotes(notes []Note, fieldMapping map[string]int) string {
+
+	defaultLanguage := "ja"
+
+	sampleSize := 5
+	if len(notes) < sampleSize {
+		sampleSize = len(notes)
+	}
+
+	for i := 0; i < sampleSize; i++ {
+		if i >= len(notes) {
+			break
+		}
+
+		wordField := ""
+		if idx, ok := fieldMapping["Word"]; ok && idx < len(notes[i].Fields) {
+			wordField = notes[i].Fields[idx]
+		}
+
+		if wordField == "" {
+			continue
+		}
+
+		japanesePattern := regexp.MustCompile(`[\p{Hiragana}\p{Katakana}\p{Han}]`)
+		if japanesePattern.MatchString(wordField) {
+			return "ja"
+		}
+
+		chinesePattern := regexp.MustCompile(`[\p{Han}]`)
+		if chinesePattern.MatchString(wordField) && !japanesePattern.MatchString(wordField) {
+			return "zh"
+		}
+
+		thaiPattern := regexp.MustCompile(`[\u0E00-\u0E7F]`)
+		if thaiPattern.MatchString(wordField) {
+			return "th"
+		}
+
+		georgianPattern := regexp.MustCompile(`[\u10A0-\u10FF]`)
+		if georgianPattern.MatchString(wordField) {
+			return "ka"
+		}
+	}
+
+	return defaultLanguage
+}
+
+func (p *Processor) inferTranscriptionType(language string, fieldMapping map[string]int) string {
+	switch language {
+	case "ja":
+		if _, ok := fieldMapping["Word Furigana"]; ok {
+			return "furigana"
+		}
+	case "zh":
+		if _, ok := fieldMapping["Word Pinyin"]; ok {
+			return "pinyin"
+		}
+	case "th":
+		if _, ok := fieldMapping["Word Romanization"]; ok {
+			return "thai_romanization"
+		}
+	case "ka":
+		if _, ok := fieldMapping["Word Transliteration"]; ok {
+			return "mkhedruli"
+		}
+	}
+
+	switch language {
+	case "ja":
+		return "furigana"
+	case "zh":
+		return "pinyin"
+	case "th":
+		return "thai_romanization"
+	case "ka":
+		return "mkhedruli"
+	default:
+		return "none"
+	}
+}
+
 func (p *Processor) ConvertToVocabularyItems(ankiExport *Export, mediaURLs map[string]string) ([]db.VocabularyItem, error) {
 	var vocabItems []db.VocabularyItem
 
@@ -291,9 +369,11 @@ func (p *Processor) ConvertToVocabularyItems(ankiExport *Export, mediaURLs map[s
 		fieldMapping[field.Name] = field.Ord
 	}
 
-	for _, note := range ankiExport.Notes {
+	language := p.detectLanguageFromNotes(ankiExport.Notes, fieldMapping)
+	transcriptionType := p.inferTranscriptionType(language, fieldMapping)
 
-		if len(note.Fields) < 10 {
+	for _, note := range ankiExport.Notes {
+		if len(note.Fields) < 5 {
 			continue
 		}
 
@@ -333,19 +413,43 @@ func (p *Processor) ConvertToVocabularyItems(ankiExport *Export, mediaURLs map[s
 			}
 		}
 
+		termField := "Word"
+		transcriptionField := "Word Reading"
+		termWithTranscriptionField := "Word Furigana"
+		exampleNativeField := "Sentence"
+		exampleWithTranscriptionField := "Sentence Furigana"
+
+		switch language {
+		case "zh":
+			transcriptionField = "Word Pinyin"
+			termWithTranscriptionField = "Word With Pinyin"
+			exampleWithTranscriptionField = "Sentence With Pinyin"
+		case "th":
+			transcriptionField = "Word Romanization"
+			termWithTranscriptionField = "Word With Romanization"
+			exampleWithTranscriptionField = "Sentence With Romanization"
+		case "ka":
+			transcriptionField = "Word Transliteration"
+			termWithTranscriptionField = "Word With Transliteration"
+			exampleWithTranscriptionField = "Sentence With Transliteration"
+		}
+
 		vocabItem := db.VocabularyItem{
-			Word:            getFieldValue(note.Fields, fieldMapping, "Word", ""),
-			Reading:         getFieldValue(note.Fields, fieldMapping, "Word Reading", ""),
-			WordFurigana:    getFieldValue(note.Fields, fieldMapping, "Word Furigana", ""),
-			MeaningEn:       getFieldValue(note.Fields, fieldMapping, "Word Meaning", ""),
-			MeaningRu:       "",
-			ExampleJa:       getFieldValue(note.Fields, fieldMapping, "Sentence", ""),
-			ExampleEn:       getFieldValue(note.Fields, fieldMapping, "Sentence Meaning", ""),
-			ExampleRu:       "",
-			ExampleFurigana: getFieldValue(note.Fields, fieldMapping, "Sentence Furigana", ""),
-			AudioWord:       wordAudioURL,
-			AudioExample:    exampleAudioURL,
-			ImageURL:        imageURL,
+
+			Term:                     getFieldValue(note.Fields, fieldMapping, termField, ""),
+			Transcription:            getFieldValue(note.Fields, fieldMapping, transcriptionField, ""),
+			TermWithTranscription:    getFieldValue(note.Fields, fieldMapping, termWithTranscriptionField, ""),
+			MeaningEn:                getFieldValue(note.Fields, fieldMapping, "Word Meaning", ""),
+			MeaningRu:                getFieldValue(note.Fields, fieldMapping, "Word Meaning Russian", ""),
+			ExampleNative:            getFieldValue(note.Fields, fieldMapping, exampleNativeField, ""),
+			ExampleWithTranscription: getFieldValue(note.Fields, fieldMapping, exampleWithTranscriptionField, ""),
+			ExampleEn:                getFieldValue(note.Fields, fieldMapping, "Sentence Meaning", ""),
+			ExampleRu:                getFieldValue(note.Fields, fieldMapping, "Sentence Meaning Russian", ""),
+			LanguageCode:             language,
+			TranscriptionType:        transcriptionType,
+			AudioWord:                wordAudioURL,
+			AudioExample:             exampleAudioURL,
+			ImageURL:                 imageURL,
 		}
 
 		vocabItems = append(vocabItems, vocabItem)
@@ -354,7 +458,7 @@ func (p *Processor) ConvertToVocabularyItems(ankiExport *Export, mediaURLs map[s
 	return vocabItems, nil
 }
 
-func (p *Processor) ImportDeck(ctx context.Context, userID, deckName, zipFilePath string) (*ImportResult, error) {
+func (p *Processor) ImportDeck(ctx context.Context, userID, deckName, zipFilePath, languageCode string) (*ImportResult, error) {
 	result := &ImportResult{
 		Errors: []string{},
 	}
@@ -371,14 +475,20 @@ func (p *Processor) ImportDeck(ctx context.Context, userID, deckName, zipFilePat
 		result.DeckName = deckName
 	}
 
-	mediaFiles, err := p.GetMediaFiles(ankiExport, tempDir)
-	if err != nil {
-		result.Errors = append(result.Errors, fmt.Sprintf("error getting media files: %v", err))
+	result.LanguageCode = languageCode
+
+	mediaFiles, mediaErrors := p.GetMediaFiles(ankiExport, tempDir)
+
+	for _, errMsg := range mediaErrors {
+		result.Errors = append(result.Errors, fmt.Sprintf("error getting media files: %v", errMsg))
 	}
 
-	mediaURLs, err := p.UploadMediaFiles(ctx, mediaFiles)
-	if err != nil {
-		result.Errors = append(result.Errors, fmt.Sprintf("error uploading media files: %v", err))
+	mediaURLs := make(map[string]string)
+	if len(mediaFiles) > 0 {
+		mediaURLs, err = p.UploadMediaFiles(ctx, mediaFiles)
+		if err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("error uploading media files: %v", err))
+		}
 	}
 	result.MediaUploaded = len(mediaURLs)
 
@@ -387,7 +497,20 @@ func (p *Processor) ImportDeck(ctx context.Context, userID, deckName, zipFilePat
 		result.Errors = append(result.Errors, fmt.Sprintf("error converting notes: %v", err))
 	}
 
-	deck, err := p.db.CreateDeck(userID, result.DeckName, fmt.Sprintf("Imported from Anki: %s", result.DeckName), "")
+	if languageCode == "" {
+		languageCode = "ja"
+	}
+
+	transcriptionType := p.inferTranscriptionType(languageCode, map[string]int{})
+
+	result.TranscriptionType = transcriptionType
+
+	for i := range vocabItems {
+		vocabItems[i].LanguageCode = languageCode
+		vocabItems[i].TranscriptionType = transcriptionType
+	}
+
+	deck, err := p.db.CreateDeck(userID, result.DeckName, fmt.Sprintf("Imported from Anki: %s", result.DeckName), "", languageCode, transcriptionType)
 	if err != nil {
 		return result, fmt.Errorf("failed to create deck: %w", err)
 	}

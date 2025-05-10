@@ -21,7 +21,6 @@ import (
 func TestHandleAnkiImport(t *testing.T) {
 	e := testutils.SetupHandlerDependencies(t)
 
-	// Authenticate user
 	resp, err := testutils.AuthHelper(t, e, testutils.TelegramTestUserID, "mkkksim", "Maksim")
 	if err != nil {
 		t.Fatalf("Failed to authenticate: %v", err)
@@ -29,7 +28,6 @@ func TestHandleAnkiImport(t *testing.T) {
 
 	require.NotEmpty(t, resp.Token, "Expected non-empty JWT token")
 
-	// Test successful import
 	t.Run("SuccessfulImport", func(t *testing.T) {
 		body, contentType := createMultipartFormWithFile(t, "test_deck.zip", "Test Deck")
 
@@ -78,7 +76,7 @@ func TestHandleAnkiImport(t *testing.T) {
 	})
 
 	t.Run("NoFileProvided", func(t *testing.T) {
-		// Create form without file
+
 		body, contentType := createMultipartFormWithoutFile(t, "Test Deck")
 
 		req := httptest.NewRequest(http.MethodPost, "/v1/decks/import/anki", bytes.NewReader(body.Bytes()))
@@ -92,16 +90,16 @@ func TestHandleAnkiImport(t *testing.T) {
 	})
 }
 
-// Helper function to create multipart form data with a deck zip file
 func createMultipartFormWithFile(t *testing.T, filename, deckName string) (bytes.Buffer, string) {
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
 
-	// Add deck name field
 	err := writer.WriteField("deck_name", deckName)
 	require.NoError(t, err, "Failed to write deck_name field")
 
-	// Add file field
+	err = writer.WriteField("language_code", deckName)
+	require.NoError(t, err, "Failed to write language_code field")
+
 	testFilePath := filepath.Join("../../testdata", filename)
 	fileContents, err := os.ReadFile(testFilePath)
 	require.NoError(t, err, fmt.Sprintf("Failed to read test file %s", testFilePath))
@@ -112,46 +110,38 @@ func createMultipartFormWithFile(t *testing.T, filename, deckName string) (bytes
 	_, err = io.Copy(part, bytes.NewReader(fileContents))
 	require.NoError(t, err, "Failed to copy file contents")
 
-	// Close the writer
 	err = writer.Close()
 	require.NoError(t, err, "Failed to close writer")
 
 	return body, writer.FormDataContentType()
 }
 
-// Helper function to create multipart form with an invalid (non-zip) file
 func createMultipartFormWithInvalidFile(t *testing.T, deckName string) (bytes.Buffer, string) {
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
 
-	// Add deck name field
 	err := writer.WriteField("deck_name", deckName)
 	require.NoError(t, err, "Failed to write deck_name field")
 
-	// Add invalid file field
 	part, err := writer.CreateFormFile("file", "invalid.txt")
 	require.NoError(t, err, "Failed to create form file")
 
 	_, err = io.Copy(part, strings.NewReader("This is not a zip file"))
 	require.NoError(t, err, "Failed to copy file contents")
 
-	// Close the writer
 	err = writer.Close()
 	require.NoError(t, err, "Failed to close writer")
 
 	return body, writer.FormDataContentType()
 }
 
-// Helper function to create multipart form without a file
 func createMultipartFormWithoutFile(t *testing.T, deckName string) (bytes.Buffer, string) {
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
 
-	// Add deck name field only
 	err := writer.WriteField("deck_name", deckName)
 	require.NoError(t, err, "Failed to write deck_name field")
 
-	// Close the writer
 	err = writer.Close()
 	require.NoError(t, err, "Failed to close writer")
 

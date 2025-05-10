@@ -21,6 +21,8 @@ func (s *Storage) UpdateSchema() error {
 		description TEXT,
 		new_cards_per_day INTEGER DEFAULT 7,
 		level TEXT,
+		language_code TEXT DEFAULT 'ja',
+		transcription_type TEXT DEFAULT 'furigana',
 		user_id TEXT NOT NULL,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

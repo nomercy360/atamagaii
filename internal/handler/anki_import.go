@@ -11,14 +11,17 @@ import (
 )
 
 type AnkiImportRequest struct {
-	DeckName string `form:"deck_name"`
+	DeckName     string `form:"deck_name"`
+	LanguageCode string `form:"language_code"` // ISO 639-1 language code (e.g., "ja", "zh", "th", "ka")
 }
 
 type AnkiImportResponse struct {
-	DeckName      string   `json:"deck_name"`
-	CardsAdded    int      `json:"cards_added"`
-	MediaUploaded int      `json:"media_uploaded"`
-	Errors        []string `json:"errors,omitempty"`
+	DeckName          string   `json:"deck_name"`
+	CardsAdded        int      `json:"cards_added"`
+	MediaUploaded     int      `json:"media_uploaded"`
+	LanguageCode      string   `json:"language_code"`
+	TranscriptionType string   `json:"transcription_type"`
+	Errors            []string `json:"errors,omitempty"`
 }
 
 func (h *Handler) HandleAnkiImport(c echo.Context) error {
@@ -60,7 +63,7 @@ func (h *Handler) HandleAnkiImport(c echo.Context) error {
 
 	processor := anki.NewProcessor(h.db, h.storageProvider)
 
-	result, err := processor.ImportDeck(c.Request().Context(), userID, request.DeckName, tempFile.Name())
+	result, err := processor.ImportDeck(c.Request().Context(), userID, request.DeckName, tempFile.Name(), request.LanguageCode)
 	if err != nil {
 		if result == nil {
 			result = &anki.ImportResult{
@@ -72,10 +75,12 @@ func (h *Handler) HandleAnkiImport(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, AnkiImportResponse{
-		DeckName:      result.DeckName,
-		CardsAdded:    result.CardsAdded,
-		MediaUploaded: result.MediaUploaded,
-		Errors:        result.Errors,
+		DeckName:          result.DeckName,
+		CardsAdded:        result.CardsAdded,
+		MediaUploaded:     result.MediaUploaded,
+		LanguageCode:      result.LanguageCode,
+		TranscriptionType: result.TranscriptionType,
+		Errors:            result.Errors,
 	})
 }
 
