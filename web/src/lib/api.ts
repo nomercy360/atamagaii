@@ -67,6 +67,7 @@ export interface Deck {
     new_cards?: number
     learning_cards?: number
     review_cards?: number
+    completed_today_cards?: number
 }
 
 export interface CardFields {
@@ -197,8 +198,8 @@ export interface CardReviewResponse {
         new_cards: number
         learning_cards: number
         review_cards: number
+        completed_today_cards: number
     }
-
 }
 
 export interface UpdateDeckSettingsRequest {

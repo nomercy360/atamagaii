@@ -245,32 +245,38 @@ func (s *Storage) DeleteDeck(deckID string) error {
 }
 
 type DeckStatistics struct {
-	NewCards      int `json:"new_cards"`
-	LearningCards int `json:"learning_cards"`
-	ReviewCards   int `json:"review_cards"`
+	NewCards            int `json:"new_cards"`
+	LearningCards       int `json:"learning_cards"`
+	ReviewCards         int `json:"review_cards"`
+	CompletedTodayCards int `json:"completed_today_cards"`
 }
 
 func (s *Storage) GetDeckStatistics(userID string, deckID string, newCardsPerDay int) (*DeckStatistics, error) {
 	stats := &DeckStatistics{}
 	todayEnd := time.Now().Truncate(24 * time.Hour).Add(24*time.Hour - time.Nanosecond)
 
+	today := time.Now().Truncate(24 * time.Hour)
+	tomorrow := today.Add(24 * time.Hour)
+
 	dueDueQuery := `
         SELECT
             COALESCE(SUM(CASE WHEN (c.state = 'learning' OR c.state = 'relearning') AND c.next_review <= ? THEN 1 ELSE 0 END), 0) as learning_due_count,
-            COALESCE(SUM(CASE WHEN c.state = 'review' AND c.next_review <= ? THEN 1 ELSE 0 END), 0) as review_due_count
+            COALESCE(SUM(CASE WHEN c.state = 'review' AND c.next_review <= ? THEN 1 ELSE 0 END), 0) as review_due_count,
+            COALESCE(SUM(CASE WHEN c.last_reviewed_at >= ? AND c.last_reviewed_at < ? AND c.next_review >= ? THEN 1 ELSE 0 END), 0) as completed_today_count
         FROM cards c
         WHERE c.user_id = ? AND c.deck_id = ? AND c.deleted_at IS NULL;
     `
 
-	err := s.db.QueryRow(dueDueQuery, todayEnd, todayEnd, userID, deckID).Scan(
+	err := s.db.QueryRow(dueDueQuery, todayEnd, todayEnd, today, tomorrow, tomorrow, userID, deckID).Scan(
 		&stats.LearningCards,
 		&stats.ReviewCards,
+		&stats.CompletedTodayCards,
 	)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("error calculating due cards statistics for deck %s: %w", deckID, err)
 	}
 
-	today := time.Now().Truncate(24 * time.Hour)
+	// today variable is already defined above
 	countNewStartedTodayQuery := `
 		SELECT COUNT(*)
 		FROM cards c

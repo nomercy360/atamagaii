@@ -5,6 +5,7 @@ import AudioButton from '~/components/audio-button'
 import { hapticFeedback } from '~/lib/utils'
 import TranscriptionText from '~/components/transcription-text'
 import { audioService } from '~/lib/audio-service'
+import ProgressBar from '~/components/progress-bar'
 
 const PREFETCH_BUFFER_THRESHOLD = 2
 
@@ -49,7 +50,18 @@ export default function Cards() {
 		newCards: number;
 		learningCards: number;
 		reviewCards: number;
-	}>({ newCards: 0, learningCards: 0, reviewCards: 0 })
+		completedCards: number;
+	}>({ newCards: 0, learningCards: 0, reviewCards: 0, completedCards: 0 })
+
+	const progressInfo = () => {
+		const metrics = deckMetrics()
+		const total = metrics.newCards + metrics.learningCards + metrics.reviewCards + metrics.completedCards
+		return {
+			completed: metrics.completedCards,
+			total: total,
+			percentage: total > 0 ? Math.round((metrics.completedCards / total) * 100) : 0,
+		}
+	}
 
 	const [cardBuffer, setCardBuffer] = createSignal<Card[]>([])
 	const [needMoreCards, setNeedMoreCards] = createSignal(true)
@@ -69,6 +81,7 @@ export default function Cards() {
 					newCards: data.new_cards || 0,
 					learningCards: data.learning_cards || 0,
 					reviewCards: data.review_cards || 0,
+					completedCards: data.completed_today_cards || 0,
 				})
 			}
 
@@ -119,8 +132,6 @@ export default function Cards() {
 			}
 
 			const newCards = data || []
-
-			// if current card is in the new cards and length is greater than 1, remove it
 
 			if (newCards.length > 1 && currentCard()) {
 				const currentCardId = currentCard()!.id
@@ -327,6 +338,7 @@ export default function Cards() {
 				newCards: data.stats.new_cards || 0,
 				learningCards: data.stats.learning_cards || 0,
 				reviewCards: data.stats.review_cards || 0,
+				completedCards: data.stats.completed_today_cards || 0,
 			})
 		}
 
@@ -335,10 +347,15 @@ export default function Cards() {
 
 	return (
 		<div class="container mx-auto px-2 py-6 max-w-md flex flex-col items-center min-h-screen">
-			{/* Deck name */}
+			{/* Deck name and progress */}
 			<Show when={deck() && !deck.loading}>
 				<div class="w-full mb-4">
 					<h2 class="text-lg font-semibold mb-1">{deck()?.name}</h2>
+					<ProgressBar
+						completed={progressInfo().completed}
+						total={progressInfo().total}
+						showPercentage={true}
+					/>
 				</div>
 			</Show>
 
