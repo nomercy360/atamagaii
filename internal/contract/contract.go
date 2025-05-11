@@ -36,7 +36,6 @@ type ErrorResponse struct {
 type CardFields struct {
 	Term                     string `json:"term"`
 	Transcription            string `json:"transcription"`
-	TranscriptionType        string `json:"transcription_type"`
 	TermWithTranscription    string `json:"term_with_transcription"`
 	MeaningEn                string `json:"meaning_en"`
 	MeaningRu                string `json:"meaning_ru"`
@@ -48,7 +47,6 @@ type CardFields struct {
 	AudioWord                string `json:"audio_word"`
 	AudioExample             string `json:"audio_example"`
 	ImageURL                 string `json:"image_url,omitempty"`
-	LanguageCode             string `json:"language_code,omitempty"` // ISO 639-1 language code
 }
 type CardResponse struct {
 	ID              string                       `json:"id"`

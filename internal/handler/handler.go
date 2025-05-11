@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"atamagaii/internal/ai"
 	"atamagaii/internal/contract"
 	"atamagaii/internal/db"
 	"atamagaii/internal/middleware"
@@ -18,6 +19,7 @@ type Handler struct {
 	jwtSecret       string
 	botToken        string
 	storageProvider storage.Provider
+	openaiClient    *ai.OpenAIClient
 }
 
 func New(
@@ -26,6 +28,7 @@ func New(
 	jwtSecret string,
 	botToken string,
 	storageProvider storage.Provider,
+	openaiClient *ai.OpenAIClient,
 ) *Handler {
 	return &Handler{
 		bot:             bot,
@@ -33,6 +36,7 @@ func New(
 		jwtSecret:       jwtSecret,
 		botToken:        botToken,
 		storageProvider: storageProvider,
+		openaiClient:    openaiClient,
 	}
 }
 

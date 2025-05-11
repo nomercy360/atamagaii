@@ -258,4 +258,19 @@ export async function getCard(cardId: string): Promise<{
 	})
 }
 
+export interface GenerateCardRequest {
+	card_id: string
+	deck_id: string
+}
+
+export async function generateCard(request: GenerateCardRequest): Promise<{
+	data: Card | null
+	error: string | null
+}> {
+	return apiRequest(`/cards/generate`, {
+		method: 'POST',
+		body: JSON.stringify(request),
+	})
+}
+
 

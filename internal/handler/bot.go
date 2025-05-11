@@ -133,14 +133,14 @@ func (h *Handler) handleUpdate(update tgbotapi.Update) (msg *telegram.SendMessag
 			return msg
 		}
 
-		cardResp, err := h.createCardFromMessage(user.ID, msgText)
+		cardResp, lang, err := h.createCardFromMessage(user.ID, msgText)
 		if err != nil {
 			log.Printf("Failed to create card from message: %v", err)
 			msg.Text = "Не удалось создать карточку. Попробуй позже."
 			return msg
 		}
 
-		languageName := utils.GetLanguageNameFromCode(cardResp.Fields.LanguageCode)
+		languageName := utils.GetLanguageNameFromCode(lang)
 		msg.Text = fmt.Sprintf("Создана новая карточка для изучения \\(%s\\):\n\n*%s*\n\nПерейди в приложение, чтобы начать изучение\\!",
 			languageName,
 			telegram.EscapeMarkdown(cardResp.Fields.Term))
@@ -156,36 +156,34 @@ func (h *Handler) handleUpdate(update tgbotapi.Update) (msg *telegram.SendMessag
 	return msg
 }
 
-func (h *Handler) createCardFromMessage(userID string, messageText string) (*contract.CardResponse, error) {
+func (h *Handler) createCardFromMessage(userID string, messageText string) (*contract.CardResponse, string, error) {
 	languageCode := utils.DetectLanguage(messageText)
 
 	transcriptionType := utils.GetDefaultTranscriptionType(languageCode)
 
 	deck, err := h.db.GetOrCreateGeneratedDeck(userID, languageCode, transcriptionType)
 	if err != nil {
-		return nil, fmt.Errorf("error getting/creating deck: %w", err)
+		return nil, "", fmt.Errorf("error getting/creating deck: %w", err)
 	}
 
 	cardFields := contract.CardFields{
-		Term:              messageText,
-		LanguageCode:      languageCode,
-		TranscriptionType: transcriptionType,
+		Term: messageText,
 	}
 
 	fieldsJSON, err := json.Marshal(cardFields)
 	if err != nil {
-		return nil, fmt.Errorf("error marshalling card fields: %w", err)
+		return nil, "", fmt.Errorf("error marshalling card fields: %w", err)
 	}
 
 	card, err := h.db.AddCard(userID, deck.ID, string(fieldsJSON))
 	if err != nil {
-		return nil, fmt.Errorf("error adding card: %w", err)
+		return nil, "", fmt.Errorf("error adding card: %w", err)
 	}
 
 	cardResponse, err := formatCardResponse(*card)
 	if err != nil {
-		return nil, fmt.Errorf("error formatting card response: %w", err)
+		return nil, "", fmt.Errorf("error formatting card response: %w", err)
 	}
 
-	return &cardResponse, nil
+	return &cardResponse, languageCode, nil
 }

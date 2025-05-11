@@ -41,6 +41,7 @@ func (h *Handler) AddFlashcardRoutes(g *echo.Group) {
 	g.GET("/cards/due", h.GetDueCards)
 	g.GET("/cards/:id", h.GetCard)
 	g.PUT("/cards/:id", h.UpdateCard)
+	g.POST("/cards/generate", h.GenerateCard)
 
 	g.POST("/cards/:id/review", h.ReviewCard)
 	g.GET("/stats", h.GetStats)

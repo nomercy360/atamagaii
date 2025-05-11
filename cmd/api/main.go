@@ -1,6 +1,7 @@
 package main
 
 import (
+	"atamagaii/internal/ai"
 	"atamagaii/internal/db"
 	"atamagaii/internal/handler"
 	"atamagaii/internal/middleware"
@@ -95,7 +96,12 @@ func main() {
 		storageProvider = nil
 	}
 
-	h := handler.New(bot, dbStorage, cfg.JWTSecretKey, cfg.TelegramBotToken, storageProvider)
+	openaiClient, err := ai.NewOpenAIClient(cfg.OpenAIAPIKey)
+	if err != nil {
+		log.Fatalf("Failed to create OpenAI client: %v", err)
+	}
+
+	h := handler.New(bot, dbStorage, cfg.JWTSecretKey, cfg.TelegramBotToken, storageProvider, openaiClient)
 
 	log.Printf("Authorized on account %d", bot.ID())
 
