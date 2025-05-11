@@ -156,48 +156,45 @@ export const audioService = {
         
         // Schedule example audio to play after delay
         setTimeout(() => {
-          // Only play if we're still in a valid state (e.g., user didn't navigate away)
-          if (document.body.contains(wordAudio)) {
-            const exampleAudio = new Audio(exampleUrl)
-            const exampleItem: AudioWithMetadata = { audio: exampleAudio, type: 'example', url: exampleUrl }
-            
-            setActiveAudios([exampleItem])
-            
-            // Notify callbacks for example audio
+          const exampleAudio = new Audio(exampleUrl)
+          const exampleItem: AudioWithMetadata = { audio: exampleAudio, type: 'example', url: exampleUrl }
+
+          setActiveAudios([exampleItem])
+
+          // Notify callbacks for example audio
+          audioStateCallbacks.forEach((callback, key) => {
+            if (key.includes(exampleUrl)) {
+              callback(true, exampleUrl)
+            }
+          })
+
+          exampleAudio.onended = () => {
+            setActiveAudios(audios => audios.filter(a => a.audio !== exampleAudio))
+
+            // If this was the last audio, update the playing state
+            if (activeAudios().length === 0) {
+              setIsPlaying(false)
+            }
+
+            // Notify callbacks that example audio has ended
             audioStateCallbacks.forEach((callback, key) => {
               if (key.includes(exampleUrl)) {
-                callback(true, exampleUrl)
+                callback(false, exampleUrl)
               }
-            })
-            
-            exampleAudio.onended = () => {
-              setActiveAudios(audios => audios.filter(a => a.audio !== exampleAudio))
-              
-              // If this was the last audio, update the playing state
-              if (activeAudios().length === 0) {
-                setIsPlaying(false)
-              }
-              
-              // Notify callbacks that example audio has ended
-              audioStateCallbacks.forEach((callback, key) => {
-                if (key.includes(exampleUrl)) {
-                  callback(false, exampleUrl)
-                }
-              })
-            }
-            
-            exampleAudio.play().catch(error => {
-              console.error('Error playing example audio:', error)
-              setActiveAudios(audios => audios.filter(a => a.audio !== exampleAudio))
-              
-              // Notify callbacks of failure
-              audioStateCallbacks.forEach((callback, key) => {
-                if (key.includes(exampleUrl)) {
-                  callback(false, exampleUrl)
-                }
-              })
             })
           }
+
+          exampleAudio.play().catch(error => {
+            console.error('Error playing example audio:', error)
+            setActiveAudios(audios => audios.filter(a => a.audio !== exampleAudio))
+
+            // Notify callbacks of failure
+            audioStateCallbacks.forEach((callback, key) => {
+              if (key.includes(exampleUrl)) {
+                callback(false, exampleUrl)
+              }
+            })
+          })
         }, delayMs)
       }
     } else {

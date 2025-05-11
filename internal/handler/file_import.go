@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // AvailableDecksResponse represents the structure of available decks grouped by language
@@ -68,21 +67,53 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to parse vocabulary data: %v", err))
 	}
 
-	var level string
-	if len(req.FileName) >= 8 && req.FileName[:7] == "vocab_n" {
-		level = req.FileName[6:8]
-	} else {
-		level = "Unknown"
+	metadataPath := filepath.Join(materialsDir, "available_decks.json")
+	metadataData, err := os.ReadFile(metadataPath)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to read available decks metadata: %v", err))
 	}
 
-	// Default to Japanese for predefined vocabulary
-	languageCode := "ja"
-	transcriptionType := "furigana"
+	var availableDecks AvailableDecksResponse
+	if err := json.Unmarshal(metadataData, &availableDecks); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to parse available decks metadata: %v", err))
+	}
 
-	// Determine language and transcription type based on filename
-	if strings.HasPrefix(req.FileName, "georgian_") {
-		languageCode = "ka"
-		transcriptionType = "transliteration"
+	var (
+		languageCode      = "en"
+		level             = "A1"
+		transcriptionType = "none"
+	)
+
+	deckFound := false
+	for _, lang := range availableDecks.Languages {
+		for _, deck := range lang.Decks {
+			if deck.ID == req.FileName {
+				languageCode = lang.Code
+				level = deck.Level
+				deckFound = true
+
+				switch languageCode {
+				case "ja":
+					transcriptionType = "furigana"
+				case "ka":
+					transcriptionType = "transliteration"
+				case "th":
+					transcriptionType = "aua"
+				case "zh":
+					transcriptionType = "pinyin"
+				default:
+					transcriptionType = "none"
+				}
+				break
+			}
+		}
+		if deckFound {
+			break
+		}
+	}
+
+	if !deckFound {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Deck with ID %s not found in available decks", req.FileName))
 	}
 
 	deck, err := h.db.CreateDeck(userID, req.Name, req.Description, level, languageCode, transcriptionType)

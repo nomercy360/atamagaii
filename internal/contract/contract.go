@@ -40,7 +40,7 @@ type CardFields struct {
 	TermWithTranscription    string `json:"term_with_transcription"`
 	MeaningEn                string `json:"meaning_en"`
 	MeaningRu                string `json:"meaning_ru"`
-	ExampleNative            string `json:"example_ja"`
+	ExampleNative            string `json:"example_native"`
 	ExampleEn                string `json:"example_en"`
 	ExampleRu                string `json:"example_ru"`
 	ExampleWithTranscription string `json:"example_with_transcription"`

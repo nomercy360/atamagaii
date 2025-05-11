@@ -5,22 +5,10 @@
       "name": "Japanese",
       "decks": [
         {
-          "id": "vocab_n5.json",
+          "id": "japanese_cards_with_audio.json",
           "name": "N5 Vocabulary",
           "description": "Basic Japanese vocabulary for JLPT N5 level",
-          "level": "N5"
-        },
-        {
-          "id": "vocab_n4.json",
-          "name": "N4 Vocabulary",
-          "description": "Japanese vocabulary for JLPT N4 level",
-          "level": "N4"
-        },
-        {
-          "id": "vocab_n3.json",
-          "name": "N3 Vocabulary",
-          "description": "Intermediate Japanese vocabulary for JLPT N3 level",
-          "level": "N3"
+          "level": "beginner"
         }
       ]
     },
@@ -32,7 +20,19 @@
           "id": "georgian_cards_with_audio.json",
           "name": "Georgian Vocabulary",
           "description": "Basic Georgian vocabulary with audio",
-          "level": "Beginner"
+          "level": "beginner"
+        }
+      ]
+    },
+    {
+      "code": "th",
+      "name": "Thai",
+      "decks": [
+        {
+          "id": "thai_cards_with_audio.json",
+          "name": "Thai Vocabulary",
+          "description": "Basic Thai vocabulary with audio",
+          "level": "beginner"
         }
       ]
     }

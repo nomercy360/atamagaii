@@ -191,7 +191,7 @@ export default function Cards() {
 		const card = currentCard()
 		if (card?.fields.audio_word) {
 			if (card?.fields.audio_example) {
-				audioService.playSequence(card.fields.audio_word, card.fields.audio_example, 300)
+				audioService.playSequence(card.fields.audio_word, card.fields.audio_example, 200)
 			} else {
 				audioService.playAudio(card.fields.audio_word, 'word')
 			}
@@ -235,12 +235,6 @@ export default function Cards() {
 
 		void (async () => {
 			try {
-				const artificialDelay = 500
-				console.log(`Adding ${artificialDelay}ms artificial delay for testing...`)
-
-				const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
-				await sleep(artificialDelay)
-
 				const {
 					data,
 					error,
@@ -283,7 +277,6 @@ export default function Cards() {
 			{/* Deck name and progress */}
 			<Show when={deck() && !deck.loading}>
 				<div class="w-full mb-4">
-					<h2 class="text-lg font-semibold mb-1">{deck()?.name}</h2>
 					<ProgressBar
 						completed={progressInfo().completed}
 						total={progressInfo().total}
@@ -428,15 +421,25 @@ export default function Cards() {
 						<div class="grid grid-cols-2 gap-4">
 							<button
 								onClick={() => handleReview(currentCard()!.id, 1)}
-								class="py-3 px-4 bg-error text-error-foreground rounded-md transition-opacity font-medium text-lg"
+								class="justify-center flex flex-col items-center h-14 px-4 bg-error text-error-foreground rounded-md transition-opacity font-medium text-lg"
 							>
-								Again
+								<span>
+									Again
+								</span>
+								<span class="text-xs opacity-70">
+									{currentCard()?.next_intervals.again}
+								</span>
 							</button>
 							<button
 								onClick={() => handleReview(currentCard()!.id, 2)}
-								class="py-3 px-4 bg-info text-info-foreground rounded-md transition-opacity font-medium text-lg"
+								class="justify-center flex flex-col items-center h-14 px-4 bg-info text-info-foreground rounded-md transition-opacity font-medium text-lg"
 							>
-								Good
+								<span>
+									Good
+								</span>
+								<span class="text-xs opacity-70">
+									{currentCard()?.next_intervals.good}
+								</span>
 							</button>
 						</div>
 					</div>

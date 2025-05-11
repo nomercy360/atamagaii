@@ -100,7 +100,7 @@ export default function ImportDeck() {
 	}
 
 	return (
-		<div class="container mx-auto px-4 py-6 max-w-md">
+		<div class="container mx-auto px-4 py-6 max-w-md overflow-y-auto h-screen">
 			<h1 class="text-2xl font-bold mb-6">Import Deck</h1>
 
 			<div class="space-y-4">

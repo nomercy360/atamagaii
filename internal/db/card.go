@@ -234,14 +234,35 @@ func (s *Storage) GetNewCards(userID string, deckID string, limit int) ([]Card, 
 }
 
 func (s *Storage) GetDueCardCount(userID string) (int, error) {
-	reviewTime := time.Now().Truncate(24 * time.Hour).Add(24*time.Hour - time.Nanosecond)
+	todayEnd := time.Now().Truncate(24 * time.Hour).Add(24*time.Hour - time.Nanosecond)
+	today := time.Now().Truncate(24 * time.Hour)
+
+	// Query to count learning, review, and new cards available for study today
 	query := `
-		SELECT COUNT(*)
+		SELECT
+			COALESCE(SUM(CASE WHEN (state = 'learning' OR state = 'relearning') AND next_review <= ? THEN 1 ELSE 0 END), 0) +
+			COALESCE(SUM(CASE WHEN state = 'review' AND next_review <= ? THEN 1 ELSE 0 END), 0) +
+			COALESCE((
+				SELECT COUNT(*) FROM (
+					SELECT id FROM cards
+					WHERE user_id = ? AND deleted_at IS NULL
+					AND state = 'new'
+					AND (first_reviewed_at IS NULL OR first_reviewed_at < ?)
+					LIMIT (
+						SELECT SUM(new_cards_per_day) - (
+							SELECT COUNT(*) FROM cards
+							WHERE user_id = ? AND deleted_at IS NULL
+							AND first_reviewed_at >= ?
+						) FROM decks WHERE user_id = ? AND deleted_at IS NULL
+					)
+				) as new_count
+			), 0) as total_due_count
 		FROM cards
-		WHERE user_id = ? AND next_review IS NOT NULL AND next_review <= ? AND deleted_at IS NULL
+		WHERE user_id = ? AND deleted_at IS NULL
 	`
+
 	var count int
-	err := s.db.QueryRow(query, userID, reviewTime).Scan(&count)
+	err := s.db.QueryRow(query, todayEnd, todayEnd, userID, today, userID, today, userID, userID).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("error getting due card count: %w", err)
 	}
