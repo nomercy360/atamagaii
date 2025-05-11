@@ -1,8 +1,11 @@
 package handler
 
 import (
+	"atamagaii/internal/contract"
 	"atamagaii/internal/db"
+	"atamagaii/internal/utils"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -12,6 +15,7 @@ import (
 	nanoid "github.com/matoous/go-nanoid/v2"
 	"log"
 	"math/rand"
+	"strings"
 )
 
 func (h *Handler) HandleWebhook(c echo.Context) error {
@@ -89,7 +93,6 @@ func (h *Handler) handleUpdate(update tgbotapi.Update) (msg *telegram.SendMessag
 		log.Printf("Failed to get user: %v", err)
 		msg.Text = "Ошибка при получении пользователя. Попробуй позже."
 	} else if user.AvatarURL == nil {
-
 		imgUrl := fmt.Sprintf("%s/avatars/%d.svg", "https://assets.peatch.io", rand.Intn(30)+1)
 
 		newUser := &db.User{
@@ -104,13 +107,85 @@ func (h *Handler) handleUpdate(update tgbotapi.Update) (msg *telegram.SendMessag
 		}
 	}
 
-	switch update.Message.Command() {
-	case "start":
-		msg.Text = "Привет\\! Этот бот для изучения японского языка\\. Он поможет тебе практиковать слов и грамматику\\!\n\n"
-		msg.ParseMode = models.ParseModeMarkdown
-	default:
+	if update.Message == nil || user == nil {
+		return msg
+	}
 
+	if update.Message.IsCommand() {
+		switch update.Message.Command() {
+		case "start":
+			msg.Text = "Привет\\! Этот бот для изучения японского языка\\. Он поможет тебе практиковать слов и грамматику\\!\n\n"
+			msg.ParseMode = models.ParseModeMarkdown
+		case "help":
+			msg.Text = "Просто отправь мне слово или фразу на любом языке, и я создам для тебя карточку для изучения\\!"
+			msg.ParseMode = models.ParseModeMarkdown
+		default:
+			msg.Text = "Неизвестная команда. Используй /help для получения справки."
+		}
+		return msg
+	}
+
+	if update.Message.Text != "" {
+		msgText := strings.TrimSpace(update.Message.Text)
+
+		if len(msgText) < 2 {
+			msg.Text = "Сообщение слишком короткое для создания карточки. Пожалуйста, отправь более длинный текст."
+			return msg
+		}
+
+		cardResp, err := h.createCardFromMessage(user.ID, msgText)
+		if err != nil {
+			log.Printf("Failed to create card from message: %v", err)
+			msg.Text = "Не удалось создать карточку. Попробуй позже."
+			return msg
+		}
+
+		languageName := utils.GetLanguageNameFromCode(cardResp.Fields.LanguageCode)
+		msg.Text = fmt.Sprintf("Создана новая карточка для изучения \\(%s\\):\n\n*%s*\n\nПерейди в приложение, чтобы начать изучение\\!",
+			languageName,
+			telegram.EscapeMarkdown(cardResp.Fields.Term))
+		msg.ParseMode = models.ParseModeMarkdown
+
+		return msg
+	}
+
+	if msg.Text == "" {
+		msg.Text = "Отправь мне слово или фразу, чтобы создать карточку для изучения!"
 	}
 
 	return msg
+}
+
+func (h *Handler) createCardFromMessage(userID string, messageText string) (*contract.CardResponse, error) {
+	languageCode := utils.DetectLanguage(messageText)
+
+	transcriptionType := utils.GetDefaultTranscriptionType(languageCode)
+
+	deck, err := h.db.GetOrCreateGeneratedDeck(userID, languageCode, transcriptionType)
+	if err != nil {
+		return nil, fmt.Errorf("error getting/creating deck: %w", err)
+	}
+
+	cardFields := contract.CardFields{
+		Term:              messageText,
+		LanguageCode:      languageCode,
+		TranscriptionType: transcriptionType,
+	}
+
+	fieldsJSON, err := json.Marshal(cardFields)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling card fields: %w", err)
+	}
+
+	card, err := h.db.AddCard(userID, deck.ID, string(fieldsJSON))
+	if err != nil {
+		return nil, fmt.Errorf("error adding card: %w", err)
+	}
+
+	cardResponse, err := formatCardResponse(*card)
+	if err != nil {
+		return nil, fmt.Errorf("error formatting card response: %w", err)
+	}
+
+	return &cardResponse, nil
 }

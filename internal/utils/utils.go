@@ -22,3 +22,29 @@ func FindDirUp(dirName string, maxDepth int) (string, error) {
 
 	return "", fmt.Errorf("directory %q not found within %d levels up", dirName, maxDepth)
 }
+
+func GetLanguageNameFromCode(code string) string {
+	languages := map[string]string{
+		"ja": "Japanese",
+		"en": "English",
+		"es": "Spanish",
+		"ru": "Russian",
+		"zh": "Chinese",
+		"ko": "Korean",
+		"fr": "French",
+		"de": "German",
+		"it": "Italian",
+		"pt": "Portuguese",
+		"ar": "Arabic",
+		"tr": "Turkish",
+		"th": "Thai",
+		"hi": "Hindi",
+		"ka": "Georgian",
+		"vi": "Vietnamese",
+	}
+
+	if name, ok := languages[code]; ok {
+		return name
+	}
+	return "Unknown"
+}

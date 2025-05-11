@@ -3,6 +3,7 @@ import NavigationTabs from '~/components/navigation-tabs'
 import Index from '~/pages'
 import Cards from '~/pages/cards'
 import ImportDeck from '~/pages/import-deck'
+import EditCard from '~/pages/edit-card'
 
 
 export const routes: RouteDefinition[] = [
@@ -23,5 +24,9 @@ export const routes: RouteDefinition[] = [
 	{
 		'path': '/import-deck',
 		'component': ImportDeck,
+	},
+	{
+		'path': '/edit-card/:deckId/:cardId',
+		'component': EditCard,
 	},
 ]

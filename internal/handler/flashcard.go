@@ -26,6 +26,10 @@ type UpdateDeckSettingsRequest struct {
 	NewCardsPerDay int `json:"new_cards_per_day" validate:"required,min=1,max=500"`
 }
 
+type UpdateCardRequest struct {
+	Fields contract.CardFields `json:"fields" validate:"required"`
+}
+
 func (h *Handler) AddFlashcardRoutes(g *echo.Group) {
 	g.GET("/decks", h.GetDecks)
 	g.GET("/decks/:id", h.GetDeck)
@@ -36,6 +40,7 @@ func (h *Handler) AddFlashcardRoutes(g *echo.Group) {
 
 	g.GET("/cards/due", h.GetDueCards)
 	g.GET("/cards/:id", h.GetCard)
+	g.PUT("/cards/:id", h.UpdateCard)
 
 	g.POST("/cards/:id/review", h.ReviewCard)
 	g.GET("/stats", h.GetStats)
@@ -366,4 +371,63 @@ func (h *Handler) DeleteDeck(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (h *Handler) UpdateCard(c echo.Context) error {
+	userID, err := GetUserIDFromToken(c)
+	if err != nil {
+		return err
+	}
+
+	cardID := c.Param("id")
+	if cardID == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Card ID is required")
+	}
+
+	card, err := h.db.GetCard(cardID, userID)
+	if err != nil {
+		if errors.Is(err, db.ErrNotFound) {
+			return echo.NewHTTPError(http.StatusNotFound, "Card not found")
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch card").WithInternal(err)
+	}
+
+	deck, err := h.db.GetDeck(card.DeckID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to verify card ownership")
+	}
+
+	if deck.UserID != userID {
+		return echo.NewHTTPError(http.StatusForbidden, "Access denied")
+	}
+
+	req := new(UpdateCardRequest)
+	if err := c.Bind(req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request")
+	}
+
+	if err := c.Validate(req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	fieldsJSON, err := json.Marshal(req.Fields)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to process card fields")
+	}
+
+	if err := h.db.UpdateCardFields(cardID, string(fieldsJSON)); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update card")
+	}
+
+	updatedCard, err := h.db.GetCard(cardID, userID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch updated card")
+	}
+
+	response, err := formatCardResponse(*updatedCard)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to format card response")
+	}
+
+	return c.JSON(http.StatusOK, response)
 }

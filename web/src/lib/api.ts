@@ -235,4 +235,27 @@ export async function deleteDeck(deckId: string): Promise<{
 	})
 }
 
+export interface UpdateCardRequest {
+	fields: CardFields
+}
+
+export async function updateCard(cardId: string, request: UpdateCardRequest): Promise<{
+	data: Card | null
+	error: string | null
+}> {
+	return apiRequest(`/cards/${cardId}`, {
+		method: 'PUT',
+		body: JSON.stringify(request),
+	})
+}
+
+export async function getCard(cardId: string): Promise<{
+	data: Card | null
+	error: string | null
+}> {
+	return apiRequest(`/cards/${cardId}`, {
+		method: 'GET',
+	})
+}
+
 

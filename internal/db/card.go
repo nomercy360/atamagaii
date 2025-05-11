@@ -529,3 +529,28 @@ func (s *Storage) GetCard(cardID string, userID string) (*Card, error) {
 	card.Interval = time.Duration(intervalNs)
 	return &card, nil
 }
+
+func (s *Storage) UpdateCardFields(cardID string, fields string) error {
+	now := time.Now()
+	query := `
+		UPDATE cards
+		SET fields = ?, updated_at = ?
+		WHERE id = ? AND deleted_at IS NULL
+	`
+
+	result, err := s.db.Exec(query, fields, now, cardID)
+	if err != nil {
+		return fmt.Errorf("error updating card fields: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error checking updated rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return ErrNotFound
+	}
+
+	return nil
+}

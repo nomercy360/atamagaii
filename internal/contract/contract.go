@@ -48,6 +48,7 @@ type CardFields struct {
 	AudioWord                string `json:"audio_word"`
 	AudioExample             string `json:"audio_example"`
 	ImageURL                 string `json:"image_url,omitempty"`
+	LanguageCode             string `json:"language_code,omitempty"` // ISO 639-1 language code
 }
 type CardResponse struct {
 	ID              string                       `json:"id"`

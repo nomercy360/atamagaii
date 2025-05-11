@@ -1,6 +1,7 @@
 package db
 
 import (
+	"atamagaii/internal/utils"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -313,4 +314,49 @@ func (s *Storage) GetDeckStatistics(userID string, deckID string, newCardsPerDay
 	}
 
 	return stats, nil
+}
+
+func (s *Storage) GetOrCreateGeneratedDeck(userID string, languageCode string, transcriptionType string) (*Deck, error) {
+	query := `
+		SELECT id, name, description, level, language_code, transcription_type, new_cards_per_day, user_id, created_at, updated_at, deleted_at
+		FROM decks
+		WHERE user_id = ? AND language_code = ? AND description LIKE 'Generated deck for %' AND deleted_at IS NULL
+		LIMIT 1
+	`
+
+	var deck Deck
+	err := s.db.QueryRow(query, userID, languageCode).Scan(
+		&deck.ID,
+		&deck.Name,
+		&deck.Description,
+		&deck.Level,
+		&deck.LanguageCode,
+		&deck.TranscriptionType,
+		&deck.NewCardsPerDay,
+		&deck.UserID,
+		&deck.CreatedAt,
+		&deck.UpdatedAt,
+		&deck.DeletedAt,
+	)
+
+	if err == nil {
+		stats, err := s.GetDeckStatistics(userID, deck.ID, deck.NewCardsPerDay)
+		if err != nil {
+			return nil, fmt.Errorf("error getting deck statistics: %w", err)
+		}
+		deck.Stats = stats
+		return &deck, nil
+	}
+
+	if errors.Is(err, sql.ErrNoRows) {
+		languageName := utils.GetLanguageNameFromCode(languageCode)
+
+		name := fmt.Sprintf("Generated %s Cards", languageName)
+		description := fmt.Sprintf("Generated deck for %s language", languageName)
+		level := "mixed"
+
+		return s.CreateDeck(userID, name, description, level, languageCode, transcriptionType)
+	}
+
+	return nil, fmt.Errorf("error finding generated deck: %w", err)
 }
