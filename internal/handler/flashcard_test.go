@@ -371,18 +371,20 @@ func TestDeckMetrics(t *testing.T) {
 
 	deck := testutils.ParseResponse[db.Deck](t, rec)
 
-	// Verify metrics exist
-	if deck.NewCards <= 0 {
-		t.Errorf("Expected deck to have new cards, got %d", deck.NewCards)
-	}
+	if deck.Stats == nil {
+		t.Errorf("Expected deck to have stats")
+	} else {
+		if deck.Stats.NewCards <= 0 {
+			t.Errorf("Expected deck to have new cards, got %d", deck.Stats.NewCards)
+		}
 
-	// Learning and Review cards should be 0 initially
-	if deck.LearningCards != 0 {
-		t.Errorf("Expected learning cards to be 0 initially, got %d", deck.LearningCards)
-	}
+		if deck.Stats.LearningCards != 0 {
+			t.Errorf("Expected learning cards to be 0 initially, got %d", deck.Stats.LearningCards)
+		}
 
-	if deck.ReviewCards != 0 {
-		t.Errorf("Expected review cards to be 0 initially, got %d", deck.ReviewCards)
+		if deck.Stats.ReviewCards != 0 {
+			t.Errorf("Expected review cards to be 0 initially, got %d", deck.Stats.ReviewCards)
+		}
 	}
 
 	// Get due cards
@@ -432,15 +434,21 @@ func TestDeckMetrics(t *testing.T) {
 
 	updatedDeck := testutils.ParseResponse[db.Deck](t, rec)
 
-	// Verify new card count decreased
-	if updatedDeck.NewCards >= deck.NewCards {
-		t.Errorf("Expected new cards to decrease after review, was %d, now %d",
-			deck.NewCards, updatedDeck.NewCards)
+	if updatedDeck.Stats != nil && deck.Stats != nil {
+		if updatedDeck.Stats.NewCards >= deck.Stats.NewCards {
+			t.Errorf("Expected new cards to decrease after review, was %d, now %d",
+				deck.Stats.NewCards, updatedDeck.Stats.NewCards)
+		}
+	} else {
+		t.Errorf("Stats missing from deck or updated deck")
 	}
 
-	// Verify learning cards increased
-	if updatedDeck.LearningCards < 1 {
-		t.Errorf("Expected learning cards to increase after review, got %d", updatedDeck.LearningCards)
+	if updatedDeck.Stats != nil {
+		if updatedDeck.Stats.LearningCards < 1 {
+			t.Errorf("Expected learning cards to increase after review, got %d", updatedDeck.Stats.LearningCards)
+		}
+	} else {
+		t.Errorf("Stats missing from updated deck")
 	}
 }
 

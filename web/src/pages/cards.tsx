@@ -63,7 +63,6 @@ export default function Cards() {
 
 	const [cardBuffer, setCardBuffer] = createSignal<Card[]>([])
 	const [needMoreCards, setNeedMoreCards] = createSignal(true)
-	const [isFetchingMore, setIsFetchingMore] = createSignal(false)
 
 	const [deck, { refetch: refetchDeck }] = createResource<Deck | null>(
 		async () => {
@@ -82,110 +81,36 @@ export default function Cards() {
 		},
 	)
 
-	const [fetchFailureCount, setFetchFailureCount] = createSignal<number>(0)
-	const MAX_FETCH_FAILURES = 1
-
-	const fetchCards = async (): Promise<Card[]> => {
-		if (!params.deckId || isFetchingMore()) {
-			console.log('Fetch skipped: No deckId or already fetching.')
-			return []
-		}
-
-		if (fetchFailureCount() >= MAX_FETCH_FAILURES) {
-			console.log(`Skipping fetch - reached max failure count (${MAX_FETCH_FAILURES})`)
-			setNeedMoreCards(false)
-			return []
-		}
-
-		console.log('Attempting to fetch cards...')
-		setIsFetchingMore(true)
-
-		try {
-			const { data, error } = await apiRequest<Card[]>(`/cards/due?deck_id=${params.deckId}&limit=3`)
-			if (error) {
-				console.error(`Failed to fetch cards for deck ${params.deckId}:`, error)
-				setIsFetchingMore(false)
-
-				const newCount = fetchFailureCount() + 1
-				setFetchFailureCount(newCount)
-
-				if (newCount >= MAX_FETCH_FAILURES) {
-					console.log(`Max failure count reached (${MAX_FETCH_FAILURES}), stopping automatic retries`)
-					setNeedMoreCards(false) // Prevent further fetch attempts
-				}
-
-				return []
-			}
-
-			setFetchFailureCount(0)
-
-			if (!data || data.length === 0) {
-				console.log('API returned no cards. Setting needMoreCards to false.')
-				setNeedMoreCards(false)
-			}
-
-			const newCards = data || []
-
-			if (newCards.length > 1 && currentCard()) {
-				const currentCardId = currentCard()!.id
-				const currentCardIndex = newCards.findIndex(card => card.id === currentCardId)
-				if (currentCardIndex !== -1) {
-					newCards.splice(currentCardIndex, 1)
-					console.log(`Removed current card from new cards: ${currentCardId}`)
-				}
-			}
-
-			if (newCards.length > 0) {
-				setCardBuffer(prev => [...prev, ...newCards])
-				console.log(`Fetched and added ${newCards.length} new cards to buffer.`)
-			} else {
-				console.log('Fetched cards, but no *new* cards to add (either all processed or API returned processed cards).')
-			}
-
-			setIsFetchingMore(false)
-			return newCards
-		} catch (e) {
-			console.error('Exception during fetchCards:', e)
-			setIsFetchingMore(false)
-
-			const newCount = fetchFailureCount() + 1
-			setFetchFailureCount(newCount)
-
-			if (newCount >= MAX_FETCH_FAILURES) {
-				console.log(`Max failure count reached (${MAX_FETCH_FAILURES}), stopping automatic retries`)
-				setNeedMoreCards(false)
-			}
-
-			return []
-		}
-	}
-
-	const [cards] = createResource<Card[], boolean>(
+	const [cards, { refetch: refetchCards }] = createResource<Card[], boolean>(
 		() => needMoreCards() && cardBuffer().length === 0,
 		async (shouldFetch) => {
 			if (!shouldFetch) {
 				return cardBuffer()
 			}
-			console.log('Resource: Triggering initial fetchCards.')
-			await fetchCards()
-			return cardBuffer()
+			if (!params.deckId) return []
+
+			const { data, error } = await apiRequest<Card[]>(`/cards/due?deck_id=${params.deckId}&limit=10`)
+
+			if (error) {
+				return []
+			}
+
+			if (data && data.length > 0) {
+				setCardBuffer(prev => [...prev, ...data])
+			} else {
+				setNeedMoreCards(false)
+			}
+
+			return data || []
 		},
 	)
 
-	// Effect to maintain our buffer of at least 2 cards when possible
 	createEffect(() => {
 		const buffer = cardBuffer()
 		const currentIdx = cardIndex()
 		const remaining = buffer.length - currentIdx
 
-		// Log buffer state for debugging
 		console.log(`Card buffer state: ${remaining} remaining (${currentIdx}/${buffer.length})`)
-
-		// If we have 1 or fewer cards left in our buffer, fetch more
-		if (remaining <= 1 && needMoreCards()) {
-			console.log('Fetching more cards for buffer')
-			fetchCards()
-		}
 	})
 
 	const currentCard = () => {
@@ -275,9 +200,7 @@ export default function Cards() {
 
 	const handleCardFlip = () => {
 		if (isTransitioning()) return
-		// Only allow flipping from front to back, not back to front
 		if (!flipped()) {
-			// Provide haptic feedback when flipping the card
 			hapticFeedback('impact', 'light')
 
 			setFlipped(true)
@@ -310,17 +233,18 @@ export default function Cards() {
 
 		handleNextCard()
 
-		;(async () => {
+		void (async () => {
 			try {
-				// Add small delay for testing purposes
-				const artificialDelay = 1000 // 1 second delay
+				const artificialDelay = 500
 				console.log(`Adding ${artificialDelay}ms artificial delay for testing...`)
 
-				// Sleep function for the artificial delay
 				const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 				await sleep(artificialDelay)
 
-				const { data, error } = await apiRequest<CardReviewResponse>(`/cards/${cardId}/review`, {
+				const {
+					data,
+					error,
+				} = await apiRequest<CardReviewResponse>(`/cards/${cardId}/review`, {
 					method: 'POST',
 					body: JSON.stringify({
 						card_id: cardId,
@@ -329,22 +253,27 @@ export default function Cards() {
 					}),
 				})
 
-				if (error) {
-					console.error(`Failed to submit review for card ${cardId}:`, error)
-					// Optionally: Implement a retry queue or notify user of sync failure
-					return
-				}
+				if (error) return
 
 				if (data?.stats) {
-					console.log('Review submitted successfully, updating stats:', data.stats)
-					// Replace our optimistic stats with the real ones from the server
 					setDeckMetrics(data.stats)
-				} else {
-					console.warn(`Review API call for card ${cardId} succeeded but returned no stats data.`)
 				}
+
+				if (data?.next_cards && data?.next_cards.length > 0) {
+					const current = currentCard()
+					const filteredNewCards = current
+						? data.next_cards.filter(c => c.id !== current.id)
+						: data.next_cards
+
+					if (filteredNewCards.length > 0) {
+						setCardBuffer(prev => [...prev, ...filteredNewCards])
+					} else {
+						setCardBuffer(prev => [...prev, ...data.next_cards])
+					}
+				}
+
 			} catch (e) {
 				console.error(`Exception during background review submission for card ${cardId}:`, e)
-				// Optionally: Implement a retry queue or notify user of sync failure
 			}
 		})()
 	}
@@ -472,22 +401,16 @@ export default function Cards() {
 
 				<Show when={!cards.loading && !currentCard()}>
 					<div class="w-full flex flex-col items-center justify-center h-[300px]">
-						<Show when={fetchFailureCount() >= MAX_FETCH_FAILURES}>
-							<p class="text-muted-foreground mb-2">Failed to load cards. Please try again later.</p>
-							<button
-								onClick={() => {
-									setFetchFailureCount(0)
-									setNeedMoreCards(true)
-									fetchCards()
-								}}
-								class="mb-4 px-4 py-2 bg-primary text-primary-foreground rounded-md"
-							>
-								Retry
-							</button>
-						</Show>
-						<Show when={fetchFailureCount() < MAX_FETCH_FAILURES}>
-							<p class="text-muted-foreground">No cards found in this deck.</p>
-						</Show>
+						<p class="text-muted-foreground mb-2">No cards available for review.</p>
+						<button
+							onClick={() => {
+								setNeedMoreCards(true)
+								refetchCards()
+							}}
+							class="mb-4 px-4 py-2 bg-primary text-primary-foreground rounded-md"
+						>
+							Retry
+						</button>
 						<button
 							onClick={() => navigate('/')}
 							class="mt-4 text-primary"

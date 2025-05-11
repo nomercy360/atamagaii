@@ -199,6 +199,7 @@ export interface CardReviewRequest {
 	card_id: string
 	rating: number
 	time_spent_ms: number
+	skip_card_id?: string
 }
 
 export interface CardReviewResponse {
@@ -208,6 +209,7 @@ export interface CardReviewResponse {
 		review_cards: number
 		completed_today_cards: number
 	}
+	next_cards: Card[]
 }
 
 export interface UpdateDeckSettingsRequest {

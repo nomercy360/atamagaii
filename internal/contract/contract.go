@@ -69,7 +69,8 @@ type CardResponse struct {
 }
 
 type ReviewCardResponse struct {
-	Stats *db.DeckStatistics `json:"stats"`
+	Stats     *db.DeckStatistics `json:"stats"`
+	NextCards []CardResponse     `json:"next_cards"`
 }
 
 type PotentialIntervalsForDisplay struct {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	nanoid "github.com/matoous/go-nanoid/v2"
 	"math"
+	"sort"
 	"time"
 )
 
@@ -150,11 +151,6 @@ func (s *Storage) AddCardsInBatch(userID, deckID string, fieldsArray []string) e
 }
 
 func (s *Storage) GetNewCards(userID string, deckID string, limit int) ([]Card, error) {
-	deck, err := s.GetDeck(deckID)
-	if err != nil {
-		return nil, fmt.Errorf("error getting deck settings: %w", err)
-	}
-
 	today := time.Now().Truncate(24 * time.Hour)
 
 	countNewStartedTodayQuery := `
@@ -167,12 +163,12 @@ func (s *Storage) GetNewCards(userID string, deckID string, limit int) ([]Card, 
 	`
 
 	var newCardsStartedToday int
-	err = s.db.QueryRow(countNewStartedTodayQuery, userID, deckID, today).Scan(&newCardsStartedToday)
+	err := s.db.QueryRow(countNewStartedTodayQuery, userID, deckID, today).Scan(&newCardsStartedToday)
 	if err != nil {
 		return nil, fmt.Errorf("error counting new cards started today: %w", err)
 	}
 
-	newCardsRemaining := deck.NewCardsPerDay - newCardsStartedToday
+	newCardsRemaining := limit - newCardsStartedToday
 	if newCardsRemaining < 0 {
 		newCardsRemaining = 0
 	}
@@ -329,17 +325,28 @@ func CalculatePreviewInterval(card Card, rating int) time.Duration {
 	return params.Interval
 }
 
-func (s *Storage) GetCardsForReview(userID string, deckID string, limit int) ([]Card, error) {
-	reviewCards, err := s.GetDueCards(userID, deckID, limit)
+func (s *Storage) GetCardsForReview(
+	userID string,
+	deckID string,
+	limit int,
+	newCardsLimitForDay int,
+) ([]Card, error) {
+	reviewLimit := newCardsLimitForDay * 10
+
+	reviewCards, err := s.GetDueCards(userID, deckID, reviewLimit)
 	if err != nil {
 		return nil, fmt.Errorf("error getting review cards: %w", err)
 	}
 
 	if len(reviewCards) >= limit {
+		SortCardsForReview(reviewCards, time.Now())
 		return reviewCards[:limit], nil
 	}
 
 	newCardsNeeded := limit - len(reviewCards)
+	if newCardsNeeded > newCardsLimitForDay {
+		newCardsNeeded = newCardsLimitForDay
+	}
 
 	newCards, err := s.GetNewCards(userID, deckID, newCardsNeeded)
 	if err != nil {
@@ -347,6 +354,9 @@ func (s *Storage) GetCardsForReview(userID string, deckID string, limit int) ([]
 	}
 
 	combinedCards := append(reviewCards, newCards...)
+
+	// Sort cards according to the spaced repetition algorithm priority
+	SortCardsForReview(combinedCards, time.Now())
 
 	return combinedCards, nil
 }
@@ -402,6 +412,59 @@ func roundSeconds(f float64) float64 {
 		return math.Ceil(f - 0.5)
 	}
 	return math.Floor(f + 0.5)
+}
+
+// SortCardsForReview sorts a slice of cards according to spaced repetition algorithm priority:
+// 1. Learning/Relearning cards first with next_review_time >= referenceTime
+// 2. Then review cards
+// 3. Then new cards
+// 4. Finally, learning/relearning cards with next_review_time < referenceTime
+// Within each category, cards are sorted by next review time or creation date
+func SortCardsForReview(cards []Card, referenceTime time.Time) {
+	// Define sorting priority
+	sort.SliceStable(cards, func(i, j int) bool {
+		a, b := cards[i], cards[j]
+
+		category := func(c Card) int {
+			switch CardState(c.State) {
+			case StateLearning, StateRelearning:
+				if c.NextReview != nil && c.NextReview.Before(referenceTime) {
+					return 0 // Learning/relearning, due now or in the past
+				}
+				return 3 // Learning/relearning, but in the future
+			case StateReview:
+				return 1
+			case StateNew:
+				return 2
+			default:
+				return 4 // Fallback for unknown states
+			}
+		}
+
+		catA := category(a)
+		catB := category(b)
+		if catA != catB {
+			return catA < catB
+		}
+
+		// Same category; use secondary sort
+		switch catA {
+		case 0, 1: // Sort by next review time
+			aTime := time.Time{}
+			bTime := time.Time{}
+			if a.NextReview != nil {
+				aTime = *a.NextReview
+			}
+			if b.NextReview != nil {
+				bTime = *b.NextReview
+			}
+			return aTime.Before(bTime)
+		case 2, 3: // Sort by creation time
+			return a.CreatedAt.Before(b.CreatedAt)
+		default:
+			return false
+		}
+	})
 }
 
 func (s *Storage) GetCard(cardID string, userID string) (*Card, error) {

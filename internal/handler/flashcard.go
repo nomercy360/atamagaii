@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"net/http"
+	"strconv"
 )
 
 type ReviewCardRequest struct {
@@ -80,7 +81,7 @@ func (h *Handler) GetDeck(c echo.Context) error {
 	if deck.UserID != userID {
 		return echo.NewHTTPError(http.StatusForbidden, "Access denied")
 	}
-	
+
 	return c.JSON(http.StatusOK, deck)
 }
 
@@ -111,6 +112,14 @@ func formatCardResponse(card db.Card) (contract.CardResponse, error) {
 	return response, nil
 }
 
+func parseIntQuery(c echo.Context, key string, defaultValue int) int {
+	value, err := strconv.Atoi(c.QueryParam(key))
+	if err != nil || value < 0 {
+		return defaultValue
+	}
+	return value
+}
+
 func (h *Handler) GetDueCards(c echo.Context) error {
 	userID, err := GetUserIDFromToken(c)
 	if err != nil {
@@ -134,15 +143,15 @@ func (h *Handler) GetDueCards(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden, "Access denied")
 	}
 
-	limit := 3
+	limit := parseIntQuery(c, "limit", 3)
 
-	cards, err := h.db.GetCardsForReview(userID, deckID, limit)
+	cards, err := h.db.GetCardsForReview(userID, deckID, limit, deck.NewCardsPerDay)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch due cards").WithInternal(err)
 	}
 
-	responses := make([]contract.CardResponse, 0, len(cards))
-	for _, card := range cards {
+	responses := make([]contract.CardResponse, len(cards))
+	for i, card := range cards {
 		response, err := formatCardResponse(card)
 		if err != nil {
 			continue
@@ -156,7 +165,7 @@ func (h *Handler) GetDueCards(c echo.Context) error {
 			Good:  db.FormatSimpleDuration(intervalGoodVal),
 		}
 
-		responses = append(responses, response)
+		responses[i] = response
 	}
 
 	return c.JSON(http.StatusOK, responses)
@@ -208,8 +217,31 @@ func (h *Handler) ReviewCard(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch stats").WithInternal(err)
 	}
 
+	nextCards, err := h.db.GetCardsForReview(userID, deck.ID, 5, deck.NewCardsPerDay)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch next card").WithInternal(err)
+	}
+
+	respCards := make([]contract.CardResponse, 0, len(nextCards))
+
+	for _, c := range nextCards {
+		nextCardResp, err := formatCardResponse(c)
+		if err == nil {
+			intervalAgainVal := db.CalculatePreviewInterval(c, db.RatingAgain)
+			intervalGoodVal := db.CalculatePreviewInterval(c, db.RatingGood)
+
+			nextCardResp.NextIntervals = contract.PotentialIntervalsForDisplay{
+				Again: db.FormatSimpleDuration(intervalAgainVal),
+				Good:  db.FormatSimpleDuration(intervalGoodVal),
+			}
+
+			respCards = append(respCards, nextCardResp)
+		}
+	}
+
 	resp := contract.ReviewCardResponse{
-		Stats: stats,
+		Stats:     stats,
+		NextCards: respCards,
 	}
 
 	return c.JSON(http.StatusOK, resp)
