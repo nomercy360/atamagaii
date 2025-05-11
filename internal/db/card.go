@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	nanoid "github.com/matoous/go-nanoid/v2"
+	"math"
 	"time"
 )
 
@@ -26,7 +27,6 @@ type Card struct {
 	UpdatedAt       time.Time     `db:"updated_at" json:"updated_at"`
 	DeletedAt       *time.Time    `db:"deleted_at" json:"deleted_at,omitempty"`
 }
-
 type VocabularyItem struct {
 	Term                  string `json:"term"`                    // Primary term in native script
 	Transcription         string `json:"transcription,omitempty"` // Reading aid (pinyin, romaji, etc.)
@@ -237,6 +237,22 @@ func (s *Storage) GetNewCards(userID string, deckID string, limit int) ([]Card, 
 	return cards, nil
 }
 
+func (s *Storage) GetDueCardCount(userID string) (int, error) {
+	reviewTime := time.Now().Truncate(24 * time.Hour).Add(24*time.Hour - time.Nanosecond)
+	query := `
+		SELECT COUNT(*)
+		FROM cards
+		WHERE user_id = ? AND next_review IS NOT NULL AND next_review <= ? AND deleted_at IS NULL
+	`
+	var count int
+	err := s.db.QueryRow(query, userID, reviewTime).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("error getting due card count: %w", err)
+	}
+
+	return count, nil
+}
+
 func (s *Storage) GetDueCards(userID string, deckID string, limit int) ([]Card, error) {
 	todayEnd := time.Now().Truncate(24 * time.Hour).Add(24*time.Hour - time.Nanosecond)
 	// todayEnd := time.Now()
@@ -298,6 +314,21 @@ func (s *Storage) GetDueCards(userID string, deckID string, limit int) ([]Card, 
 	return cards, nil
 }
 
+func CalculatePreviewInterval(card Card, rating int) time.Duration {
+	params, err := calculateNextReviewParameters(
+		CardState(card.State),
+		card.LearningStep,
+		card.Interval, // Card's current interval
+		card.Ease,     // Card's current ease
+		rating,
+	)
+	if err != nil {
+		fmt.Printf("Warning: calculatePreviewInterval failed for card ID %s (state: %s, rating: %d): %v. Returning default.\n", card.ID, card.State, rating, err)
+		return LearningStep1Duration
+	}
+	return params.Interval
+}
+
 func (s *Storage) GetCardsForReview(userID string, deckID string, limit int) ([]Card, error) {
 	reviewCards, err := s.GetDueCards(userID, deckID, limit)
 	if err != nil {
@@ -318,6 +349,59 @@ func (s *Storage) GetCardsForReview(userID string, deckID string, limit int) ([]
 	combinedCards := append(reviewCards, newCards...)
 
 	return combinedCards, nil
+}
+
+func FormatSimpleDuration(d time.Duration) string {
+	if d <= 0 {
+		// For display, a 0 or negative interval after calculation (before fallback) might appear as a very short step.
+		// After fallbacks in calculatePreviewInterval, d should be positive.
+		// If it still somehow is <=0, show a minimal positive duration.
+		return "1m" // Or "~1m", or based on LearningStep1Duration
+	}
+
+	seconds := int64(roundSeconds(d.Seconds()))
+	minutes := int64(roundSeconds(d.Minutes()))
+	hours := int64(roundSeconds(d.Hours()))
+	days := d.Hours() / 24.0
+
+	if days >= 365.0*0.95 { // About a year
+		numYears := math.Round(days/365.0*10) / 10 // Rounded to 1 decimal place
+		if numYears < 1.0 {
+			numYears = 1.0
+		}
+		return fmt.Sprintf("%.1fy", numYears)
+	}
+	if days >= 30.0*0.95 { // About a month
+		numMonths := math.Round(days / 30.0)
+		if numMonths < 1.0 {
+			numMonths = 1.0
+		}
+		return fmt.Sprintf("%.0fmo", numMonths)
+	}
+	if days >= 1.0*0.95 { // About a day
+		numDays := math.Round(days)
+		if numDays < 1.0 {
+			numDays = 1.0
+		}
+		return fmt.Sprintf("%.0fd", numDays)
+	}
+	if hours >= 1 {
+		return fmt.Sprintf("%dh", hours)
+	}
+	if minutes >= 1 {
+		return fmt.Sprintf("%dm", minutes)
+	}
+	if seconds < 1 {
+		seconds = 1
+	} // Ensure at least 1s for very short positive durations
+	return fmt.Sprintf("%ds", seconds)
+}
+
+func roundSeconds(f float64) float64 {
+	if f < 0 {
+		return math.Ceil(f - 0.5)
+	}
+	return math.Floor(f + 0.5)
 }
 
 func (s *Storage) GetCard(cardID string, userID string) (*Card, error) {

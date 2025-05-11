@@ -51,143 +51,102 @@ type Review struct {
 
 const ()
 
+// In db/review.go
+
 func (s *Storage) ReviewCard(card *Card, rating int, timeSpentMs int) error {
 	now := time.Now()
-	prevInterval := card.Interval // Interval value *before* this review
-	prevEase := card.Ease         // Ease value *before* this review
-	currentState := CardState(card.State)
 
-	if currentState == StateNew {
-		card.Ease = DefaultEase
-	} else {
-		if card.Ease < MinEaseFactor {
-			card.Ease = MinEaseFactor
-		}
+	// Store original values for logging and specific logic
+	initialCardState := CardState(card.State)
+	prevInterval := card.Interval
+	prevEase := card.Ease
+
+	// 1. Calculate next parameters using the core function
+	params, err := calculateNextReviewParameters(
+		initialCardState,
+		card.LearningStep,
+		card.Interval, // This is the interval *before* this review
+		card.Ease,     // This is the ease *before* this review
+		rating,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to calculate next review parameters for card %s: %w", card.ID, err)
 	}
 
-	switch currentState {
-	case StateNew:
-		card.State = string(StateLearning)
-		card.LearningStep = 1
+	// 2. Update card fields based on calculated parameters
+	card.State = string(params.State)
+	card.LearningStep = params.LearningStep
+	card.Ease = params.Ease
+	card.Interval = params.Interval // This is the base new interval (unfuzzed)
 
-		card.Interval = LearningStep1Duration
+	// 3. Handle LapsCount (specific to Review -> Relearning transition)
+	if initialCardState == StateReview && rating == RatingAgain {
+		card.LapsCount++
+	}
 
-	case StateLearning:
-		if rating == RatingAgain {
-			card.LearningStep = 1
-			card.Interval = LearningStep1Duration
-		} else if rating == RatingGood {
-			if card.LearningStep == 1 {
-				card.LearningStep = 2
-				card.Interval = LearningStep2Duration
+	// 4. Apply Fuzzing if applicable (only for actual reviews, not previews)
+	oneDay := 24 * time.Hour
+	// Fuzzing condition: original state was Review, rating was Good, calculated interval > 1 day
+	if initialCardState == StateReview && rating == RatingGood && card.Interval > oneDay && FuzzPercentage > 0.0 {
+		fuzzRangeSeconds := card.Interval.Seconds() * FuzzPercentage
+		// IMPORTANT: Ensure rand is seeded at application startup: rand.Seed(time.Now().UnixNano())
+		fuzzAmountSeconds := (rand.Float64()*2.0 - 1.0) * fuzzRangeSeconds
+		fuzzedInterval := card.Interval + time.Duration(fuzzAmountSeconds*float64(time.Second))
+
+		// Re-apply clamps after fuzzing, as fuzzing might push it out of bounds
+		minReviewInterval := time.Duration(GraduateToReviewIntervalDays * 24 * float64(time.Hour))
+		if fuzzedInterval < minReviewInterval {
+			fuzzedInterval = minReviewInterval
+		}
+
+		maxIntervalDuration := time.Duration(MaxReviewIntervalDays) * 24 * time.Hour
+		if fuzzedInterval > maxIntervalDuration {
+			fuzzedInterval = maxIntervalDuration
+		}
+
+		// Ensure interval is not zero/negative after fuzzing, using the *new* card state (params.State)
+		if fuzzedInterval <= 0 {
+			if params.State == StateLearning || params.State == StateRelearning {
+				fuzzedInterval = LearningStep1Duration
+			} else if params.State == StateReview {
+				fuzzedInterval = time.Duration(GraduateToReviewIntervalDays * 24 * float64(time.Hour))
 			} else {
-				card.State = string(StateReview)
-				card.LearningStep = 0
-				card.Interval = time.Duration(GraduateToReviewIntervalDays * 24 * float64(time.Hour))
+				fuzzedInterval = LearningStep1Duration
 			}
 		}
-
-	case StateReview:
-		if rating == RatingAgain { // Lapse
-			card.State = string(StateRelearning)
-			card.LearningStep = 1
-			card.Interval = LearningStep1Duration
-			card.Ease = math.Max(MinEaseFactor, card.Ease-0.20) // Reduce current ease
-			card.LapsCount++
-		} else if rating == RatingGood {
-			card.Ease = math.Max(MinEaseFactor, card.Ease+0.10)
-
-			calculatedIntervalValue := float64(prevInterval) * card.Ease
-			card.Interval = time.Duration(calculatedIntervalValue)
-
-			minReviewInterval := time.Duration(GraduateToReviewIntervalDays * 24 * float64(time.Hour))
-			if card.Interval < minReviewInterval {
-				card.Interval = minReviewInterval
-			}
-
-			oneDay := 24 * time.Hour
-			if card.Interval > oneDay && FuzzPercentage > 0.0 {
-				fuzzRangeSeconds := card.Interval.Seconds() * FuzzPercentage
-				fuzzAmountSeconds := (rand.Float64()*2.0 - 1.0) * fuzzRangeSeconds
-				card.Interval += time.Duration(fuzzAmountSeconds * float64(time.Second))
-
-				if card.Interval < minReviewInterval {
-					card.Interval = minReviewInterval
-				}
-			}
-		}
-
-	case StateRelearning:
-		if rating == RatingAgain {
-			card.LearningStep = 1 // Reset to first relearning step
-			card.Interval = LearningStep1Duration
-		} else if rating == RatingGood {
-			if card.LearningStep == 1 {
-				card.LearningStep = 2
-				card.Interval = LearningStep2Duration
-			} else { // Assuming current step is 2 (or any other step implies graduation)
-				card.State = string(StateReview)
-				card.LearningStep = 0 // No longer in a specific learning step
-				card.Interval = time.Duration(GraduateToReviewIntervalDays * 24 * float64(time.Hour))
-			}
-		}
-	default:
-		return fmt.Errorf("unknown card state: '%s' for card ID %s", card.State, card.ID)
+		card.Interval = fuzzedInterval // Assign the fuzzed and re-clamped interval
 	}
 
-	maxIntervalDuration := time.Duration(MaxReviewIntervalDays) * 24 * time.Hour
-	if card.Interval > maxIntervalDuration {
-		card.Interval = maxIntervalDuration
-	}
-
-	if card.Interval <= 0 {
-		if card.State == string(StateLearning) || card.State == string(StateRelearning) {
-			card.Interval = LearningStep1Duration
-		} else if card.State == string(StateReview) {
-			card.Interval = time.Duration(GraduateToReviewIntervalDays * 24 * float64(time.Hour))
-		} else {
-			card.Interval = LearningStep1Duration
-		}
-	}
-
+	// 5. Finalize other card updates
 	nextReviewTime := now.Add(card.Interval)
 	card.NextReview = &nextReviewTime
-
 	card.ReviewCount++
 	card.LastReviewedAt = &now
 	if card.FirstReviewedAt == nil {
 		card.FirstReviewedAt = &now
 	}
 
-	tx, err := s.db.Begin()
-	if err != nil {
-		return fmt.Errorf("error starting transaction: %w", err)
+	// 6. Database transaction (largely unchanged)
+	tx, dbErr := s.db.Begin()
+	if dbErr != nil {
+		return fmt.Errorf("error starting transaction: %w", dbErr)
 	}
-
-	defer tx.Rollback()
+	defer tx.Rollback() // Defer rollback in case of panic or early return
 
 	reviewQuery := `
 		INSERT INTO reviews (id, user_id, card_id, rating, reviewed_at, time_spent_ms, prev_interval, new_interval, prev_ease, new_ease)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
-
 	prevIntervalNs := prevInterval.Nanoseconds()
-	newIntervalNs := card.Interval.Nanoseconds()
+	newIntervalNs := card.Interval.Nanoseconds() // Use the final (possibly fuzzed) interval
 
-	_, err = tx.Exec(reviewQuery,
-		nanoid.Must(),
-		card.UserID,
-		card.ID,
-		rating,
-		now,
-		timeSpentMs,
-		prevIntervalNs,
-		newIntervalNs,
-		prevEase,
-		card.Ease,
+	_, dbErr = tx.Exec(reviewQuery,
+		nanoid.Must(), card.UserID, card.ID, rating, now, timeSpentMs,
+		prevIntervalNs, newIntervalNs, prevEase, card.Ease, // Use prevEase and new card.Ease
 	)
-	if err != nil {
-		return fmt.Errorf("error creating review: %w", err)
+	if dbErr != nil {
+		return fmt.Errorf("error creating review: %w", dbErr)
 	}
 
 	updateCardQuery := `
@@ -197,43 +156,134 @@ func (s *Storage) ReviewCard(card *Card, rating int, timeSpentMs int) error {
 		    state = ?, learning_step = ?, updated_at = ?
 		WHERE id = ? AND user_id = ?
 	`
-	_, err = tx.Exec(updateCardQuery,
-		card.NextReview,
-		card.Interval.Nanoseconds(),
-		card.Ease,
-		card.ReviewCount,
-		card.LapsCount,
-		card.LastReviewedAt,
-		card.FirstReviewedAt,
-		card.State,
-		card.LearningStep,
-		now, // updated_at
-		card.ID,
-		card.UserID,
+	_, dbErr = tx.Exec(updateCardQuery,
+		card.NextReview, card.Interval.Nanoseconds(), card.Ease, card.ReviewCount,
+		card.LapsCount, card.LastReviewedAt, card.FirstReviewedAt,
+		card.State, card.LearningStep, now, // updated_at
+		card.ID, card.UserID,
 	)
-	if err != nil {
-		return fmt.Errorf("error updating card: %w", err)
+	if dbErr != nil {
+		return fmt.Errorf("error updating card: %w", dbErr)
 	}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("error committing transaction: %w", err)
+	if dbErr := tx.Commit(); dbErr != nil {
+		return fmt.Errorf("error committing transaction: %w", dbErr)
 	}
 
 	return nil
 }
 
-func (s *Storage) GetDueCardCount(userID string) (int, error) {
-	reviewTime := time.Now().Truncate(24 * time.Hour).Add(24*time.Hour - time.Nanosecond)
-	query := `
-		SELECT COUNT(*)
-		FROM cards
-		WHERE user_id = ? AND next_review IS NOT NULL AND next_review <= ? AND deleted_at IS NULL
-	`
-	var count int
-	err := s.db.QueryRow(query, userID, reviewTime).Scan(&count)
-	if err != nil {
-		return 0, fmt.Errorf("error getting due card count: %w", err)
+type NextReviewParameters struct {
+	Interval     time.Duration
+	Ease         float64
+	State        CardState
+	LearningStep int
+}
+
+func calculateNextReviewParameters(
+	currentState CardState,
+	currentLearningStep int,
+	currentInterval time.Duration,
+	currentEase float64,
+	rating int,
+) (NextReviewParameters, error) {
+	params := NextReviewParameters{
+		Interval:     currentInterval,     // Start with current, will be updated
+		Ease:         currentEase,         // Start with current, will be updated
+		State:        currentState,        // Start with current, will be updated
+		LearningStep: currentLearningStep, // Start with current, will be updated
 	}
 
-	return count, nil
+	effectivePrevEase := params.Ease // Ease to be used for calculations
+	if currentState == StateNew {
+		params.Ease = DefaultEase
+		effectivePrevEase = DefaultEase
+	} else {
+		if params.Ease < MinEaseFactor {
+			params.Ease = MinEaseFactor
+			effectivePrevEase = MinEaseFactor
+		}
+	}
+
+	switch currentState {
+	case StateNew:
+		params.State = StateLearning
+		params.LearningStep = 1
+		params.Interval = LearningStep1Duration
+		// Ease already set to DefaultEase
+
+	case StateLearning:
+		if rating == RatingAgain {
+			params.LearningStep = 1 // Reset to first step
+			params.Interval = LearningStep1Duration
+		} else if rating == RatingGood {
+			if params.LearningStep == 1 {
+				params.LearningStep = 2
+				params.Interval = LearningStep2Duration
+			} else { // Graduating from learning (e.g., from step 2)
+				params.State = StateReview
+				params.LearningStep = 0 // No longer in a specific learning step
+				params.Interval = time.Duration(GraduateToReviewIntervalDays * 24 * float64(time.Hour))
+			}
+		}
+		// Ease generally doesn't change during learning steps unless it's a new card (handled by initial ease setting)
+
+	case StateReview:
+		if rating == RatingAgain { // Lapse
+			params.State = StateRelearning
+			params.LearningStep = 1
+			params.Interval = LearningStep1Duration
+			params.Ease = math.Max(MinEaseFactor, effectivePrevEase-0.20) // Use ease before this review
+		} else if rating == RatingGood {
+			// State remains StateReview
+			params.Ease = math.Max(MinEaseFactor, effectivePrevEase+0.10) // Use ease before this review
+
+			calculatedIntervalValue := float64(currentInterval) * params.Ease // currentInterval is prevInterval here
+			params.Interval = time.Duration(calculatedIntervalValue)
+
+			minReviewInterval := time.Duration(GraduateToReviewIntervalDays * 24 * float64(time.Hour))
+			if params.Interval < minReviewInterval {
+				params.Interval = minReviewInterval
+			}
+			// Fuzzing is applied later in ReviewCard if needed, not here
+		}
+
+	case StateRelearning:
+		if rating == RatingAgain {
+			params.LearningStep = 1 // Reset to first relearning step
+			params.Interval = LearningStep1Duration
+		} else if rating == RatingGood {
+			if params.LearningStep == 1 {
+				params.LearningStep = 2
+				params.Interval = LearningStep2Duration
+			} else { // Graduating from relearning
+				params.State = StateReview
+				params.LearningStep = 0
+				params.Interval = time.Duration(GraduateToReviewIntervalDays * 24 * float64(time.Hour))
+			}
+		}
+		// Ease is not changed during relearning steps (it was adjusted at the lapse)
+
+	default:
+		return NextReviewParameters{}, fmt.Errorf("unknown card state: '%s'", currentState)
+	}
+
+	// Apply MaxReviewIntervalDays cap
+	maxIntervalDuration := time.Duration(MaxReviewIntervalDays) * 24 * time.Hour
+	if params.Interval > maxIntervalDuration {
+		params.Interval = maxIntervalDuration
+	}
+
+	// Apply zero/negative interval fallback based on the *newly calculated* state (params.State)
+	if params.Interval <= 0 {
+		if params.State == StateLearning || params.State == StateRelearning {
+			params.Interval = LearningStep1Duration
+		} else if params.State == StateReview {
+			params.Interval = time.Duration(GraduateToReviewIntervalDays * 24 * float64(time.Hour))
+		} else { // Should not be StateNew here as it transitions out
+			params.Interval = LearningStep1Duration // Fallback for any unexpected scenario
+		}
+	}
+
+	return params, nil
 }

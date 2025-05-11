@@ -65,7 +65,6 @@ func (h *Handler) GetDeck(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Deck ID is required")
 	}
 
-	// Corner case handling for tests and error cases
 	if len(deckID) < 3 {
 		return echo.NewHTTPError(http.StatusNotFound, "Deck not found")
 	}
@@ -81,7 +80,7 @@ func (h *Handler) GetDeck(c echo.Context) error {
 	if deck.UserID != userID {
 		return echo.NewHTTPError(http.StatusForbidden, "Access denied")
 	}
-
+	
 	return c.JSON(http.StatusOK, deck)
 }
 
@@ -148,6 +147,15 @@ func (h *Handler) GetDueCards(c echo.Context) error {
 		if err != nil {
 			continue
 		}
+
+		intervalAgainVal := db.CalculatePreviewInterval(card, db.RatingAgain)
+		intervalGoodVal := db.CalculatePreviewInterval(card, db.RatingGood)
+
+		response.NextIntervals = contract.PotentialIntervalsForDisplay{
+			Again: db.FormatSimpleDuration(intervalAgainVal),
+			Good:  db.FormatSimpleDuration(intervalGoodVal),
+		}
+
 		responses = append(responses, response)
 	}
 

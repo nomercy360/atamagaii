@@ -50,23 +50,29 @@ type CardFields struct {
 	ImageURL                 string `json:"image_url,omitempty"`
 }
 type CardResponse struct {
-	ID              string        `json:"id"`
-	DeckID          string        `json:"deck_id"`
-	Fields          CardFields    `json:"fields"`
-	CreatedAt       time.Time     `json:"created_at"`
-	UpdatedAt       time.Time     `json:"updated_at"`
-	DeletedAt       *time.Time    `json:"deleted_at,omitempty"`
-	NextReview      *time.Time    `json:"next_review,omitempty"`
-	Interval        time.Duration `json:"interval,omitempty"`
-	Ease            float64       `json:"ease,omitempty"`
-	ReviewCount     int           `json:"review_count,omitempty"`
-	LapsCount       int           `json:"laps_count,omitempty"`
-	LastReviewedAt  *time.Time    `json:"last_reviewed_at,omitempty"`
-	FirstReviewedAt *time.Time    `json:"first_reviewed_at,omitempty"`
-	State           string        `json:"state,omitempty"`
-	LearningStep    int           `json:"learning_step,omitempty"`
+	ID              string                       `json:"id"`
+	DeckID          string                       `json:"deck_id"`
+	Fields          CardFields                   `json:"fields"`
+	CreatedAt       time.Time                    `json:"created_at"`
+	UpdatedAt       time.Time                    `json:"updated_at"`
+	DeletedAt       *time.Time                   `json:"deleted_at,omitempty"`
+	NextReview      *time.Time                   `json:"next_review,omitempty"`
+	Interval        time.Duration                `json:"interval,omitempty"`
+	Ease            float64                      `json:"ease,omitempty"`
+	ReviewCount     int                          `json:"review_count,omitempty"`
+	LapsCount       int                          `json:"laps_count,omitempty"`
+	LastReviewedAt  *time.Time                   `json:"last_reviewed_at,omitempty"`
+	FirstReviewedAt *time.Time                   `json:"first_reviewed_at,omitempty"`
+	State           string                       `json:"state,omitempty"`
+	LearningStep    int                          `json:"learning_step,omitempty"`
+	NextIntervals   PotentialIntervalsForDisplay `json:"next_intervals,omitempty"`
 }
 
 type ReviewCardResponse struct {
 	Stats *db.DeckStatistics `json:"stats"`
+}
+
+type PotentialIntervalsForDisplay struct {
+	Again string `json:"again"`
+	Good  string `json:"good"`
 }

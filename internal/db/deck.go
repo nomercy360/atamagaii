@@ -9,20 +9,18 @@ import (
 )
 
 type Deck struct {
-	ID                string     `db:"id" json:"id"`
-	Name              string     `db:"name" json:"name"`
-	Description       string     `db:"description" json:"description"`
-	Level             string     `db:"level" json:"level"`
-	LanguageCode      string     `db:"language_code" json:"language_code"`           // ISO 639-1 language code (e.g., "ja", "en", "th")
-	TranscriptionType string     `db:"transcription_type" json:"transcription_type"` // Type of transcription/reading aids
-	NewCardsPerDay    int        `db:"new_cards_per_day" json:"new_cards_per_day"`
-	UserID            string     `db:"user_id" json:"user_id"`
-	CreatedAt         time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt         time.Time  `db:"updated_at" json:"updated_at"`
-	DeletedAt         *time.Time `db:"deleted_at" json:"deleted_at,omitempty"`
-	NewCards          int        `json:"new_cards,omitempty" db:"-"`
-	LearningCards     int        `json:"learning_cards,omitempty" db:"-"`
-	ReviewCards       int        `json:"review_cards,omitempty" db:"-"`
+	ID                string          `db:"id" json:"id"`
+	Name              string          `db:"name" json:"name"`
+	Description       string          `db:"description" json:"description"`
+	Level             string          `db:"level" json:"level"`
+	LanguageCode      string          `db:"language_code" json:"language_code"`           // ISO 639-1 language code (e.g., "ja", "en", "th")
+	TranscriptionType string          `db:"transcription_type" json:"transcription_type"` // Type of transcription/reading aids
+	NewCardsPerDay    int             `db:"new_cards_per_day" json:"new_cards_per_day"`
+	UserID            string          `db:"user_id" json:"user_id"`
+	CreatedAt         time.Time       `db:"created_at" json:"created_at"`
+	UpdatedAt         time.Time       `db:"updated_at" json:"updated_at"`
+	DeletedAt         *time.Time      `db:"deleted_at" json:"deleted_at,omitempty"`
+	Stats             *DeckStatistics `json:"stats,omitempty"`
 }
 
 func (s *Storage) CreateDeck(userID, name, description, level string, languageCode string, transcriptionType string) (*Deck, error) {
@@ -111,10 +109,7 @@ func (s *Storage) GetDecks(userID string) ([]Deck, error) {
 			return nil, fmt.Errorf("error getting deck statistics: %w", err)
 		}
 
-		deck.NewCards = stats.NewCards
-		deck.LearningCards = stats.LearningCards
-		deck.ReviewCards = stats.ReviewCards
-
+		deck.Stats = stats
 		decks = append(decks, deck)
 	}
 
@@ -159,9 +154,7 @@ func (s *Storage) GetDeck(deckID string) (*Deck, error) {
 		return nil, fmt.Errorf("error getting deck statistics: %w", err)
 	}
 
-	deck.NewCards = stats.NewCards
-	deck.LearningCards = stats.LearningCards
-	deck.ReviewCards = stats.ReviewCards
+	deck.Stats = stats
 
 	return &deck, nil
 }

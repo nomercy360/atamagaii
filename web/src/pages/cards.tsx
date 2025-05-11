@@ -1,5 +1,5 @@
 import { createSignal, createResource, Show, createEffect, onMount, onCleanup } from 'solid-js'
-import { apiRequest, Card, CardReviewResponse, Deck } from '~/lib/api'
+import { apiRequest, Card, CardReviewResponse, Deck, DeckProgress } from '~/lib/api'
 import { useParams, useNavigate } from '@solidjs/router'
 import AudioButton from '~/components/audio-button'
 import { hapticFeedback } from '~/lib/utils'
@@ -46,20 +46,15 @@ export default function Cards() {
 	const [timeSpentMs, setTimeSpentMs] = createSignal(0)
 	const [startTime, setStartTime] = createSignal<number | null>(null)
 	const [isTimerActive, setIsTimerActive] = createSignal(false)
-	const [deckMetrics, setDeckMetrics] = createSignal<{
-		newCards: number;
-		learningCards: number;
-		reviewCards: number;
-		completedCards: number;
-	}>({ newCards: 0, learningCards: 0, reviewCards: 0, completedCards: 0 })
+	const [deckMetrics, setDeckMetrics] = createSignal<DeckProgress>({ new_cards: 0, learning_cards: 0, review_cards: 0, completed_today_cards: 0 })
 
 	const progressInfo = () => {
 		const metrics = deckMetrics()
-		const total = metrics.newCards + metrics.learningCards + metrics.reviewCards + metrics.completedCards
+		const total = metrics.new_cards + metrics.learning_cards + metrics.review_cards + metrics.completed_today_cards
 		return {
-			completed: metrics.completedCards,
+			completed: metrics.completed_today_cards,
 			total: total,
-			percentage: total > 0 ? Math.round((metrics.completedCards / total) * 100) : 0,
+			percentage: total > 0 ? Math.round((metrics.completed_today_cards / total) * 100) : 0,
 		}
 	}
 
@@ -76,13 +71,8 @@ export default function Cards() {
 				return null
 			}
 
-			if (data) {
-				setDeckMetrics({
-					newCards: data.new_cards || 0,
-					learningCards: data.learning_cards || 0,
-					reviewCards: data.review_cards || 0,
-					completedCards: data.completed_today_cards || 0,
-				})
+			if (data?.stats) {
+				setDeckMetrics(data.stats)
 			}
 
 			return data
@@ -91,6 +81,24 @@ export default function Cards() {
 
 	const [fetchFailureCount, setFetchFailureCount] = createSignal<number>(0)
 	const MAX_FETCH_FAILURES = 1
+
+	const currentCard = () => {
+		const buffer = cardBuffer()
+		const idx = cardIndex()
+		if (buffer.length === 0 || idx >= buffer.length) {
+			// If buffer is empty or index is out of bounds, and we think we should have cards
+			if (needMoreCards() && !isFetchingMore() && fetchFailureCount() < MAX_FETCH_FAILURES) {
+				console.log("Current card is null, but needMoreCards is true. Attempting to fetch.");
+				fetchCards(); // Try to fetch if we expect more cards
+			} else if (!needMoreCards() && buffer.length > 0 && idx >= buffer.length) {
+				console.log("All cards in buffer reviewed. Deck likely finished.");
+				// This is where you might navigate away or show a "deck complete" message.
+				// For now, we just return null, and the UI will show "no cards".
+			}
+			return null
+		}
+		return buffer[idx]
+	}
 
 	const fetchCards = async (): Promise<Card[]> => {
 		if (!params.deckId || isFetchingMore()) {
@@ -108,7 +116,9 @@ export default function Cards() {
 		setIsFetchingMore(true)
 
 		try {
-			const { data, error } = await apiRequest<Card[]>(`/cards/due?deck_id=${params.deckId}&limit=3`)
+			// Fetch slightly more to keep the buffer healthy if one is being reviewed
+			const limit = currentCard() ? PREFETCH_BUFFER_THRESHOLD + 2 : PREFETCH_BUFFER_THRESHOLD +1;
+			const { data, error } = await apiRequest<Card[]>(`/cards/due?deck_id=${params.deckId}&limit=${limit}`) // Fetch a bit more
 			if (error) {
 				console.error(`Failed to fetch cards for deck ${params.deckId}:`, error)
 				setIsFetchingMore(false)
@@ -129,28 +139,41 @@ export default function Cards() {
 			if (!data || data.length === 0) {
 				console.log('API returned no cards. Setting needMoreCards to false.')
 				setNeedMoreCards(false)
+				setIsFetchingMore(false) // Ensure this is reset
+				return [] // Return empty array if no data
 			}
 
 			const newCards = data || []
+			let cardsToAdd = [...newCards];
 
-			if (newCards.length > 1 && currentCard()) {
-				const currentCardId = currentCard()!.id
-				const currentCardIndex = newCards.findIndex(card => card.id === currentCardId)
-				if (currentCardIndex !== -1) {
-					newCards.splice(currentCardIndex, 1)
-					console.log(`Removed current card from new cards: ${currentCardId}`)
+			// Avoid adding duplicates already in the buffer or the current card
+			const existingIds = new Set(cardBuffer().map(c => c.id));
+			const current = currentCard();
+			if (current) {
+				existingIds.add(current.id);
+			}
+			cardsToAdd = cardsToAdd.filter(card => !existingIds.has(card.id));
+
+
+			if (cardsToAdd.length > 0) {
+				setCardBuffer(prev => {
+					const currentCardsMap = new Map(prev.map(card => [card.id, card]));
+					cardsToAdd.forEach(card => currentCardsMap.set(card.id, card)); // Add new or update existing
+					return Array.from(currentCardsMap.values());
+				})
+				console.log(`Workspaceed and added/updated ${cardsToAdd.length} cards to buffer. Buffer size: ${cardBuffer().length}`)
+			} else {
+				console.log('Fetched cards, but no *new* cards to add to buffer.')
+				// If API returned cards but they were all duplicates of what's in buffer,
+				// and buffer is small, it might mean we are near the end.
+				// But if API returned 0 cards initially, needMoreCards is already false.
+				if (newCards.length === 0) { // Explicitly check if API returned nothing
+					setNeedMoreCards(false);
 				}
 			}
 
-			if (newCards.length > 0) {
-				setCardBuffer(prev => [...prev, ...newCards])
-				console.log(`Fetched and added ${newCards.length} new cards to buffer.`)
-			} else {
-				console.log('Fetched cards, but no *new* cards to add (either all processed or API returned processed cards).')
-			}
-
 			setIsFetchingMore(false)
-			return newCards
+			return cardsToAdd // Return only the cards that were actually new to the buffer
 		} catch (e) {
 			console.error('Exception during fetchCards:', e)
 			setIsFetchingMore(false)
@@ -167,19 +190,22 @@ export default function Cards() {
 		}
 	}
 
+	// Main resource for cards, initially populates the buffer if empty and needed
+	const [cardsResourceTrigger, setCardsResourceTrigger] = createSignal(true)
 	const [cards] = createResource<Card[], boolean>(
-		() => needMoreCards() && cardBuffer().length === 0,
+		() => needMoreCards() && cardBuffer().length === 0 && cardsResourceTrigger(), // Re-trigger based on signal
 		async (shouldFetch) => {
 			if (!shouldFetch) {
-				return cardBuffer()
+				return cardBuffer(); // Return current buffer if not fetching
 			}
-			console.log('Resource: Triggering initial fetchCards.')
-			await fetchCards()
-			return cardBuffer()
-		},
-	)
+			console.log('Resource: Triggering initial fetchCards.');
+			await fetchCards();
+			return cardBuffer(); // Return buffer after fetch
+		}
+	);
 
-	// Effect to maintain our buffer of at least 2 cards when possible
+
+	// Effect to maintain card buffer
 	createEffect(() => {
 		const buffer = cardBuffer()
 		const currentIdx = cardIndex()
@@ -188,19 +214,11 @@ export default function Cards() {
 		// Log buffer state for debugging
 		console.log(`Card buffer state: ${remaining} remaining (${currentIdx}/${buffer.length})`)
 
-		// If we have 1 or fewer cards left in our buffer, fetch more
-		if (remaining <= 1 && needMoreCards()) {
-			console.log('Fetching more cards for buffer')
+		if (remaining <= 1 && needMoreCards() && !isFetchingMore()) {
+			console.log(`Buffer low (remaining: ${remaining}), fetching more cards.`)
 			fetchCards()
 		}
 	})
-
-	const currentCard = () => {
-		const buffer = cardBuffer()
-		const idx = cardIndex()
-		if (buffer.length === 0 || idx >= buffer.length) return null
-		return buffer[idx]
-	}
 
 	const handleVisibilityChange = () => {
 		if (document.visibilityState === 'hidden') {
@@ -244,17 +262,24 @@ export default function Cards() {
 			const now = Date.now()
 			const current = now - startTime()!
 			total += current
-			console.log('Current session time:', current, 'ms, total with previous:', total, 'ms')
+			// console.log('Current session time:', current, 'ms, total with previous:', total, 'ms')
 		} else {
-			console.log('Timer inactive, returning accumulated time:', total, 'ms')
+			// console.log('Timer inactive, returning accumulated time:', total, 'ms')
 		}
 		return total
 	}
 
 	onMount(() => {
+		// Initial fetch if buffer is empty
+		if (cardBuffer().length === 0 && needMoreCards()) {
+			console.log("onMount: Initial fetch triggered.");
+			fetchCards();
+		}
+
 		createEffect(() => {
-			if (currentCard() && startTime() === null) {
-				console.log('onMount/Effect: First card available, resetting timer.')
+			const card = currentCard()
+			if (card && startTime() === null) {
+				console.log('Effect (currentCard change): Card available, resetting timer for card ID:', card.id)
 				resetTimer()
 			}
 		})
@@ -272,7 +297,6 @@ export default function Cards() {
 	const playCardAudio = () => {
 		const card = currentCard()
 		if (card?.fields.audio_word) {
-			// Use audio service to play sequence of word and example audio
 			if (card?.fields.audio_example) {
 				audioService.playSequence(card.fields.audio_word, card.fields.audio_example, 300)
 			} else {
@@ -283,66 +307,79 @@ export default function Cards() {
 
 	const handleCardFlip = () => {
 		if (isTransitioning()) return
-		// Only allow flipping from front to back, not back to front
 		if (!flipped()) {
-			// Provide haptic feedback when flipping the card
 			hapticFeedback('impact', 'light')
-
 			setFlipped(true)
-			// We'll play the audio after a short delay to ensure the flip animation has started
 			setTimeout(() => playCardAudio(), 150)
 		}
 	}
 
 	const handleNextCard = () => {
 		stopAllAudio()
-
 		setIsTransitioning(true)
-		setTimeout(() => {
-			setFlipped(false)
-			setCardIndex(prevIndex => prevIndex + 1)
-			setTimeout(() => {
-				setIsTransitioning(false)
-				resetTimer()
-			}, 50)
-		}, 300)
-	}
 
-	const handleReview = async (cardId: string, rating: number) => {
+		// Ensure timer is paused before advancing, as the review submission might be async
 		pauseTimer()
 
-		const finalTimeSpent = getCurrentTimeSpent()
-		console.log('Sending review with time_spent_ms:', finalTimeSpent)
+		setTimeout(() => {
+			setFlipped(false)
+			setCardIndex(prevIndex => {
+				const newIndex = prevIndex + 1;
+				// Optimistically remove the card just reviewed from the buffer head IF it's the one at prevIndex
+				// This isn't strictly necessary if cardIndex just advances, but can help keep buffer clean
+				// if fetches are slow and user reviews multiple cards before new ones load.
+				// However, simpler to just advance index and let buffer management handle refills.
+				// setCardBuffer(prevBuffer => prevBuffer.slice(1)); // This could be problematic if fetches add to end
+				return newIndex;
+			})
+			setTimeout(() => {
+				setIsTransitioning(false)
+			}, 50) // Short delay for flip back animation before card content changes
+		}, 300) // Duration of the flip animation
+	}
 
-		// Provide simple haptic feedback on rating - the same for all ratings
+	// MODIFIED handleReview
+	const handleReview = (cardId: string, rating: number) => {
+		// 1. Pause timer & get time spent (already happens before calling handleNextCard)
+		pauseTimer()
+		const finalTimeSpent = getCurrentTimeSpent()
+		const timeToSend = finalTimeSpent > 0 ? finalTimeSpent : 1000 // Ensure at least 1s
+
+		console.log(`Reviewing card ${cardId} with rating ${rating}. Time spent: ${finalTimeSpent}ms. Sending: ${timeToSend}ms.`);
 		hapticFeedback('impact', 'light')
 
-		const timeToSend = finalTimeSpent > 0 ? finalTimeSpent : 1000
-
-		const { data, error } = await apiRequest<CardReviewResponse>(`/cards/${cardId}/review`, {
-			method: 'POST',
-			body: JSON.stringify({
-				card_id: cardId,
-				rating,
-				time_spent_ms: timeToSend,
-			}),
-		})
-
-		if (error) {
-			console.error('Failed to submit review:', error)
-			return
-		}
-
-		if (data?.stats) {
-			setDeckMetrics({
-				newCards: data.stats.new_cards || 0,
-				learningCards: data.stats.learning_cards || 0,
-				reviewCards: data.stats.review_cards || 0,
-				completedCards: data.stats.completed_today_cards || 0,
-			})
-		}
-
+		// 2. Immediately proceed to the next card for smoother UX
 		handleNextCard()
+
+		// 3. Send the review in the background (fire and forget from UX perspective)
+		;(async () => {
+			try {
+				const { data, error } = await apiRequest<CardReviewResponse>(`/cards/${cardId}/review`, {
+					method: 'POST',
+					body: JSON.stringify({
+						card_id: cardId,
+						rating,
+						time_spent_ms: timeToSend,
+					}),
+				})
+
+				if (error) {
+					console.error(`Failed to submit review for card ${cardId}:`, error)
+					// Optionally: Implement a retry queue or notify user of sync failure
+					return
+				}
+
+				if (data?.stats) {
+					console.log('Review submitted successfully, updating stats:', data.stats)
+					setDeckMetrics(data.stats)
+				} else {
+					console.warn(`Review API call for card ${cardId} succeeded but returned no stats data.`)
+				}
+			} catch (e) {
+				console.error(`Exception during background review submission for card ${cardId}:`, e)
+				// Optionally: Implement a retry queue or notify user of sync failure
+			}
+		})() // Self-invoking async function
 	}
 
 	return (
@@ -360,55 +397,57 @@ export default function Cards() {
 			</Show>
 
 			<div class="w-full flex-grow flex flex-col items-center justify-start">
-				<Show when={currentCard()}>
+				{/* Show current card */}
+				<Show when={currentCard() && !cards.loading}>
 					<div class="w-full flex flex-col items-center">
 						<div
 							class={`w-full cursor-pointer relative perspective transition-all min-h-96 ${isTransitioning() ? 'pointer-events-none' : ''}`}
 							onClick={handleCardFlip}
 						>
+							{/* Front Face */}
 							<div class={getFrontFaceClasses(flipped(), isTransitioning())}>
 								<div class="text-5xl font-semibold mb-4">
 									<TranscriptionText
-										text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
+										text={currentCard()!.fields.term || ''}
 										textSize="5xl"
-										language={currentCard()?.fields.language_code || 'ja'}
-										transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+										language={currentCard()!.fields.language_code || 'ja'}
+										transcriptionType={currentCard()!.fields.transcription_type || 'furigana'}
 									/>
 								</div>
-								<Show
-									when={currentCard()?.fields.example_native || currentCard()?.fields.example_native}>
+								<Show when={currentCard()!.fields.example_native}>
 									<div class="text-2xl p-3 mb-2 max-w-full">
 										<TranscriptionText
-											text={currentCard()?.fields.example_native || currentCard()?.fields.example_native || ''}
+											text={currentCard()!.fields.example_native || ''}
 											textSize="2xl"
-											language={currentCard()?.fields.language_code || 'ja'}
-											transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+											language={currentCard()!.fields.language_code || 'ja'}
+											transcriptionType={currentCard()!.fields.transcription_type || 'furigana'}
 										/>
 									</div>
 								</Show>
 							</div>
 
+							{/* Back Face */}
 							<div class={getBackFaceClasses(flipped(), isTransitioning())}>
 								<div class="text-5xl font-semibold mb-6 flex flex-col items-center">
 									<div class="flex items-center gap-2 pl-8">
-										{currentCard()?.fields.term_with_transcription || currentCard()?.fields.term_with_transcription ? (
+										{currentCard()!.fields.term_with_transcription ? (
 											<TranscriptionText
-												text={currentCard()?.fields.term_with_transcription || currentCard()?.fields.term_with_transcription!}
+												text={currentCard()!.fields.term_with_transcription!}
 												textSize="5xl"
-												language={currentCard()?.fields.language_code || 'ja'}
-												transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+												language={currentCard()!.fields.language_code || 'ja'}
+												transcriptionType={currentCard()!.fields.transcription_type || 'furigana'}
 											/>
 										) : (
 											<TranscriptionText
-												text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
+												text={currentCard()!.fields.term || ''}
 												textSize="5xl"
-												language={currentCard()?.fields.language_code || 'ja'}
-												transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+												language={currentCard()!.fields.language_code || 'ja'}
+												transcriptionType={currentCard()!.fields.transcription_type || 'furigana'}
 											/>
 										)}
-										<Show when={currentCard()?.fields.audio_word}>
+										<Show when={currentCard()!.fields.audio_word}>
 											<AudioButton
-												audioUrl={currentCard()?.fields.audio_word || ''}
+												audioUrl={currentCard()!.fields.audio_word || ''}
 												size="sm"
 												label="Play word pronunciation"
 												type="word"
@@ -416,43 +455,43 @@ export default function Cards() {
 										</Show>
 									</div>
 									<Show
-										when={(currentCard()?.fields.transcription || currentCard()?.fields.transcription) && !(currentCard()?.fields.term_with_transcription || currentCard()?.fields.term_with_transcription)}>
-										 <span class="text-lg text-muted-foreground">
-												{currentCard()?.fields.transcription || currentCard()?.fields.transcription}
-										 </span>
+										when={currentCard()!.fields.transcription && !currentCard()!.fields.term_with_transcription}>
+											<span class="text-lg text-muted-foreground">
+											 {currentCard()!.fields.transcription}
+											</span>
 									</Show>
 								</div>
-								<div class="text-center text-2xl font-medium mb-8">{currentCard()?.fields.meaning_ru}</div>
+								<div class="text-center text-2xl font-medium mb-8">{currentCard()!.fields.meaning_ru}</div>
 								<div class="text-sm space-y-2 w-full">
 									<div class="bg-muted rounded-md p-2">
 										<div class="flex items-start justify-between mb-1">
 											<p class="flex-grow">
-												{currentCard()?.fields.example_with_transcription || currentCard()?.fields.example_with_transcription ? (
+												{currentCard()!.fields.example_with_transcription ? (
 													<TranscriptionText
-														text={currentCard()?.fields.example_with_transcription || currentCard()?.fields.example_with_transcription!}
+														text={currentCard()!.fields.example_with_transcription!}
 														textSize="2xl"
-														language={currentCard()?.fields.language_code || 'ja'}
-														transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+														language={currentCard()!.fields.language_code || 'ja'}
+														transcriptionType={currentCard()!.fields.transcription_type || 'furigana'}
 													/>
 												) : (
 													<TranscriptionText
-														text={currentCard()?.fields.example_native || currentCard()?.fields.example_native || ''}
+														text={currentCard()!.fields.example_native || ''}
 														textSize="2xl"
-														language={currentCard()?.fields.language_code || 'ja'}
-														transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+														language={currentCard()!.fields.language_code || 'ja'}
+														transcriptionType={currentCard()!.fields.transcription_type || 'furigana'}
 													/>
 												)}
 											</p>
-											<Show when={currentCard()?.fields.audio_example}>
+											<Show when={currentCard()!.fields.audio_example}>
 												<AudioButton
-													audioUrl={currentCard()?.fields.audio_example || ''}
+													audioUrl={currentCard()!.fields.audio_example || ''}
 													size="sm"
 													label="Play example audio"
 													type="example"
 												/>
 											</Show>
 										</div>
-										<p class="text-xs text-muted-foreground">{currentCard()?.fields.example_ru}</p>
+										<p class="text-xs text-muted-foreground">{currentCard()!.fields.example_ru}</p>
 									</div>
 								</div>
 							</div>
@@ -460,13 +499,15 @@ export default function Cards() {
 					</div>
 				</Show>
 
-				<Show when={cards.loading}>
+				{/* Loading state for initial cards OR when buffer is empty and fetching */}
+				<Show when={(cards.loading || (isFetchingMore() && cardBuffer().length === 0 && cardIndex() === 0)) && !currentCard()}>
 					<div class="w-full flex flex-col items-center justify-center h-[300px]">
 						<p class="text-muted-foreground">Loading cards...</p>
 					</div>
 				</Show>
 
-				<Show when={!cards.loading && !currentCard()}>
+				{/* No cards state / Fetch failure */}
+				<Show when={!cards.loading && !currentCard() && !isFetchingMore()}>
 					<div class="w-full flex flex-col items-center justify-center h-[300px]">
 						<Show when={fetchFailureCount() >= MAX_FETCH_FAILURES}>
 							<p class="text-muted-foreground mb-2">Failed to load cards. Please try again later.</p>
@@ -474,14 +515,17 @@ export default function Cards() {
 								onClick={() => {
 									setFetchFailureCount(0)
 									setNeedMoreCards(true)
-									fetchCards()
+									setCardsResourceTrigger(v => !v); // Re-trigger resource
 								}}
 								class="mb-4 px-4 py-2 bg-primary text-primary-foreground rounded-md"
 							>
 								Retry
 							</button>
 						</Show>
-						<Show when={fetchFailureCount() < MAX_FETCH_FAILURES}>
+						<Show when={fetchFailureCount() < MAX_FETCH_FAILURES && !needMoreCards() && cardBuffer().length === 0}>
+							<p class="text-muted-foreground">No more cards in this deck for today!</p>
+						</Show>
+						<Show when={fetchFailureCount() < MAX_FETCH_FAILURES && needMoreCards() && cardBuffer().length === 0}>
 							<p class="text-muted-foreground">No cards found in this deck.</p>
 						</Show>
 						<button
@@ -494,50 +538,55 @@ export default function Cards() {
 				</Show>
 			</div>
 
-			{/* Review buttons - show only when card is flipped */}
+			{/* Review Buttons - only show when flipped, card exists, and not transitioning */}
 			<Show when={flipped() && currentCard() && !isTransitioning()}>
 				<div class="fixed bottom-0 left-0 right-0 bg-background border-t border-border pb-8">
 					<div class="mx-auto px-4 py-4">
 						<div class="grid grid-cols-2 gap-4">
 							<button
-								onClick={() => handleReview(currentCard()!.id, 1)}
+								onClick={() => handleReview(currentCard()!.id, 1)} // Pass rating 1 for 'again'
 								class="py-3 px-4 bg-error text-error-foreground rounded-md transition-opacity font-medium text-lg"
 							>
-								Again
+								Again{' '}
+								<span class="text-sm">
+          				{currentCard()?.next_intervals.again}
+        			  </span>
 							</button>
 							<button
-								onClick={() => handleReview(currentCard()!.id, 2)}
+								onClick={() => handleReview(currentCard()!.id, 2)} // Pass rating 2 for 'good' (assuming; adjust if ratings differ)
 								class="py-3 px-4 bg-info text-info-foreground rounded-md transition-opacity font-medium text-lg"
 							>
-								Good
+								Good{' '}
+								<span class="text-sm">
+          				{currentCard()?.next_intervals.good}
+								</span>
 							</button>
 						</div>
 					</div>
 				</div>
 			</Show>
 
-			{/* Deck metrics - show only when card is not flipped */}
 			<Show when={!flipped() && currentCard() && !isTransitioning() && deck() && !deck.loading}>
 				<div class="fixed bottom-0 left-0 right-0 bg-background border-t border-border pb-8">
 					<div class="mx-auto px-4 py-4">
 						<div class="flex justify-center gap-3">
-							<Show when={deckMetrics().newCards > 0}>
-								<span
-									class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-									{deckMetrics().newCards} new
-								</span>
+							<Show when={deckMetrics().new_cards > 0}>
+								 <span
+									 class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+									{deckMetrics().new_cards} new
+								 </span>
 							</Show>
-							<Show when={deckMetrics().learningCards > 0}>
-								<span
-									class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-									{deckMetrics().learningCards} learning
-								</span>
+							<Show when={deckMetrics().learning_cards > 0}>
+								 <span
+									 class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+									{deckMetrics().learning_cards} learning
+								 </span>
 							</Show>
-							<Show when={deckMetrics().reviewCards > 0}>
-								<span
-									class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-									{deckMetrics().reviewCards} review
-								</span>
+							<Show when={deckMetrics().review_cards > 0}>
+								 <span
+									 class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+									{deckMetrics().review_cards} review
+								 </span>
 							</Show>
 						</div>
 					</div>
