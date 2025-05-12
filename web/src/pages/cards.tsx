@@ -45,6 +45,8 @@ export default function Cards() {
 	const [startTime, setStartTime] = createSignal<number | null>(null)
 	const [isTimerActive, setIsTimerActive] = createSignal(false)
 	const [settingsOpen, setSettingsOpen] = createSignal(false)
+	const [feedbackType, setFeedbackType] = createSignal<'again' | 'good' | null>(null)
+	const [showFeedback, setShowFeedback] = createSignal(false)
 	const [deckMetrics, setDeckMetrics] = createSignal<DeckProgress>({
 		new_cards: 0,
 		learning_cards: 0,
@@ -280,6 +282,15 @@ export default function Cards() {
 		const finalTimeSpent = getCurrentTimeSpent()
 		hapticFeedback('impact', 'light')
 
+		// Show feedback indicator
+		setFeedbackType(rating === 1 ? 'again' : 'good')
+		setShowFeedback(true)
+
+		// Hide feedback after a short delay (will still be visible during card transition)
+		setTimeout(() => {
+			setShowFeedback(false)
+		}, 200)
+
 		const timeToSend = finalTimeSpent > 0 ? finalTimeSpent : 1000
 
 		handleNextCard()
@@ -325,6 +336,29 @@ export default function Cards() {
 
 	return (
 		<div class="container mx-auto px-2 py-6 max-w-md flex flex-col items-center min-h-screen">
+			<Show when={showFeedback()}>
+				<div
+					class={`fixed top-20 left-1/2 z-50 flex items-center justify-center pointer-events-none transition-opacity duration-200  transform -translate-x-1/2 ${showFeedback() ? 'opacity-100' : 'opacity-0'}`}
+				>
+					<div
+						class={`rounded-full p-2 flex items-center justify-center ${
+							feedbackType() === 'again' ? 'bg-error/90 text-error-foreground' : 'bg-info/90 text-info-foreground'
+						}`}
+					>
+						{feedbackType() === 'again' ? (
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<path d="M6 16.5L18 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+								<path d="M6 7.5L18 16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+							</svg>
+						) : (
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<path d="M5 13L9 17L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+							</svg>
+						)}
+					</div>
+				</div>
+			</Show>
+
 			{/* Deck name and progress */}
 			<Show when={deck() && !deck.loading}>
 				<div class="flex flex-row items-center justify-between gap-4 w-full mb-4">
