@@ -25,7 +25,7 @@ export function Toast(props: ToastProps) {
       setTimeout(() => {
         setIsVisible(false)
         if (props.onClose) props.onClose()
-      }, 300)
+      }, 200)
     }, duration)
     
     onCleanup(() => clearTimeout(timeout))
@@ -48,7 +48,7 @@ export function Toast(props: ToastProps) {
       <Portal>
         <div 
           class={cn(
-            'fixed top-0 left-0 right-0 mx-auto p-4 max-w-xs z-50 transform transition-all duration-300',
+            'fixed top-0 left-0 right-0 mx-auto p-4 max-w-xs z-50 transform transition-all duration-200',
             getTypeClasses(),
             isExiting() ? 'translate-y-0 opacity-0' : 'translate-y-4 opacity-100'
           )}
@@ -63,7 +63,7 @@ export function Toast(props: ToastProps) {
                 setTimeout(() => {
                   setIsVisible(false)
                   if (props.onClose) props.onClose()
-                }, 300)
+                }, 200)
               }}
             >
               <svg 

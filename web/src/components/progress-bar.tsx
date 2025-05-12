@@ -24,7 +24,7 @@ export default function ProgressBar(props: ProgressBarProps) {
       </div>
       <div class="w-full bg-muted rounded-full h-2.5">
         <div 
-          class="bg-primary h-2.5 rounded-full transition-all duration-300" 
+          class="bg-primary h-2.5 rounded-full transition-all duration-200" 
           style={{ width: `${percentage()}%` }}
         />
       </div>

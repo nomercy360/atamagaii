@@ -18,7 +18,7 @@ const getFrontFaceClasses = (isFlipped: boolean, isTrans: boolean) => {
 	const rotationClass = isFlipped ? 'rotate-y-180' : 'rotate-y-0'
 	const pointerEventsClass = (isTrans || isFlipped) ? 'pointer-events-none' : ''
 
-	return `absolute inset-0 w-full flex flex-col items-center justify-center p-4 ${rotationClass} ${opacityClass} ${pointerEventsClass} transition-all duration-300 transform-gpu backface-hidden`
+	return `absolute inset-0 w-full flex flex-col items-center justify-center p-4 ${rotationClass} ${opacityClass} ${pointerEventsClass} transition-all duration-200 transform-gpu backface-hidden`
 }
 
 const getBackFaceClasses = (isFlipped: boolean, isTrans: boolean) => {
@@ -32,7 +32,7 @@ const getBackFaceClasses = (isFlipped: boolean, isTrans: boolean) => {
 	const rotationClass = isFlipped ? 'rotate-y-0' : 'rotate-y-180'
 	const pointerEventsClass = (isTrans || !isFlipped) ? 'pointer-events-none' : ''
 
-	return `absolute inset-0 w-full flex flex-col items-center justify-center p-4 ${rotationClass} ${opacityClass} ${pointerEventsClass} transition-all duration-300 transform-gpu backface-hidden`
+	return `absolute inset-0 w-full flex flex-col items-center justify-center p-4 ${rotationClass} ${opacityClass} ${pointerEventsClass} transition-all duration-200 transform-gpu backface-hidden`
 }
 
 export default function Cards() {
@@ -256,7 +256,7 @@ export default function Cards() {
 
 			setFlipped(true)
 			// We'll play the audio after a short delay to ensure the flip animation has started
-			setTimeout(() => playCardAudio(), 150)
+			setTimeout(() => playCardAudio(), 100)
 		}
 	}
 
@@ -327,12 +327,59 @@ export default function Cards() {
 		<div class="container mx-auto px-2 py-6 max-w-md flex flex-col items-center min-h-screen">
 			{/* Deck name and progress */}
 			<Show when={deck() && !deck.loading}>
-				<div class="w-full mb-4">
+				<div class="flex flex-row items-center justify-between gap-4 w-full mb-4">
 					<ProgressBar
 						completed={progressInfo().completed}
 						total={progressInfo().total}
 						showPercentage={true}
 					/>
+					<div class="z-20">
+						<div class="relative">
+							<button
+								onClick={toggleSettings}
+								class="size-8 rounded-full bg-muted hover:bg-muted/90 flex items-center justify-center text-foreground"
+								aria-label="Card settings"
+							>
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+									<path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" />
+									<path d="M4 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" />
+									<path d="M20 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" />
+								</svg>
+							</button>
+
+							<Show when={settingsOpen()}>
+								<div
+									class="absolute right-0 top-8 mt-1 bg-card shadow-md rounded-md overflow-hidden border border-border w-36 z-30 settings-dropdown">
+									<div class="flex flex-col">
+										<button
+											class="px-3 py-2 hover:bg-muted text-start text-sm w-full flex items-center"
+											onClick={handleHideCard}
+										>
+											<svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+												<path d="M2 12C2 12 5.5 5 12 5C18.5 5 22 12 22 12C22 12 18.5 19 12 19C5.5 19 2 12 2 12Z"
+															stroke="currentColor" stroke-width="2" />
+												<path
+													d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
+													stroke="currentColor" stroke-width="2" />
+												<path d="M4 4L20 20" stroke="currentColor" stroke-width="2" />
+											</svg>
+											Hide Card
+										</button>
+										<button
+											class="px-3 py-2 hover:bg-muted text-start text-sm w-full flex items-center"
+											onClick={handleEditCard}
+										>
+											<svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+												<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" stroke="currentColor"
+															stroke-width="2" />
+											</svg>
+											Edit Card
+										</button>
+									</div>
+								</div>
+							</Show>
+						</div>
+					</div>
 				</div>
 			</Show>
 
@@ -340,59 +387,11 @@ export default function Cards() {
 				<Show when={currentCard()}>
 					<div class="w-full flex flex-col items-center">
 						<div
-							class={`w-full cursor-pointer relative perspective transition-all min-h-96 ${isTransitioning() ? 'pointer-events-none' : ''}`}
+							class={`w-full cursor-pointer relative perspective transition-all min-h-[500px] ${isTransitioning() ? 'pointer-events-none' : ''}`}
 							onClick={handleCardFlip}
 						>
-							<div class="absolute top-2 right-2 z-20">
-								<div class="relative">
-									<button
-										onClick={toggleSettings}
-										class="w-8 h-8 rounded-full bg-muted hover:bg-muted/90 flex items-center justify-center text-foreground"
-										aria-label="Card settings"
-									>
-										<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-											<path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" />
-											<path d="M4 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" />
-											<path d="M20 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" />
-										</svg>
-									</button>
-
-									<Show when={settingsOpen()}>
-										<div
-											class="absolute right-0 top-8 mt-1 bg-card shadow-md rounded-md overflow-hidden border border-border w-36 z-30 settings-dropdown">
-											<div class="flex flex-col">
-												<button
-													class="px-3 py-2 hover:bg-muted text-start text-sm w-full flex items-center"
-													onClick={handleHideCard}
-												>
-													<svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-														<path d="M2 12C2 12 5.5 5 12 5C18.5 5 22 12 22 12C22 12 18.5 19 12 19C5.5 19 2 12 2 12Z"
-																	stroke="currentColor" stroke-width="2" />
-														<path
-															d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
-															stroke="currentColor" stroke-width="2" />
-														<path d="M4 4L20 20" stroke="currentColor" stroke-width="2" />
-													</svg>
-													Hide Card
-												</button>
-												<button
-													class="px-3 py-2 hover:bg-muted text-start text-sm w-full flex items-center"
-													onClick={handleEditCard}
-												>
-													<svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-														<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" stroke="currentColor"
-																	stroke-width="2" />
-													</svg>
-													Edit Card
-												</button>
-											</div>
-										</div>
-									</Show>
-								</div>
-							</div>
-
 							<div class={getFrontFaceClasses(flipped(), isTransitioning())}>
-								<div class="text-5xl font-semibold mb-4">
+								<div class="text-5xl font-semibold">
 									<TranscriptionText
 										text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
 										textSize="5xl"
@@ -405,7 +404,7 @@ export default function Cards() {
 									<div class="text-2xl p-3 mb-2 max-w-full">
 										<TranscriptionText
 											text={currentCard()?.fields.example_native || currentCard()?.fields.example_native || ''}
-											textSize="2xl"
+											textSize="xl"
 											language={currentCard()?.fields.language_code || 'ja'}
 											transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 										/>
@@ -414,7 +413,7 @@ export default function Cards() {
 							</div>
 
 							<div class={getBackFaceClasses(flipped(), isTransitioning())}>
-								<div class="text-5xl font-semibold mb-6 flex flex-col items-center">
+								<div class="text-5xl font-semibold flex flex-col items-center">
 									<div class="flex items-center gap-2 pl-8">
 										{currentCard()?.fields.term_with_transcription || currentCard()?.fields.term_with_transcription ? (
 											<TranscriptionText
@@ -447,7 +446,7 @@ export default function Cards() {
 										 </span>
 									</Show>
 								</div>
-								<div class="text-center text-2xl font-medium mb-8">{currentCard()?.fields.meaning_ru}</div>
+								<div class="text-center text-xl font-normal mb-8">{currentCard()?.fields.meaning_ru}</div>
 								<div class="text-sm space-y-2 w-full">
 									<div class="bg-muted rounded-md p-2">
 										<div class="flex items-start justify-between mb-1">
