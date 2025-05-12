@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"atamagaii/internal/utils"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -33,6 +34,60 @@ func GenerateSchema[T any]() interface{} {
 	var v T
 	schema := reflector.Reflect(v)
 	return schema
+}
+
+func getLanguageSpecificSchema(language string) interface{} {
+	reflector := jsonschema.Reflector{
+		AllowAdditionalProperties: false,
+		DoNotReference:            true,
+	}
+
+	switch language {
+	case "japanese":
+		schema := reflector.Reflect(struct {
+			Term                     string `json:"term" jsonschema_description:"The Japanese term in kanji/kana"`
+			Transcription            string `json:"transcription" jsonschema_description:"Only the pure kana reading of the word — no kanji, no brackets"`
+			TermWithTranscription    string `json:"term_with_transcription" jsonschema_description:"Term with furigana in square brackets format: 漢字[かんじ]"`
+			MeaningEn                string `json:"meaning_en" jsonschema_description:"English translation of the Japanese term"`
+			MeaningRu                string `json:"meaning_ru" jsonschema_description:"Russian translation of the Japanese term"`
+			ExampleNative            string `json:"example_native" jsonschema_description:"Example sentence in Japanese using the term"`
+			ExampleEn                string `json:"example_en" jsonschema_description:"English translation of the Japanese example"`
+			ExampleRu                string `json:"example_ru" jsonschema_description:"Russian translation of the Japanese example"`
+			ExampleWithTranscription string `json:"example_with_transcription" jsonschema_description:"The same example sentence with furigana in the Anki-style format."`
+			Frequency                int    `json:"frequency" jsonschema_description:"Usage frequency in Japanese, 1-3000 (1=very common)"`
+		}{})
+		return schema
+	case "thai":
+		schema := reflector.Reflect(struct {
+			Term                     string `json:"term" jsonschema_description:"The Thai term in Thai script"`
+			Transcription            string `json:"transcription" jsonschema_description:"Pronunciation of the Thai term using the American University Alumni / Peace Corps system"`
+			TermWithTranscription    string `json:"term_with_transcription" jsonschema_description:"Thai term with transliteration"`
+			MeaningEn                string `json:"meaning_en" jsonschema_description:"English translation of the Thai term"`
+			MeaningRu                string `json:"meaning_ru" jsonschema_description:"Russian translation of the Thai term"`
+			ExampleNative            string `json:"example_native" jsonschema_description:"Example sentence in Thai using the term"`
+			ExampleEn                string `json:"example_en" jsonschema_description:"English translation of the Thai example"`
+			ExampleRu                string `json:"example_ru" jsonschema_description:"Russian translation of the Thai example"`
+			ExampleWithTranscription string `json:"example_with_transcription" jsonschema_description:"Thai example with romanized pronunciation"`
+			Frequency                int    `json:"frequency" jsonschema_description:"Usage frequency in Thai language, 1-3000 (1=very common)"`
+		}{})
+		return schema
+	case "georgian":
+		schema := reflector.Reflect(struct {
+			Term                     string `json:"term" jsonschema_description:"The Georgian term in mkhedruli script"`
+			Transcription            string `json:"transcription" jsonschema_description:"Latin transliteration of the Georgian term"`
+			TermWithTranscription    string `json:"term_with_transcription" jsonschema_description:"Georgian term with transliteration (if needed)"`
+			MeaningEn                string `json:"meaning_en" jsonschema_description:"English translation of the Georgian term"`
+			MeaningRu                string `json:"meaning_ru" jsonschema_description:"Russian translation of the Georgian term"`
+			ExampleNative            string `json:"example_native" jsonschema_description:"Example sentence in Georgian using the term"`
+			ExampleEn                string `json:"example_en" jsonschema_description:"English translation of the Georgian example"`
+			ExampleRu                string `json:"example_ru" jsonschema_description:"Russian translation of the Georgian example"`
+			ExampleWithTranscription string `json:"example_with_transcription" jsonschema_description:"Georgian example with Latin transliteration"`
+			Frequency                int    `json:"frequency" jsonschema_description:"Usage frequency in Georgian language, 1-3000 (1=very common)"`
+		}{})
+		return schema
+	default:
+		return GenerateSchema[VocabularyCard]()
+	}
 }
 
 var vocabularyCardSchema = GenerateSchema[VocabularyCard]()
@@ -79,10 +134,12 @@ func (c *OpenAIClient) GenerateCardContent(ctx context.Context, term string, lan
 		},
 	})
 
+	languageSpecificSchema := getLanguageSpecificSchema(language)
+
 	schemaParam := openai.ResponseFormatJSONSchemaJSONSchemaParam{
 		Name:        "vocabulary_card",
-		Description: openai.String("Structure for a language vocabulary flashcard"),
-		Schema:      vocabularyCardSchema,
+		Description: openai.String(fmt.Sprintf("Structure for a %s vocabulary flashcard", utils.GetLanguageNameFromCode(language))),
+		Schema:      languageSpecificSchema,
 		Strict:      openai.Bool(true),
 	}
 
@@ -120,7 +177,7 @@ func (c *OpenAIClient) GenerateAudio(ctx context.Context, text string, language 
 		Input:          text,
 		Voice:          openai.AudioSpeechNewParamsVoiceOnyx,
 		ResponseFormat: openai.AudioSpeechNewParamsResponseFormatAAC,
-		Speed:          openai.Float(1.0),
+		Speed:          openai.Float(1.3),
 		Instructions:   openai.String(getAudioInstructions(language)),
 	}
 
@@ -156,7 +213,7 @@ func getFewShotExamples(language string) ([][]openai.ChatCompletionMessageParamU
 
 	switch language {
 	case "japanese":
-		systemPrompt = "You're a language assistant creating Japanese flashcards for JLPT N5 level. Use the provided term to generate a complete flashcard with examples that would be clear and useful for a beginner Japanese student. The card must be in strict JSON format as shown in the examples. Requirements for examples: Keep sentences short (10-12 words max). Use only JLPT N5 level grammar and vocabulary. Use natural context and the word in its most typical form. For furigana in term_with_transcription and example_with_transcription, use square brackets format: 漢字[かな]. Don't use HTML or parentheses - only []."
+		systemPrompt = "You're a language assistant creating Japanese flashcards for JLPT N5 level. Use the provided term to generate a complete flashcard with examples that would be clear and useful for a Japanese student. The card must be in strict JSON format as shown in the examples. Requirements for examples: Keep sentences short (10-12 words max). Use only JLPT N5 level grammar and vocabulary. Use natural context and the word in its most typical form. For furigana in term_with_transcription and example_with_transcription, use square brackets format: 漢字[かな]. Don't use HTML or parentheses - only []."
 
 		examples = append(examples, []openai.ChatCompletionMessageParamUnion{
 			{
@@ -211,7 +268,7 @@ func getFewShotExamples(language string) ([][]openai.ChatCompletionMessageParamU
 			},
 		})
 	case "georgian":
-		systemPrompt = "You're a language assistant creating Georgian flashcards for beginners. Use the provided term to generate a complete flashcard with examples that would be clear and useful for a beginner Georgian language student. The card must be in strict JSON format as shown in the examples. Requirements for examples: Keep sentences short (10-12 words max). Use only beginner level grammar and vocabulary. Use natural context and the word in its most typical form. For example_with_transcription, use Latin letters to convey Georgian pronunciation. Don't use HTML or special formats - just plain Latin text."
+		systemPrompt = "You're a language assistant creating Georgian flashcards for student. Use the provided term to generate a complete flashcard with examples that would be clear and useful. The card must be in strict JSON format as shown in the examples. Requirements for examples: Keep sentences short (10-12 words max). Use natural context and the word in its most typical form. For example_with_transcription, use Latin letters to convey Georgian pronunciation. Don't use HTML or special formats - just plain Latin text."
 
 		examples = append(examples, []openai.ChatCompletionMessageParamUnion{
 			{
@@ -240,7 +297,7 @@ func getFewShotExamples(language string) ([][]openai.ChatCompletionMessageParamU
 			},
 		})
 	case "thai":
-		systemPrompt = "You're a language assistant creating Thai flashcards for beginners. Use the provided term to generate a complete flashcard with examples that would be clear and useful for a beginner Thai language student. The card must be in strict JSON format as shown in the examples. Requirements for examples: Keep sentences short (10-12 words max). Use only beginner level grammar and vocabulary. Use natural context and the word in its most typical form. For transcription, use the American University Alumni / Peace Corps system to reflect pronunciation. Don't use HTML or special formats - just plain text."
+		systemPrompt = "You're a language assistant creating Thai flashcards for student. Use the provided term to generate a complete flashcard with examples that would be clear and useful. The card must be in strict JSON format as shown in the examples. Requirements for examples: Keep sentences short (10-12 words max). Use natural context and the word in its most typical form. For transcription, use the American University Alumni / Peace Corps system to reflect pronunciation. Don't use HTML or special formats - just plain text."
 
 		examples = append(examples, []openai.ChatCompletionMessageParamUnion{
 			{
