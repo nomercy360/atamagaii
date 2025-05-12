@@ -141,10 +141,21 @@ func (h *Handler) handleUpdate(update tgbotapi.Update) (msg *telegram.SendMessag
 		}
 
 		languageName := utils.GetLanguageNameFromCode(lang)
-		msg.Text = fmt.Sprintf("Создана новая карточка для изучения \\(%s\\):\n\n*%s*\n\nПерейди в приложение, чтобы начать изучение\\!",
+		msg.Text = fmt.Sprintf("Создана новая карточка для изучения \\(%s\\):\n\n*%s*",
 			languageName,
 			telegram.EscapeMarkdown(cardResp.Fields.Term))
 		msg.ParseMode = models.ParseModeMarkdown
+
+		button := models.InlineKeyboardButton{
+			Text:   "Посмотреть карточку",
+			WebApp: &models.WebAppInfo{URL: fmt.Sprintf("%s/edit-card/%s/%s", h.webAppURL, cardResp.DeckID, cardResp.ID)},
+		}
+
+		msg.ReplyMarkup = models.InlineKeyboardMarkup{
+			InlineKeyboard: [][]models.InlineKeyboardButton{
+				{button},
+			},
+		}
 
 		return msg
 	}

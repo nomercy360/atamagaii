@@ -196,7 +196,7 @@ export default function Cards() {
 		const card = currentCard()
 		if (card?.fields.audio_word) {
 			if (card?.fields.audio_example) {
-				audioService.playSequence(card.fields.audio_word, card.fields.audio_example, 200)
+				audioService.playSequence(card.fields.audio_word, card.fields.audio_example, 0)
 			} else {
 				audioService.playAudio(card.fields.audio_word, 'word')
 			}
@@ -257,8 +257,8 @@ export default function Cards() {
 			hapticFeedback('impact', 'light')
 
 			setFlipped(true)
-			// We'll play the audio after a short delay to ensure the flip animation has started
-			setTimeout(() => playCardAudio(), 100)
+			// Play audio immediately
+			playCardAudio()
 		}
 	}
 
@@ -352,7 +352,8 @@ export default function Cards() {
 							</svg>
 						) : (
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-								<path d="M5 13L9 17L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+								<path d="M5 13L9 17L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+											stroke-linejoin="round" />
 							</svg>
 						)}
 					</div>
@@ -361,12 +362,7 @@ export default function Cards() {
 
 			{/* Deck name and progress */}
 			<Show when={deck() && !deck.loading}>
-				<div class="flex flex-row items-center justify-between gap-4 w-full mb-4">
-					<ProgressBar
-						completed={progressInfo().completed}
-						total={progressInfo().total}
-						showPercentage={true}
-					/>
+				<div class="flex flex-row items-center justify-end gap-4 w-full mb-4">
 					<div class="z-20">
 						<div class="relative">
 							<button

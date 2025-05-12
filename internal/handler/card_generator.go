@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"atamagaii/internal/ai"
 	"atamagaii/internal/contract"
 	"atamagaii/internal/db"
 	"encoding/json"
@@ -62,22 +61,9 @@ func (h *Handler) GenerateCard(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Card must have a term field")
 	}
 
-	content, err := h.openaiClient.GenerateCardContent(c.Request().Context(), fields.Term, deck.LanguageCode)
+	updatedFields, err := h.openaiClient.GenerateCardContent(c.Request().Context(), fields.Term, deck.LanguageCode)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate card content").WithInternal(err)
-	}
-
-	var updatedFields contract.CardFields
-	if card, ok := content["card"].(ai.VocabularyCard); ok {
-
-		updatedFields = convertVocabularyCardToFields(card, fields)
-	} else {
-
-		var err error
-		updatedFields, err = parseCardContent(content["raw_response"].(string), fields)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to parse generated content").WithInternal(err)
-		}
 	}
 
 	if updatedFields.AudioWord == "" {
@@ -158,56 +144,4 @@ func (h *Handler) GenerateCard(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, response)
-}
-
-func convertVocabularyCardToFields(card ai.VocabularyCard, existingFields contract.CardFields) contract.CardFields {
-	return contract.CardFields{
-		Term:                     card.Term,
-		Transcription:            card.Transcription,
-		TermWithTranscription:    card.TermWithTranscription,
-		MeaningEn:                card.MeaningEn,
-		MeaningRu:                card.MeaningRu,
-		ExampleNative:            card.ExampleNative,
-		ExampleEn:                card.ExampleEn,
-		ExampleRu:                card.ExampleRu,
-		ExampleWithTranscription: card.ExampleWithTranscription,
-		Frequency:                card.Frequency,
-		AudioWord:                existingFields.AudioWord,
-		AudioExample:             existingFields.AudioExample,
-		ImageURL:                 existingFields.ImageURL,
-	}
-}
-
-func parseCardContent(contentStr string, existingFields contract.CardFields) (contract.CardFields, error) {
-
-	var generatedContent map[string]interface{}
-	if err := json.Unmarshal([]byte(contentStr), &generatedContent); err != nil {
-		return existingFields, fmt.Errorf("error unmarshaling generated content: %w", err)
-	}
-
-	generatedJSON, err := json.Marshal(generatedContent)
-	if err != nil {
-		return existingFields, fmt.Errorf("error marshaling generated content: %w", err)
-	}
-
-	var newFields contract.CardFields
-	if err := json.Unmarshal(generatedJSON, &newFields); err != nil {
-		return existingFields, fmt.Errorf("error unmarshaling to card fields: %w", err)
-	}
-
-	if existingFields.AudioWord != "" {
-		newFields.AudioWord = existingFields.AudioWord
-	}
-	if existingFields.AudioExample != "" {
-		newFields.AudioExample = existingFields.AudioExample
-	}
-	if existingFields.ImageURL != "" {
-		newFields.ImageURL = existingFields.ImageURL
-	}
-
-	if newFields.Term == "" {
-		newFields.Term = existingFields.Term
-	}
-
-	return newFields, nil
 }

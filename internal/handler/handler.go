@@ -18,6 +18,7 @@ type Handler struct {
 	db              *db.Storage
 	jwtSecret       string
 	botToken        string
+	webAppURL       string
 	storageProvider storage.Provider
 	openaiClient    *ai.OpenAIClient
 }
@@ -27,6 +28,7 @@ func New(
 	db *db.Storage,
 	jwtSecret string,
 	botToken string,
+	webAppURL string,
 	storageProvider storage.Provider,
 	openaiClient *ai.OpenAIClient,
 ) *Handler {
@@ -35,6 +37,7 @@ func New(
 		db:              db,
 		jwtSecret:       jwtSecret,
 		botToken:        botToken,
+		webAppURL:       webAppURL,
 		storageProvider: storageProvider,
 		openaiClient:    openaiClient,
 	}

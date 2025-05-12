@@ -158,7 +158,6 @@ func (h *Handler) GetAvailableDecks(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find materials directory")
 	}
 
-	// Read the available_decks.json file
 	metadataPath := filepath.Join(materialsDir, "available_decks.json")
 	fileData, err := os.ReadFile(metadataPath)
 	if err != nil {

@@ -26,6 +26,6 @@ RUN apk add --no-cache \
     sqlite
 
 COPY --from=build /go/bin/main /app/main
-COPY /materials /app/materials
+COPY /data /app/data
 
 CMD [ "/app/main" ]

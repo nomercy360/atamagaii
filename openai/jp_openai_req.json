@@ -1,0 +1,86 @@
+{
+  "model": "gpt-4.1-mini",
+  "input": [
+    {
+      "role": "system",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Ты — языковой помощник, создающий карточки японских слов.\n\nИспользуй словарную информацию, чтобы сгенерировать полноценную карточку с примерами, которые были бы понятны и полезны студенту японского.\nКарточка должна быть в строгом формате JSON.\n\nТребования к полям:\n- Слово в поле term должно быть в словарной форме (для глаголов и прилагательных).\n- Если у слова несколько значений, укажи наиболее употребимое или перечисли их кратко, если они просты и различны\n- Для фуриганы в term_with_transcription и example_with_transcription используй только квадратные скобки в формате 漢字[かな]. Не используй HTML, не используй круглые скобки - только [].\n\nТребования к примеру:\n- Пример должен быть простым, понятными и близкими к повседневным ситуациям, чтобы ясно показывать значение и типичное употребление слова.\n- Предложение должно быть коротким (10-12 слов)."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "{\n  \"term\": \"食べる\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"term\": \"食べる\",\n  \"transcription\": \"たべる\",\n  \"term_with_transcription\": \"食[た]べる\",\n  \"meaning_en\": \"to eat\",\n  \"meaning_ru\": \"есть, кушать\",\n  \"transcription\": \"たべる\",\n  \"example_native\": \"毎朝、パンを食べます。\",\n  \"example_en\": \"I eat bread every morning.\",\n  \"example_ru\": \"Я ем хлеб каждое утро.\",\n  \"example_with_transcription\": \"毎朝[まいあさ]、パンを食[た]べます。\",\n  \"frequency\": 542\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "{\n  \"term\": \"学生\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"term\": \"学生\",\n  \"transcription\": \"がくせい\",\n  \"term_with_transcription\": \"学生[がくせい]\",\n  \"meaning_en\": \"student\",\n  \"meaning_ru\": \"студент\",\n  \"transcription\": \"がくせい\",\n  \"example_native\": \"彼は日本の学生です。\",\n  \"example_en\": \"He is a student in Japan.\",\n  \"example_ru\": \"Он студент в Японии.\",\n  \"example_with_transcription\": \"彼[かれ]は日本[にほん]の学生[がくせい]です。\",\n  \"frequency\": 321\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "{\n  \"term\": \"ある\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"term\": \"ある\",\n  \"transcription\": \"ある\",\n  \"term_with_transcription\": \"ある\",\n  \"meaning_en\": \"to be, to exist (for inanimate objects)\",\n  \"meaning_ru\": \"быть, существовать (для неодушевленных предметов)\",\n  \"transcription\": \"ある\",\n  \"example_native\": \"机の上に本がある。\",\n  \"example_en\": \"There is a book on the desk.\",\n  \"example_ru\": \"На столе есть книга.\",\n  \"example_with_transcription\": \"机[つくえ]の上[うえ]に本[ほん]がある。\",\n  \"frequency\": 37\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "{\"term\": \"{{term}}\"}"
+        }
+      ]
+    }
+  ],
+  "text": {
+
+  },
+  "reasoning": {},
+  "tools": [],
+  "temperature": 0.8,
+  "max_output_tokens": 10000,
+  "top_p": 0.8,
+  "store": true
+}

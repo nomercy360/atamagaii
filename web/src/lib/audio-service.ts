@@ -118,9 +118,9 @@ export const audioService = {
   },
 
   /**
-   * Play word audio followed by example audio with a delay
+   * Play word audio followed by example audio
    */
-  playSequence(wordUrl: string, exampleUrl?: string, delayMs: number = 300): Promise<void> {
+  playSequence(wordUrl: string, exampleUrl?: string, delayMs: number = 0): Promise<void> {
     if (!wordUrl) {
       return Promise.reject(new Error('Word audio URL is empty'))
     }

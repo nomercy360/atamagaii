@@ -29,6 +29,7 @@ type Config struct {
 	ExternalURL      string           `yaml:"external_url"`
 	JWTSecretKey     string           `yaml:"jwt_secret_key"`
 	S3Storage        storage.S3Config `yaml:"s3_storage"`
+	TelegramWebApp   string           `yaml:"telegram_webapp_url"`
 }
 
 func ReadConfig(filePath string) (*Config, error) {
@@ -101,7 +102,7 @@ func main() {
 		log.Fatalf("Failed to create OpenAI client: %v", err)
 	}
 
-	h := handler.New(bot, dbStorage, cfg.JWTSecretKey, cfg.TelegramBotToken, storageProvider, openaiClient)
+	h := handler.New(bot, dbStorage, cfg.JWTSecretKey, cfg.TelegramBotToken, cfg.TelegramWebApp, storageProvider, openaiClient)
 
 	log.Printf("Authorized on account %d", bot.ID())
 
