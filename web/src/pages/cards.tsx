@@ -108,14 +108,6 @@ export default function Cards() {
 		},
 	)
 
-	createEffect(() => {
-		const buffer = cardBuffer()
-		const currentIdx = cardIndex()
-		const remaining = buffer.length - currentIdx
-
-		console.log(`Card buffer state: ${remaining} remaining (${currentIdx}/${buffer.length})`)
-	})
-
 	const currentCard = () => {
 		const buffer = cardBuffer()
 		const idx = cardIndex()
@@ -213,8 +205,6 @@ export default function Cards() {
 		e.stopPropagation()
 		setSettingsOpen(false)
 		console.log('Hide card clicked', currentCard()?.id)
-		// For demo, just go to next card
-		handleNextCard()
 	}
 
 	const handleEditCard = (e: MouseEvent) => {
@@ -315,19 +305,22 @@ export default function Cards() {
 					setDeckMetrics(data.stats)
 				}
 
-				if (data?.next_cards && data?.next_cards.length > 0) {
+				if (data?.next_cards && data.next_cards.length > 0) {
 					const current = currentCard()
 					const filteredNewCards = current
 						? data.next_cards.filter(c => c.id !== current.id)
 						: data.next_cards
 
 					if (filteredNewCards.length > 0) {
-						setCardBuffer(prev => [...prev, ...filteredNewCards])
+						setCardBuffer(prev => {
+							const index = cardIndex()
+							const before = prev.slice(0, index + 1)
+							return [...before, ...filteredNewCards]
+						})
 					} else {
 						setCardBuffer(prev => [...prev, ...data.next_cards])
 					}
 				}
-
 			} catch (e) {
 				console.error(`Exception during background review submission for card ${cardId}:`, e)
 			}
@@ -360,55 +353,52 @@ export default function Cards() {
 				</div>
 			</Show>
 
-			{/* Deck name and progress */}
 			<Show when={deck() && !deck.loading}>
-				<div class="flex flex-row items-center justify-end gap-4 w-full mb-4">
-					<div class="z-20">
-						<div class="relative">
-							<button
-								onClick={toggleSettings}
-								class="size-8 rounded-full bg-muted hover:bg-muted/90 flex items-center justify-center text-foreground"
-								aria-label="Card settings"
-							>
-								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-									<path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" />
-									<path d="M4 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" />
-									<path d="M20 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" />
-								</svg>
-							</button>
+				<div class="absolute top-5 right-5 z-20">
+					<div class="relative">
+						<button
+							onClick={toggleSettings}
+							class="size-8 rounded-full bg-muted hover:bg-muted/90 flex items-center justify-center text-foreground"
+							aria-label="Card settings"
+						>
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" />
+								<path d="M4 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" />
+								<path d="M20 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" />
+							</svg>
+						</button>
 
-							<Show when={settingsOpen()}>
-								<div
-									class="absolute right-0 top-8 mt-1 bg-card shadow-md rounded-md overflow-hidden border border-border w-36 z-30 settings-dropdown">
-									<div class="flex flex-col">
-										<button
-											class="px-3 py-2 hover:bg-muted text-start text-sm w-full flex items-center"
-											onClick={handleHideCard}
-										>
-											<svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-												<path d="M2 12C2 12 5.5 5 12 5C18.5 5 22 12 22 12C22 12 18.5 19 12 19C5.5 19 2 12 2 12Z"
-															stroke="currentColor" stroke-width="2" />
-												<path
-													d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
-													stroke="currentColor" stroke-width="2" />
-												<path d="M4 4L20 20" stroke="currentColor" stroke-width="2" />
-											</svg>
-											Hide Card
-										</button>
-										<button
-											class="px-3 py-2 hover:bg-muted text-start text-sm w-full flex items-center"
-											onClick={handleEditCard}
-										>
-											<svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-												<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" stroke="currentColor"
-															stroke-width="2" />
-											</svg>
-											Edit Card
-										</button>
-									</div>
+						<Show when={settingsOpen()}>
+							<div
+								class="absolute right-0 top-8 mt-1 bg-card shadow-md rounded-md overflow-hidden border border-border w-36 z-30 settings-dropdown">
+								<div class="flex flex-col">
+									<button
+										class="px-3 py-2 hover:bg-muted text-start text-sm w-full flex items-center"
+										onClick={handleHideCard}
+									>
+										<svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+											<path d="M2 12C2 12 5.5 5 12 5C18.5 5 22 12 22 12C22 12 18.5 19 12 19C5.5 19 2 12 2 12Z"
+														stroke="currentColor" stroke-width="2" />
+											<path
+												d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
+												stroke="currentColor" stroke-width="2" />
+											<path d="M4 4L20 20" stroke="currentColor" stroke-width="2" />
+										</svg>
+										Hide Card
+									</button>
+									<button
+										class="px-3 py-2 hover:bg-muted text-start text-sm w-full flex items-center"
+										onClick={handleEditCard}
+									>
+										<svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+											<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" stroke="currentColor"
+														stroke-width="2" />
+										</svg>
+										Edit Card
+									</button>
 								</div>
-							</Show>
-						</div>
+							</div>
+						</Show>
 					</div>
 				</div>
 			</Show>
@@ -477,38 +467,40 @@ export default function Cards() {
 									</Show>
 								</div>
 								<div class="text-center text-xl font-normal mb-8">{currentCard()?.fields.meaning_ru}</div>
-								<div class="text-sm space-y-2 w-full">
-									<div class="bg-muted rounded-md p-2">
-										<div class="flex items-start justify-between mb-1">
-											<p class="flex-grow">
-												{currentCard()?.fields.example_with_transcription || currentCard()?.fields.example_with_transcription ? (
-													<TranscriptionText
-														text={currentCard()?.fields.example_with_transcription || currentCard()?.fields.example_with_transcription!}
-														textSize="2xl"
-														language={currentCard()?.fields.language_code || 'ja'}
-														transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+								<Show when={currentCard()?.fields.example_native}>
+									<div class="text-sm space-y-2 w-full">
+										<div class="bg-muted rounded-md p-2">
+											<div class="flex items-start justify-between mb-1">
+												<p class="flex-grow">
+													{currentCard()?.fields.example_with_transcription || currentCard()?.fields.example_with_transcription ? (
+														<TranscriptionText
+															text={currentCard()?.fields.example_with_transcription || currentCard()?.fields.example_with_transcription!}
+															textSize="2xl"
+															language={currentCard()?.fields.language_code || 'ja'}
+															transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+														/>
+													) : (
+														<TranscriptionText
+															text={currentCard()?.fields.example_native || currentCard()?.fields.example_native || ''}
+															textSize="2xl"
+															language={currentCard()?.fields.language_code || 'ja'}
+															transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+														/>
+													)}
+												</p>
+												<Show when={currentCard()?.fields.audio_example}>
+													<AudioButton
+														audioUrl={currentCard()?.fields.audio_example || ''}
+														size="sm"
+														label="Play example audio"
+														type="example"
 													/>
-												) : (
-													<TranscriptionText
-														text={currentCard()?.fields.example_native || currentCard()?.fields.example_native || ''}
-														textSize="2xl"
-														language={currentCard()?.fields.language_code || 'ja'}
-														transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
-													/>
-												)}
-											</p>
-											<Show when={currentCard()?.fields.audio_example}>
-												<AudioButton
-													audioUrl={currentCard()?.fields.audio_example || ''}
-													size="sm"
-													label="Play example audio"
-													type="example"
-												/>
-											</Show>
+												</Show>
+											</div>
+											<p class="text-xs text-muted-foreground">{currentCard()?.fields.example_ru}</p>
 										</div>
-										<p class="text-xs text-muted-foreground">{currentCard()?.fields.example_ru}</p>
 									</div>
-								</div>
+								</Show>
 							</div>
 						</div>
 					</div>
@@ -544,7 +536,7 @@ export default function Cards() {
 
 			{/* Review buttons - show only when card is flipped */}
 			<Show when={flipped() && currentCard() && !isTransitioning()}>
-				<div class="fixed bottom-0 left-0 right-0 bg-background border-t border-border pb-8">
+				<div class="h-28 fixed bottom-0 left-0 right-0 bg-background border-t border-border">
 					<div class="mx-auto px-4 py-4">
 						<div class="grid grid-cols-2 gap-4">
 							<button
@@ -576,7 +568,7 @@ export default function Cards() {
 
 			{/* Deck metrics - show only when card is not flipped */}
 			<Show when={!flipped() && currentCard() && !isTransitioning() && deck() && !deck.loading}>
-				<div class="fixed bottom-0 left-0 right-0 bg-background border-t border-border pb-8">
+				<div class="h-28 fixed bottom-0 left-0 right-0 bg-background border-t border-border">
 					<div class="mx-auto px-4 py-4">
 						<div class="flex justify-center gap-3">
 							<Show when={deckMetrics().new_cards > 0}>

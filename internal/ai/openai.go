@@ -36,12 +36,12 @@ func NewOpenAIClient(apiKey string) (*OpenAIClient, error) {
 }
 
 func (c *OpenAIClient) GenerateCardContent(ctx context.Context, term string, language string) (*contract.CardFields, error) {
-	openAIDir, err := utils.FindDirUp("openai", 3)
+	openAIDir, err := utils.FindDirUp("templates", 3)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find materials directory: %w", err)
 	}
 
-	filePath := filepath.Join(openAIDir, "templates", "jp_openai_req.json")
+	filePath := filepath.Join(openAIDir, "jp_openai_req.json")
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("file %s does not exist (looked in %s)", filePath, openAIDir)
 	}
@@ -74,9 +74,33 @@ func (c *OpenAIClient) GenerateCardContent(ctx context.Context, term string, lan
 		}
 	}
 
-	var vocabularyCard contract.CardFields
-	if err := json.Unmarshal([]byte(text), &vocabularyCard); err != nil {
+	httpClient := &http.Client{}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error: received status code %d", resp.StatusCode)
+	}
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %w", err)
+	}
+
+	response := &Response{}
+	if err := json.Unmarshal(responseBody, response); err != nil {
 		return nil, fmt.Errorf("error parsing response: %w", err)
+	}
+
+	if len(response.Output) == 0 || len(response.Output[0].Content) == 0 {
+		return nil, fmt.Errorf("no content found in response")
+	}
+
+	var vocabularyCard contract.CardFields
+	if err := json.Unmarshal([]byte(response.Output[0].Content[0].Text), &vocabularyCard); err != nil {
+		return nil, fmt.Errorf("error parsing card fields: %w", err)
 	}
 
 	return &vocabularyCard, nil

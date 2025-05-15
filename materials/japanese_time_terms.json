@@ -1,0 +1,906 @@
+[
+  {
+    "term": "一月",
+    "transcription": "いちがつ",
+    "term_with_transcription": "一月[いちがつ]",
+    "meaning_ru": "Январь",
+    "meaning_en": "January",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_HlyYTDLREa.m4a"
+  },
+  {
+    "term": "二月",
+    "transcription": "にがつ",
+    "term_with_transcription": "二月[にがつ]",
+    "meaning_ru": "Февраль",
+    "meaning_en": "February",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_45WGLOjYbX.m4a"
+  },
+  {
+    "term": "三月",
+    "transcription": "さんがつ",
+    "term_with_transcription": "三月[さんがつ]",
+    "meaning_ru": "Март",
+    "meaning_en": "March",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_iabd9HqO48.m4a"
+  },
+  {
+    "term": "四月",
+    "transcription": "しがつ",
+    "term_with_transcription": "四月[しがつ]",
+    "meaning_ru": "Апрель",
+    "meaning_en": "April",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_-WUIjRgOXE.m4a"
+  },
+  {
+    "term": "五月",
+    "transcription": "ごがつ",
+    "term_with_transcription": "五月[ごがつ]",
+    "meaning_ru": "Май",
+    "meaning_en": "May",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_njRehFJkm-.m4a"
+  },
+  {
+    "term": "六月",
+    "transcription": "ろくがつ",
+    "term_with_transcription": "六月[ろくがつ]",
+    "meaning_ru": "Июнь",
+    "meaning_en": "June",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_ru9gr-SwwO.m4a"
+  },
+  {
+    "term": "七月",
+    "transcription": "しちがつ",
+    "term_with_transcription": "七月[しちがつ]",
+    "meaning_ru": "Июль",
+    "meaning_en": "July",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_mk-54rwDox.m4a"
+  },
+  {
+    "term": "八月",
+    "transcription": "はちがつ",
+    "term_with_transcription": "八月[はちがつ]",
+    "meaning_ru": "Август",
+    "meaning_en": "August",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_D49ZiKFVIE.m4a"
+  },
+  {
+    "term": "九月",
+    "transcription": "くがつ",
+    "term_with_transcription": "九月[くがつ]",
+    "meaning_ru": "Сентябрь",
+    "meaning_en": "September",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_k3YMVH0Rmu.m4a"
+  },
+  {
+    "term": "十月",
+    "transcription": "じゅうがつ",
+    "term_with_transcription": "十月[じゅうがつ]",
+    "meaning_ru": "Октябрь",
+    "meaning_en": "October",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_mASUNjuDue.m4a"
+  },
+  {
+    "term": "十一月",
+    "transcription": "じゅういちがつ",
+    "term_with_transcription": "十一月[じゅういちがつ]",
+    "meaning_ru": "Ноябрь",
+    "meaning_en": "November",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_o0JceugItM.m4a"
+  },
+  {
+    "term": "十二月",
+    "transcription": "じゅうにがつ",
+    "term_with_transcription": "十二月[じゅうにがつ]",
+    "meaning_ru": "Декабрь",
+    "meaning_en": "December",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_m0OuFnn8EP.m4a"
+  },
+  {
+    "term": "月曜日",
+    "transcription": "げつようび",
+    "term_with_transcription": "月曜日[げつようび]",
+    "meaning_ru": "Понедельник",
+    "meaning_en": "Monday",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word__mo54Dx9xI.m4a"
+  },
+  {
+    "term": "火曜日",
+    "transcription": "かようび",
+    "term_with_transcription": "火曜日[かようび]",
+    "meaning_ru": "Вторник",
+    "meaning_en": "Tuesday",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_F-vglZW4oc.m4a"
+  },
+  {
+    "term": "水曜日",
+    "transcription": "すいようび",
+    "term_with_transcription": "水曜日[すいようび]",
+    "meaning_ru": "Среда",
+    "meaning_en": "Wednesday",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_7WB7WyPx01.m4a"
+  },
+  {
+    "term": "木曜日",
+    "transcription": "もくようび",
+    "term_with_transcription": "木曜日[もくようび]",
+    "meaning_ru": "Четверг",
+    "meaning_en": "Thursday",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_7v2dAPrup4.m4a"
+  },
+  {
+    "term": "金曜日",
+    "transcription": "きんようび",
+    "term_with_transcription": "金曜日[きんようび]",
+    "meaning_ru": "Пятница",
+    "meaning_en": "Friday",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_lqchHtGIoQ.m4a"
+  },
+  {
+    "term": "土曜日",
+    "transcription": "どようび",
+    "term_with_transcription": "土曜日[どようび]",
+    "meaning_ru": "Суббота",
+    "meaning_en": "Saturday",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_2coXFG9iBZ.m4a"
+  },
+  {
+    "term": "日曜日",
+    "transcription": "にちようび",
+    "term_with_transcription": "日曜日[にちようび]",
+    "meaning_ru": "Воскресенье",
+    "meaning_en": "Sunday",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_Gzzwzw4B3c.m4a"
+  },
+  {
+    "term": "一日",
+    "transcription": "ついたち",
+    "term_with_transcription": "一日[ついたち]",
+    "meaning_ru": "Первое число",
+    "meaning_en": "1st day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_zxLLkGe2Js.m4a"
+  },
+  {
+    "term": "二日",
+    "transcription": "ふつか",
+    "term_with_transcription": "二日[ふつか]",
+    "meaning_ru": "Второе число",
+    "meaning_en": "2nd day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_5EF_NrnMka.m4a"
+  },
+  {
+    "term": "三日",
+    "transcription": "みっか",
+    "term_with_transcription": "三日[みっか]",
+    "meaning_ru": "Третье число",
+    "meaning_en": "3rd day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_4hzJ0kmzys.m4a"
+  },
+  {
+    "term": "四日",
+    "transcription": "よっか",
+    "term_with_transcription": "四日[よっか]",
+    "meaning_ru": "Четвёртое число",
+    "meaning_en": "4th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_Iq5CsqHzEb.m4a"
+  },
+  {
+    "term": "五日",
+    "transcription": "いつか",
+    "term_with_transcription": "五日[いつか]",
+    "meaning_ru": "Пятое число",
+    "meaning_en": "5th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word__7GiXwM6aW.m4a"
+  },
+  {
+    "term": "六日",
+    "transcription": "むいか",
+    "term_with_transcription": "六日[むいか]",
+    "meaning_ru": "Шестое число",
+    "meaning_en": "6th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_10iIAHRRR6.m4a"
+  },
+  {
+    "term": "七日",
+    "transcription": "なのか",
+    "term_with_transcription": "七日[なのか]",
+    "meaning_ru": "Седьмое число",
+    "meaning_en": "7th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_4Ij3RH2WKf.m4a"
+  },
+  {
+    "term": "八日",
+    "transcription": "ようか",
+    "term_with_transcription": "八日[ようか]",
+    "meaning_ru": "Восьмое число",
+    "meaning_en": "8th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_bZ0G7FeD4Y.m4a"
+  },
+  {
+    "term": "九日",
+    "transcription": "ここのか",
+    "term_with_transcription": "九日[ここのか]",
+    "meaning_ru": "Девя decalканное число",
+    "meaning_en": "9th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_PYaAZxiu6L.m4a"
+  },
+  {
+    "term": "十日",
+    "transcription": "とおか",
+    "term_with_transcription": "十日[とおか]",
+    "meaning_ru": "Десятое число",
+    "meaning_en": "10th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_bPnBnpo7q_.m4a"
+  },
+  {
+    "term": "十一日",
+    "transcription": "じゅういちにち",
+    "term_with_transcription": "十一日[じゅういちにち]",
+    "meaning_ru": "Одиннадцатое число",
+    "meaning_en": "11th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_vmlJgxhXRp.m4a"
+  },
+  {
+    "term": "十二日",
+    "transcription": "じゅうににち",
+    "term_with_transcription": "十二日[じゅうににち]",
+    "meaning_ru": "Двенадцатое число",
+    "meaning_en": "12th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_TAu9okU8uj.m4a"
+  },
+  {
+    "term": "十三日",
+    "transcription": "じゅうさんにち",
+    "term_with_transcription": "十三日[じゅうさんにち]",
+    "meaning_ru": "Тринадцатое число",
+    "meaning_en": "13th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_9_KjKMDJ22.m4a"
+  },
+  {
+    "term": "十四日",
+    "transcription": "じゅうよんにち",
+    "term_with_transcription": "十四日[じゅうよんにち]",
+    "meaning_ru": "Четырнадцатое число",
+    "meaning_en": "14th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_fsUMKAo5rN.m4a"
+  },
+  {
+    "term": "十五日",
+    "transcription": "じゅうごにち",
+    "term_with_transcription": "十五日[じゅうごにち]",
+    "meaning_ru": "Пятнадцатое число",
+    "meaning_en": "15th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_5EbhI7ICks.m4a"
+  },
+  {
+    "term": "十六日",
+    "transcription": "じゅうろくにち",
+    "term_with_transcription": "十六日[じゅうろくにち]",
+    "meaning_ru": "Шестнадцатое число",
+    "meaning_en": "16th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_kK_-98bFse.m4a"
+  },
+  {
+    "term": "十七日",
+    "transcription": "じゅうしちにち",
+    "term_with_transcription": "十七日[じゅうしちにち]",
+    "meaning_ru": "Семнадцатое число",
+    "meaning_en": "17th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_glWoJ3L8Sb.m4a"
+  },
+  {
+    "term": "十八日",
+    "transcription": "じゅうはちにち",
+    "term_with_transcription": "十八日[じゅうはちにち]",
+    "meaning_ru": "Восемнадцатое число",
+    "meaning_en": "18th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_BMq0gSMcnl.m4a"
+  },
+  {
+    "term": "十九日",
+    "transcription": "じゅうくにち",
+    "term_with_transcription": "十九日[じゅうくにち]",
+    "meaning_ru": "Девятнадцатое число",
+    "meaning_en": "19th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_K4qslMxuIG.m4a"
+  },
+  {
+    "term": "二十日",
+    "transcription": "はつか",
+    "term_with_transcription": "二十日[はつか]",
+    "meaning_ru": "Двадцатое число",
+    "meaning_en": "20th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_q9i2m2gsL0.m4a"
+  },
+  {
+    "term": "二十一日",
+    "transcription": "にじゅういちにち",
+    "term_with_transcription": "二十一日[にじゅういちにち]",
+    "meaning_ru": "Двадцать первое число",
+    "meaning_en": "21st day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_ZiN_zIdD6P.m4a"
+  },
+  {
+    "term": "二十二日",
+    "transcription": "にじゅうににち",
+    "term_with_transcription": "二十二日[にじゅうににち]",
+    "meaning_ru": "Двадцать второе число",
+    "meaning_en": "22nd day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_gQz3ReoBIx.m4a"
+  },
+  {
+    "term": "二十三日",
+    "transcription": "にじゅうさんにち",
+    "term_with_transcription": "二十三日[にじゅうさんにち]",
+    "meaning_ru": "Двадцать третье число",
+    "meaning_en": "23rd day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_WTWVykMBgh.m4a"
+  },
+  {
+    "term": "二十四日",
+    "transcription": "にじゅうよんにち",
+    "term_with_transcription": "二十四日[にじゅうよんにち]",
+    "meaning_ru": "Двадцать четвёртое число",
+    "meaning_en": "24th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_g1TuF1JAFA.m4a"
+  },
+  {
+    "term": "二十五日",
+    "transcription": "にじゅうごにち",
+    "term_with_transcription": "二十五日[にじゅうごにち]",
+    "meaning_ru": "Двадцать пятое число",
+    "meaning_en": "25th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_Q1u_EyLglr.m4a"
+  },
+  {
+    "term": "二十六日",
+    "transcription": "にじゅうろくにち",
+    "term_with_transcription": "二十六日[にじゅうろくにち]",
+    "meaning_ru": "Двадцать шестое число",
+    "meaning_en": "26th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_jKnwS1o4uS.m4a"
+  },
+  {
+    "term": "二十七日",
+    "transcription": "にじゅうしちにち",
+    "term_with_transcription": "二十七日[にじゅうしちにち]",
+    "meaning_ru": "Двадцать седьмое число",
+    "meaning_en": "27th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_uf55NaPhp_.m4a"
+  },
+  {
+    "term": "二十八日",
+    "transcription": "にじゅうはちにち",
+    "term_with_transcription": "二十八日[にじゅうはちにち]",
+    "meaning_ru": "Двадцать восьмое число",
+    "meaning_en": "28th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_vkE4rIUqB7.m4a"
+  },
+  {
+    "term": "二十九日",
+    "transcription": "にじゅうくにち",
+    "term_with_transcription": "二十九日[にじゅうくにち]",
+    "meaning_ru": "Двадцать девятое число",
+    "meaning_en": "29th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_Nmy2g3nG2E.m4a"
+  },
+  {
+    "term": "三十日",
+    "transcription": "さんじゅうにち",
+    "term_with_transcription": "三十日[さんじゅうにち]",
+    "meaning_ru": "Тридцатое число",
+    "meaning_en": "30th day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_8of_OOWqrt.m4a"
+  },
+  {
+    "term": "三十一日",
+    "transcription": "さんじゅういちにち",
+    "term_with_transcription": "三十一日[さんじゅういちにち]",
+    "meaning_ru": "Тридцать первое число",
+    "meaning_en": "31st day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_znHPRl7ZJG.m4a"
+  },
+  {
+    "term": "今年",
+    "transcription": "ことし",
+    "term_with_transcription": "今年[ことし]",
+    "meaning_ru": "Этот год",
+    "meaning_en": "This year",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_S4w6QDrPRq.m4a"
+  },
+  {
+    "term": "来年",
+    "transcription": "らいねん",
+    "term_with_transcription": "来年[らいねん]",
+    "meaning_ru": "Следующий год",
+    "meaning_en": "Next year",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_20dy__jy4Q.m4a"
+  },
+  {
+    "term": "去年",
+    "transcription": "きょねん",
+    "term_with_transcription": "去年[きょねん]",
+    "meaning_ru": "Прошлый год",
+    "meaning_en": "Last year",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word__abjAX0KTx.m4a"
+  },
+  {
+    "term": "今月",
+    "transcription": "こんげつ",
+    "term_with_transcription": "今月[こんげつ]",
+    "meaning_ru": "Этот месяц",
+    "meaning_en": "This month",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_PiY957H8dv.m4a"
+  },
+  {
+    "term": "来月",
+    "transcription": "らいげつ",
+    "term_with_transcription": "来月[らいげつ]",
+    "meaning_ru": "Следующий месяц",
+    "meaning_en": "Next month",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_x5Ih64KgpU.m4a"
+  },
+  {
+    "term": "先月",
+    "transcription": "せんげつ",
+    "term_with_transcription": "先月[せんげつ]",
+    "meaning_ru": "Прошлый месяц",
+    "meaning_en": "Last month",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_2V-CgIYm5c.m4a"
+  },
+  {
+    "term": "今週",
+    "transcription": "こんしゅう",
+    "term_with_transcription": "今週[こんしゅう]",
+    "meaning_ru": "Эта неделя",
+    "meaning_en": "This week",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_QJDRv6MauK.m4a"
+  },
+  {
+    "term": "来週",
+    "transcription": "らいしゅう",
+    "term_with_transcription": "来週[らいしゅう]",
+    "meaning_ru": "Следующая неделя",
+    "meaning_en": "Next week",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_aNpmGhiFOC.m4a"
+  },
+  {
+    "term": "先週",
+    "transcription": "せんしゅう",
+    "term_with_transcription": "先週[せんしゅう]",
+    "meaning_ru": "Прошлая неделя",
+    "meaning_en": "Last week",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_hIw09uXCwQ.m4a"
+  },
+  {
+    "term": "今日",
+    "transcription": "きょう",
+    "term_with_transcription": "今日[きょう]",
+    "meaning_ru": "Сегодня",
+    "meaning_en": "Today",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_PvItB1DN9w.m4a"
+  },
+  {
+    "term": "明日",
+    "transcription": "あした",
+    "term_with_transcription": "明日[あした]",
+    "meaning_ru": "Завтра",
+    "meaning_en": "Tomorrow",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_rY0yNdelf4.m4a"
+  },
+  {
+    "term": "昨日",
+    "transcription": "きのう",
+    "term_with_transcription": "昨日[きのう]",
+    "meaning_ru": "Вчера",
+    "meaning_en": "Yesterday",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_9cGJSFygqs.m4a"
+  },
+  {
+    "term": "明後日",
+    "transcription": "あさって",
+    "term_with_transcription": "明後日[あさって]",
+    "meaning_ru": "Послезавтра",
+    "meaning_en": "Day after tomorrow",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_EFgt0VfRM1.m4a"
+  },
+  {
+    "term": "一昨日",
+    "transcription": "おととい",
+    "term_with_transcription": "一昨日[おととい]",
+    "meaning_ru": "Позавчера",
+    "meaning_en": "Day before yesterday",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_S7vbrXSVYb.m4a"
+  },
+  {
+    "term": "朝",
+    "transcription": "あさ",
+    "term_with_transcription": "朝[あさ]",
+    "meaning_ru": "Утро",
+    "meaning_en": "Morning",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_2HaXqNzkLz.m4a"
+  },
+  {
+    "term": "昼",
+    "transcription": "ひる",
+    "term_with_transcription": "昼[ひる]",
+    "meaning_ru": "Полдень",
+    "meaning_en": "Noon",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_l_xEA5Sy3_.m4a"
+  },
+  {
+    "term": "夕方",
+    "transcription": "ゆうがた",
+    "term_with_transcription": "夕方[ゆうがた]",
+    "meaning_ru": "Вечер",
+    "meaning_en": "Evening",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_XdI7fXcRzE.m4a"
+  },
+  {
+    "term": "夜",
+    "transcription": "よる",
+    "term_with_transcription": "夜[よる]",
+    "meaning_ru": "Ночь",
+    "meaning_en": "Night",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_oCki14Sg7v.m4a"
+  },
+  {
+    "term": "今朝",
+    "transcription": "けさ",
+    "term_with_transcription": "今朝[けさ]",
+    "meaning_ru": "Это утро",
+    "meaning_en": "This morning",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_ht8MwizBfI.m4a"
+  },
+  {
+    "term": "今晩",
+    "transcription": "こんばん",
+    "term_with_transcription": "今晩[こんばん]",
+    "meaning_ru": "Этот вечер",
+    "meaning_en": "This evening",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_jNmGNKTX8K.m4a"
+  },
+  {
+    "term": "今夜",
+    "transcription": "こんや",
+    "term_with_transcription": "今夜[こんや]",
+    "meaning_ru": "Сегодня ночью",
+    "meaning_en": "Tonight",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_CkxIjyDqal.m4a"
+  },
+  {
+    "term": "深夜",
+    "transcription": "しんや",
+    "term_with_transcription": "深夜[しんや]",
+    "meaning_ru": "Полночь",
+    "meaning_en": "Midnight",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_g8-DiMdNXV.m4a"
+  },
+  {
+    "term": "毎日",
+    "transcription": "まいにち",
+    "term_with_transcription": "毎日[まいにち]",
+    "meaning_ru": "Каждый день",
+    "meaning_en": "Every day",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_C-v7eGMQSq.m4a"
+  },
+  {
+    "term": "毎週",
+    "transcription": "まいしゅう",
+    "term_with_transcription": "毎週[まいしゅう]",
+    "meaning_ru": "Каждая неделя",
+    "meaning_en": "Every week",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_ZD3_r5ygxn.m4a"
+  },
+  {
+    "term": "毎月",
+    "transcription": "まいげつ",
+    "term_with_transcription": "毎月[まいげつ]",
+    "meaning_ru": "Каждый месяц",
+    "meaning_en": "Every month",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_ZZF4H2g1bn.m4a"
+  },
+  {
+    "term": "毎年",
+    "transcription": "まいねん",
+    "term_with_transcription": "毎年[まいねん]",
+    "meaning_ru": "Каждый год",
+    "meaning_en": "Every year",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_ONf09mQu8F.m4a"
+  },
+  {
+    "term": "毎朝",
+    "transcription": "まいあさ",
+    "term_with_transcription": "毎朝[まいあさ]",
+    "meaning_ru": "Каждое утро",
+    "meaning_en": "Every morning",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_nN0tpz4sFj.m4a"
+  },
+  {
+    "term": "毎晩",
+    "transcription": "まいばん",
+    "term_with_transcription": "毎晩[まいばん]",
+    "meaning_ru": "Каждый вечер",
+    "meaning_en": "Every evening",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_5FvIGjznOF.m4a"
+  },
+  {
+    "term": "毎夜",
+    "transcription": "まいや",
+    "term_with_transcription": "毎夜[まいや]",
+    "meaning_ru": "Каждая ночь",
+    "meaning_en": "Every night",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_bUAE_2y8YO.m4a"
+  },
+  {
+    "term": "春",
+    "transcription": "はる",
+    "term_with_transcription": "春[はる]",
+    "meaning_ru": "Весна",
+    "meaning_en": "Spring",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_HCeybsI-aH.m4a"
+  },
+  {
+    "term": "夏",
+    "transcription": "なつ",
+    "term_with_transcription": "夏[なつ]",
+    "meaning_ru": "Лето",
+    "meaning_en": "Summer",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_J56ySG7zC0.m4a"
+  },
+  {
+    "term": "秋",
+    "transcription": "あき",
+    "term_with_transcription": "秋[あき]",
+    "meaning_ru": "Осень",
+    "meaning_en": "Autumn",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_fF7dbf-E3J.m4a"
+  },
+  {
+    "term": "冬",
+    "transcription": "ふゆ",
+    "term_with_transcription": "冬[ふゆ]",
+    "meaning_ru": "Зима",
+    "meaning_en": "Winter",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_PXfL5mYbir.m4a"
+  },
+  {
+    "term": "時間",
+    "transcription": "じかん",
+    "term_with_transcription": "時間[じかん]",
+    "meaning_ru": "Час (общий)",
+    "meaning_en": "Hour (general)",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_x0vlmiU4kx.m4a"
+  },
+  {
+    "term": "時",
+    "transcription": "じ",
+    "term_with_transcription": "時[じ]",
+    "meaning_ru": "Час (счётчик)",
+    "meaning_en": "Hour (counter)",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_TEM_6Kd9xL.m4a"
+  },
+  {
+    "term": "分",
+    "transcription": "ふん",
+    "term_with_transcription": "分[ふん]",
+    "meaning_ru": "Минута",
+    "meaning_en": "Minute",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_O3MTR9GJtS.m4a"
+  },
+  {
+    "term": "秒",
+    "transcription": "びょう",
+    "term_with_transcription": "秒[びょう]",
+    "meaning_ru": "Секунда",
+    "meaning_en": "Second",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_GU52m4Ip8-.m4a"
+  },
+  {
+    "term": "半",
+    "transcription": "はん",
+    "term_with_transcription": "半[はん]",
+    "meaning_ru": "Полчаса",
+    "meaning_en": "Half hour",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_P1-bDFdpmK.m4a"
+  },
+  {
+    "term": "週末",
+    "transcription": "しゅうまつ",
+    "term_with_transcription": "週末[しゅうまつ]",
+    "meaning_ru": "Выходные",
+    "meaning_en": "Weekend",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_XWw_mjYmCH.m4a"
+  },
+  {
+    "term": "平日",
+    "transcription": "へいじつ",
+    "term_with_transcription": "平日[へいじつ]",
+    "meaning_ru": "Будний день",
+    "meaning_en": "Weekday",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_xl9LvvbObQ.m4a"
+  },
+  {
+    "term": "夜明け",
+    "transcription": "よあけ",
+    "term_with_transcription": "夜明け[よあけ]",
+    "meaning_ru": "Рассвет",
+    "meaning_en": "Dawn",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_4D4F4f7khy.m4a"
+  },
+  {
+    "term": "夕暮れ",
+    "transcription": "ゆうぐれ",
+    "term_with_transcription": "夕暮れ[ゆうぐれ]",
+    "meaning_ru": "Сумерки",
+    "meaning_en": "Dusk",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_deVp5BA-aV.m4a"
+  },
+  {
+    "term": "早朝",
+    "transcription": "そうちょう",
+    "term_with_transcription": "早朝[そうちょう]",
+    "meaning_ru": "Раннее утро",
+    "meaning_en": "Early morning",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_cidr_v8JCN.m4a"
+  },
+  {
+    "term": "午後",
+    "transcription": "ごご",
+    "term_with_transcription": "午後[ごご]",
+    "meaning_ru": "Послеобеденное время",
+    "meaning_en": "Afternoon",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_GyHigmh-IN.m4a"
+  },
+  {
+    "term": "午前",
+    "transcription": "ごぜん",
+    "term_with_transcription": "午前[ごぜん]",
+    "meaning_ru": "Дообеденное время",
+    "meaning_en": "Morning (AM)",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_boBRr6btV4.m4a"
+  },
+  {
+    "term": "休日",
+    "transcription": "きゅうじつ",
+    "term_with_transcription": "休日[きゅうじつ]",
+    "meaning_ru": "Праздник/Выходной",
+    "meaning_en": "Holiday",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_ZuFmX69h-X.m4a"
+  },
+  {
+    "term": "世紀",
+    "transcription": "せいき",
+    "term_with_transcription": "世紀[せいき]",
+    "meaning_ru": "Век",
+    "meaning_en": "Century",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_oBW6cSMj6i.m4a"
+  },
+  {
+    "term": "十年",
+    "transcription": "じゅうねん",
+    "term_with_transcription": "十年[じゅうねん]",
+    "meaning_ru": "Десятилетие",
+    "meaning_en": "Decade",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_3ukhrmLRS6.m4a"
+  },
+  {
+    "term": "時代",
+    "transcription": "じだい",
+    "term_with_transcription": "時代[じだい]",
+    "meaning_ru": "Эра",
+    "meaning_en": "Era",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_o-IYDdwRBn.m4a"
+  },
+  {
+    "term": "過去",
+    "transcription": "かこ",
+    "term_with_transcription": "過去[かこ]",
+    "meaning_ru": "Прошлое",
+    "meaning_en": "Past",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_kKQMMpq1vy.m4a"
+  },
+  {
+    "term": "現在",
+    "transcription": "げんざい",
+    "term_with_transcription": "現在[げんざい]",
+    "meaning_ru": "Настоящее",
+    "meaning_en": "Present",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_fhIG93Twms.m4a"
+  },
+  {
+    "term": "未来",
+    "transcription": "みらい",
+    "term_with_transcription": "未来[みらい]",
+    "meaning_ru": "Будущее",
+    "meaning_en": "Future",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_VRhRU1OlxE.m4a"
+  },
+  {
+    "term": "今",
+    "transcription": "いま",
+    "term_with_transcription": "今[いま]",
+    "Meaning_ru": "Сейчас",
+    "meaning_en": "Now",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_Arf-Dg3E1t.m4a"
+  },
+  {
+    "term": "すぐ",
+    "transcription": "すぐ",
+    "term_with_transcription": "すぐ[すぐ]",
+    "meaning_ru": "Скоро/Немедленно",
+    "meaning_en": "Soon",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_oV6Jgj3c5m.m4a"
+  },
+  {
+    "term": "後で",
+    "transcription": "あとで",
+    "term_with_transcription": "後で[あとで]",
+    "meaning_ru": "Позже",
+    "meaning_en": "Later",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_8ZlHiTg5se.m4a"
+  },
+  {
+    "term": "前に",
+    "transcription": "まえに",
+    "term_with_transcription": "前に[まえに]",
+    "meaning_ru": "Раньше",
+    "meaning_en": "Before",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_YhLP8slZnP.m4a"
+  },
+  {
+    "term": "いつも",
+    "transcription": "いつも",
+    "term_with_transcription": "いつも[いつも]",
+    "meaning_ru": "Всегда",
+    "meaning_en": "Always",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_UuwZ2HaT3f.m4a"
+  },
+  {
+    "term": "時々",
+    "transcription": "ときどき",
+    "term_with_transcription": "時々[ときどき]",
+    "meaning_ru": "Иногда",
+    "meaning_en": "Sometimes",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_lwVztpCxja.m4a"
+  },
+  {
+    "term": "決して",
+    "transcription": "けっして",
+    "term_with_transcription": "決して[けっして]",
+    "meaning_ru": "Никогда (формально)",
+    "meaning_en": "Never (formal)",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_HrNMGxtJud.m4a"
+  },
+  {
+    "term": "正月",
+    "transcription": "しょうがつ",
+    "term_with_transcription": "正月[しょうがつ]",
+    "meaning_ru": "Новый год",
+    "meaning_en": "New Year",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_9CdqLKMFGJ.m4a"
+  },
+  {
+    "term": "年末",
+    "transcription": "ねんまつ",
+    "term_with_transcription": "年末[ねんまつ]",
+    "meaning_ru": "Конец года",
+    "meaning_en": "End of year",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_4mjZtaIj6a.m4a"
+  },
+  {
+    "term": "年始",
+    "transcription": "ねんし",
+    "term_with_transcription": "年始[ねんし]",
+    "meaning_ru": "Начало года",
+    "meaning_en": "Start of year",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_ZtVyaHP8HB.m4a"
+  },
+  {
+    "term": "ゴールデンウィーク",
+    "transcription": "ごーるでんうぃーく",
+    "term_with_transcription": "ゴールデンウィーク[ごーるでんうぃーく]",
+    "meaning_ru": "Золотая неделя",
+    "meaning_en": "Golden Week",
+    "audio_word": "https://assets.peatch.io/audio/japanese/word_ifZ-TpxQua.m4a"
+  }
+]

@@ -9,6 +9,12 @@
           "name": "N5 Vocabulary",
           "description": "Basic Japanese vocabulary for JLPT N5 level",
           "level": "beginner"
+        },
+        {
+          "id": "japanese_time_terms.json",
+          "name": "Japanese Time Terms",
+          "description": "Basic Japanese time-related vocabulary",
+          "level": "beginner"
         }
       ]
     },

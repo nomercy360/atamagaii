@@ -75,7 +75,69 @@
     }
   ],
   "text": {
-
+    "format": {
+      "type": "json_schema",
+      "name": "kanji_entry",
+      "schema": {
+        "type": "object",
+        "required": [
+          "term",
+          "transcription",
+          "term_with_transcription",
+          "meaning_en",
+          "meaning_ru",
+          "example_native",
+          "example_en",
+          "example_ru",
+          "example_with_transcription",
+          "frequency"
+        ],
+        "properties": {
+          "term": {
+            "type": "string",
+            "description": "The kanji word or expression."
+          },
+          "frequency": {
+            "type": "integer",
+            "description": "An estimated frequency rank from 1 (very common) to 3000+ (rare)."
+          },
+          "example_en": {
+            "type": "string",
+            "description": "The English translation of the example sentence."
+          },
+          "example_ru": {
+            "type": "string",
+            "description": "The Russian translation of the example sentence."
+          },
+          "meaning_en": {
+            "type": "string",
+            "description": "The meaning of the word or expression in English."
+          },
+          "meaning_ru": {
+            "type": "string",
+            "description": "The meaning of the word or expression in Russian."
+          },
+          "transcription": {
+            "type": "string",
+            "description": "Only the pure kana reading of the word — no kanji, no brackets."
+          },
+          "example_native": {
+            "type": "string",
+            "description": "An example sentence in natural Japanese using the target word."
+          },
+          "term_with_transcription": {
+            "type": "string",
+            "description": "The same word with furigana in the Anki-style format with furigana in brackets."
+          },
+          "example_with_transcription": {
+            "type": "string",
+            "description": "The same example sentence with furigana in brackets: the Anki-style format."
+          }
+        },
+        "additionalProperties": false
+      },
+      "strict": true
+    }
   },
   "reasoning": {},
   "tools": [],

@@ -150,7 +150,7 @@ func (s *Storage) AddCardsInBatch(userID, deckID string, fieldsArray []string) e
 	return nil
 }
 
-func (s *Storage) GetNewCards(userID string, deckID string, limit int) ([]Card, error) {
+func (s *Storage) GetNewCards(userID string, deckID string, limit, limitPerDay int) ([]Card, error) {
 	today := time.Now().Truncate(24 * time.Hour)
 
 	countNewStartedTodayQuery := `
@@ -168,13 +168,13 @@ func (s *Storage) GetNewCards(userID string, deckID string, limit int) ([]Card, 
 		return nil, fmt.Errorf("error counting new cards started today: %w", err)
 	}
 
-	newCardsRemaining := limit - newCardsStartedToday
-	if newCardsRemaining < 0 {
-		newCardsRemaining = 0
+	if newCardsStartedToday >= limitPerDay {
+		return nil, nil
 	}
 
-	if newCardsRemaining == 0 {
-		return []Card{}, nil
+	remainingNewCards := limitPerDay - newCardsStartedToday
+	if remainingNewCards > limit {
+		remainingNewCards = limit
 	}
 
 	query := `
@@ -190,7 +190,7 @@ func (s *Storage) GetNewCards(userID string, deckID string, limit int) ([]Card, 
 		LIMIT ?
 	`
 
-	rows, err := s.db.Query(query, userID, deckID, newCardsRemaining)
+	rows, err := s.db.Query(query, userID, deckID, remainingNewCards)
 	if err != nil {
 		return nil, fmt.Errorf("error getting new cards: %w", err)
 	}
@@ -365,11 +365,11 @@ func (s *Storage) GetCardsForReview(
 	}
 
 	newCardsNeeded := limit - len(reviewCards)
-	if newCardsNeeded > newCardsLimitForDay {
-		newCardsNeeded = newCardsLimitForDay
+	if newCardsNeeded <= 0 {
+		return reviewCards, nil
 	}
 
-	newCards, err := s.GetNewCards(userID, deckID, newCardsNeeded)
+	newCards, err := s.GetNewCards(userID, deckID, newCardsNeeded, newCardsLimitForDay)
 	if err != nil {
 		return nil, fmt.Errorf("error getting new cards: %w", err)
 	}
