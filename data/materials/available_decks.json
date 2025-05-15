@@ -15,6 +15,12 @@
           "name": "Japanese Time Terms",
           "description": "Basic Japanese time-related vocabulary",
           "level": "beginner"
+        },
+        {
+          "id": "japanese_kaishi_ru.json",
+          "name": "Kaishi 1.5k",
+          "description": "Всем знакомая колода кайши, с русскими переводами.",
+          "level": "beginner"
         }
       ]
     },
