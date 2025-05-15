@@ -472,20 +472,31 @@ export default function Cards() {
 										<div class="bg-muted rounded-md p-2">
 											<div class="flex items-start justify-between mb-1">
 												<p class="flex-grow">
-													{currentCard()?.fields.example_with_transcription || currentCard()?.fields.example_with_transcription ? (
+													{currentCard()?.fields.language_code === 'th' ? (
 														<TranscriptionText
-															text={currentCard()?.fields.example_with_transcription || currentCard()?.fields.example_with_transcription!}
+															text={currentCard()?.fields.example_native || ''}
+															secondaryText={currentCard()?.fields.example_with_transcription || ''}
 															textSize="2xl"
-															language={currentCard()?.fields.language_code || 'ja'}
+															secondaryTextSize="sm"
+															language="th"
 															transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 														/>
 													) : (
-														<TranscriptionText
-															text={currentCard()?.fields.example_native || currentCard()?.fields.example_native || ''}
-															textSize="2xl"
-															language={currentCard()?.fields.language_code || 'ja'}
-															transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
-														/>
+														currentCard()?.fields.example_with_transcription ? (
+															<TranscriptionText
+																text={currentCard()?.fields.example_with_transcription || ''}
+																textSize="2xl"
+																language={currentCard()?.fields.language_code || 'ja'}
+																transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+															/>
+														) : (
+															<TranscriptionText
+																text={currentCard()?.fields.example_native || ''}
+																textSize="2xl"
+																language={currentCard()?.fields.language_code || 'ja'}
+																transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+															/>
+														)
 													)}
 												</p>
 												<Show when={currentCard()?.fields.audio_example}>
