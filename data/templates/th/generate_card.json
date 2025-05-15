@@ -1,0 +1,148 @@
+{
+  "model": "gpt-4.1-mini",
+  "input": [
+    {
+      "role": "system",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Ты — языковой помощник, создающий карточки тайских слов.\n\nИспользуй словарную информацию, чтобы сгенерировать полноценную карточку с примерами, которые были бы понятны и полезны студенту тайского.\nКарточка должна быть в строгом формате JSON.\n\nТребования к полям:\n- Слово в поле term должно быть в его основной форме.\n- Если у слова несколько значений, укажи наиболее употребимое или перечисли их кратко, если они просты и различны.\n- Для передачи произношения в term_with_transcription и example_with_transcription используй систему транскрипции American University Alumni. \n\nТребования к примеру:\n- Пример должен быть простым, понятными и близкими к повседневным ситуациям, чтобы ясно показывать значение и типичное употребление слова.\n- Предложение должно быть коротким (примерно 5-10 слов для простоты)."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "{\n  \"term\": \"กิน\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"term\": \"กิน\",\n  \"transcription\": \"kin\",\n  \"term_with_transcription\": \"กิน (kin)\",\n  \"meaning_en\": \"to eat\",\n  \"meaning_ru\": \"есть, кушать\",\n  \"example_native\": \"ฉันกินข้าวทุกวัน\",\n  \"example_en\": \"I eat rice every day.\",\n  \"example_ru\": \"Я ем рис каждый день.\",\n  \"example_with_transcription\": \"chǎn kin khâao thúk wan\",\n  \"frequency\": 500\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "{\n  \"term\": \"นักเรียน\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"term\": \"นักเรียน\",\n  \"transcription\": \"nák riian\",\n  \"term_with_transcription\": \"นักเรียน (nák riian)\",\n  \"meaning_en\": \"student\",\n  \"meaning_ru\": \"студент, учащийся\",\n  \"example_native\": \"เขาเป็นนักเรียนไทย\",\n  \"example_en\": \"He/She is a Thai student.\",\n  \"example_ru\": \"Он/Она тайский студент/учащийся.\",\n  \"example_with_transcription\": \"khăo pen nák riian thai\",\n  \"frequency\": 300\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "{\n  \"term\": \"มี\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"term\": \"มี\",\n  \"transcription\": \"mii\",\n  \"term_with_transcription\": \"มี (mii)\",\n  \"meaning_en\": \"to have, to possess; there is/are, to exist\",\n  \"meaning_ru\": \"иметь, обладать; есть, существует (о предметах и понятиях)\",\n  \"example_native\": \"บนโต๊ะมีหนังสือ\",\n  \"example_en\": \"There is a book on the table.\",\n  \"example_ru\": \"На столе есть книга.\",\n  \"example_with_transcription\": \"bon tó mii năng sǔe\",\n  \"frequency\": 450\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "{\"term\": \"{{term}}\"}"
+        }
+      ]
+    }
+  ],
+  "text": {
+    "format": {
+      "type": "json_schema",
+      "name": "thai_word_entry",
+      "schema": {
+        "type": "object",
+        "required": [
+          "term",
+          "transcription",
+          "term_with_transcription",
+          "meaning_en",
+          "meaning_ru",
+          "example_native",
+          "example_en",
+          "example_ru",
+          "example_with_transcription",
+          "frequency"
+        ],
+        "properties": {
+          "term": {
+            "type": "string",
+            "description": "The Thai word or expression."
+          },
+          "frequency": {
+            "type": "integer",
+            "description": "An estimated frequency rank from 1 (very common) to 3000+ (rare)."
+          },
+          "example_en": {
+            "type": "string",
+            "description": "The English translation of the example sentence."
+          },
+          "example_ru": {
+            "type": "string",
+            "description": "The Russian translation of the example sentence."
+          },
+          "meaning_en": {
+            "type": "string",
+            "description": "The meaning of the word or expression in English."
+          },
+          "meaning_ru": {
+            "type": "string",
+            "description": "The meaning of the word or expression in Russian."
+          },
+          "transcription": {
+            "type": "string",
+            "description": "ONLY the phonetic reading of the word, using American University Alumni."
+          },
+          "example_native": {
+            "type": "string",
+            "description": "An example sentence in natural Thai using the target word."
+          },
+          "term_with_transcription": {
+            "type": "string",
+            "description": "Word with its phonetic reading, using American University Alumni (AUA)."
+          },
+          "example_with_transcription": {
+            "type": "string",
+            "description": "ONLY the phonetic reading of the sentence, using American University Alumni (AUA)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "strict": true
+    }
+  },
+  "reasoning": {},
+  "tools": [],
+  "temperature": 0.8,
+  "max_output_tokens": 10000,
+  "top_p": 0.8,
+  "store": true
+}

@@ -36,12 +36,12 @@ func NewOpenAIClient(apiKey string) (*OpenAIClient, error) {
 }
 
 func (c *OpenAIClient) GenerateCardContent(ctx context.Context, term string, language string) (*contract.CardFields, error) {
-	openAIDir, err := utils.FindDirUp("templates", 3)
+	openAIDir, err := utils.FindDirUp("data", 3)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find materials directory: %w", err)
 	}
 
-	filePath := filepath.Join(openAIDir, "jp_openai_req.json")
+	filePath := filepath.Join(openAIDir, "templates", language, "generate_card.json")
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("file %s does not exist (looked in %s)", filePath, openAIDir)
 	}

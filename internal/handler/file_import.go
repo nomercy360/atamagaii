@@ -46,15 +46,15 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	materialsDir, err := utils.FindDirUp("materials", 3)
+	materialsDir, err := utils.FindDirUp("data", 3)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find materials directory")
+		return echo.NewHTTPError(http.StatusInternalServerError, "data not found")
 	}
 
-	filePath := filepath.Join(materialsDir, req.FileName)
+	filePath := filepath.Join(materialsDir, "materials", req.FileName)
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("File %s does not exist (looked in %s)", req.FileName, materialsDir))
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("File %s does not exist", req.FileName))
 	}
 
 	fileData, err := os.ReadFile(filePath)
@@ -67,7 +67,7 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to parse vocabulary data: %v", err))
 	}
 
-	metadataPath := filepath.Join(materialsDir, "available_decks.json")
+	metadataPath := filepath.Join(materialsDir, "materials", "available_decks.json")
 	metadataData, err := os.ReadFile(metadataPath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to read available decks metadata: %v", err))
@@ -153,12 +153,12 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 }
 
 func (h *Handler) GetAvailableDecks(c echo.Context) error {
-	materialsDir, err := utils.FindDirUp("materials", 3)
+	materialsDir, err := utils.FindDirUp("data", 3)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find materials directory")
+		return echo.NewHTTPError(http.StatusInternalServerError, "data not found")
 	}
 
-	metadataPath := filepath.Join(materialsDir, "available_decks.json")
+	metadataPath := filepath.Join(materialsDir, "materials", "available_decks.json")
 	fileData, err := os.ReadFile(metadataPath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to read available decks metadata: %v", err))

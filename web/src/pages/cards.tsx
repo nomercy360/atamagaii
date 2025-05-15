@@ -525,8 +525,8 @@ export default function Cards() {
 				</Show>
 
 				<Show when={!cards.loading && !currentCard()}>
-					<div class="w-full flex flex-col items-center justify-center h-[400px]">
-						<AllDoneAnimation width={60} height={60} class="mb-2" />
+					<div class="w-full flex flex-col items-center justify-center h-[400px] px-4">
+						<AllDoneAnimation width={100} height={100} class="mb-2" />
 						<p class="text-xl font-medium text-center mb-4">All done for today!</p>
 						<p class="text-muted-foreground mb-4 text-center">You've completed all your cards for this session.</p>
 						<button

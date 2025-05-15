@@ -1,0 +1,148 @@
+{
+  "model": "gpt-4.1-mini",
+  "input": [
+    {
+      "role": "system",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "შენ ხარ ენობრივი ასისტენტი, რომელიც ქმნის ქართულ სიტყვების ბარათებს.\n\nგამოიყენე ლექსიკონის ინფორმაცია, რათა შექმნა სრულფასოვანი ბარათი მაგალითებით, რომლებიც იქნებოდა გასაგები და სასარგებლო ქართველი ენის სტუდენტისთვის.\nბარათი უნდა იყოს მკაცრად JSON ფორმატში.\n\nველების მოთხოვნები:\n- სიტყვა ველში term უნდა იყოს ძირითად ფორმაში (სახელების მხოლობითი ფორმა, ზმნების უსასრულო ფორმა).\n- თუ სიტყვას აქვს რამდენიმე მნიშვნელობა, მიუთითე ყველაზე გავრცელებული ან ჩამოთვალე მოკლედ, თუ ისინი მარტივია და განსხვავებული.\n- ტრანსკრიფციისთვის გამოიყენე ლათინური ანბანი IPA-თან მიახლოებულად ან სხვა გავრცელებული ქართულ-ლათინური ტრანსკრიფცია.\n\nმოთხოვნები მაგალითისთვის:\n- მაგალითი უნდა იყოს მარტივი, გასაგები და დაკავშირებული ყოველდღიურ სიტუაციებთან, რათა ნათლად აჩვენოს სიტყვის მნიშვნელობა და ტიპური გამოყენება.\n- წინადადება უნდა იყოს მოკლე (დაახლოებით 5-10 სიტყვა მარტივად აღსაქმელად)."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "{\n  \"term\": \"ჭამა\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"term\": \"ჭამა\",\n  \"transcription\": \"ch’ama\",\n  \"term_with_transcription\": \"ჭამა (ch’ama)\",\n  \"meaning_en\": \"to eat\",\n  \"meaning_ru\": \"есть, кушать\",\n  \"example_native\": \"თამარი ახლა ვაშლს ჭამს.\",\n  \"example_en\": \"Tamar is eating an apple now.\",\n  \"example_ru\": \"Тамар сейчас ест яблоко.\",\n  \"example_with_transcription\": \"tamari akhla vashls ch’ams\",\n  \"frequency\": 480\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "{\n  \"term\": \"წიგნი\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"term\": \"წიგნი\",\n  \"transcription\": \"ts’igni\",\n  \"term_with_transcription\": \"წიგნი (ts’igni)\",\n  \"meaning_en\": \"book\",\n  \"meaning_ru\": \"книга\",\n  \"example_native\": \"ეს წიგნი ძალიან საინტერესოა.\",\n  \"example_en\": \"This book is very interesting.\",\n  \"example_ru\": \"Эта книга очень интересная.\",\n  \"example_with_transcription\": \"es ts’igni dzalian sainteresoa\",\n  \"frequency\": 350\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "{\n  \"term\": \"განვითარება\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"term\": \"განვითარება\",\n  \"transcription\": \"ts’igni\",\n  \"term_with_transcription\": \"განვითარება (ganvitareba)\",\n  \"meaning_en\": \"development\",\n  \"meaning_ru\": \"развитие\",\n  \"example_native\": \"ტექნოლოგიური განვითარება მნიშვნელოვანია.\",\n  \"example_en\": \"Technological development is important.\",\n  \"example_ru\": \"Технологическое развитие важно.\",\n  \"example_with_transcription\": \"tek’nologiuri ganvitareba mnishvnelovania\",\n  \"frequency\": 1100\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "{\"term\": \"{{term}}\"}"
+        }
+      ]
+    }
+  ],
+  "text": {
+    "format": {
+      "type": "json_schema",
+      "name": "georgian_word_entry",
+      "schema": {
+        "type": "object",
+        "required": [
+          "term",
+          "transcription",
+          "term_with_transcription",
+          "meaning_en",
+          "meaning_ru",
+          "example_native",
+          "example_en",
+          "example_ru",
+          "example_with_transcription",
+          "frequency"
+        ],
+        "properties": {
+          "term": {
+            "type": "string",
+            "description": "The Georgian word or expression."
+          },
+          "transcription": {
+            "type": "string",
+            "description": "Phonetic transcription using Latin script (close to IPA or popular Georgian-Latin conversion)."
+          },
+          "term_with_transcription": {
+            "type": "string",
+            "description": "Term with its transcription (e.g., ჭამა (ch’ama))."
+          },
+          "meaning_en": {
+            "type": "string",
+            "description": "The meaning of the word in English."
+          },
+          "meaning_ru": {
+            "type": "string",
+            "description": "The meaning of the word in Russian."
+          },
+          "example_native": {
+            "type": "string",
+            "description": "An example sentence in natural Georgian using the word."
+          },
+          "example_en": {
+            "type": "string",
+            "description": "The English translation of the example."
+          },
+          "example_ru": {
+            "type": "string",
+            "description": "The Russian translation of the example."
+          },
+          "example_with_transcription": {
+            "type": "string",
+            "description": "Phonetic transcription of the Georgian example sentence using Latin script."
+          },
+          "frequency": {
+            "type": "integer",
+            "description": "Estimated frequency rank (1 - very common, 3000+ - rare)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "strict": true
+    }
+  },
+  "reasoning": {},
+  "tools": [],
+  "temperature": 0.8,
+  "max_output_tokens": 10000,
+  "top_p": 0.8,
+  "store": true
+}
