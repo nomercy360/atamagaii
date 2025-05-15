@@ -47,6 +47,7 @@ type CardFields struct {
 	AudioWord                string `json:"audio_word"`
 	AudioExample             string `json:"audio_example"`
 	ImageURL                 string `json:"image_url,omitempty"`
+	LanguageCode             string `json:"language_code"`
 }
 type CardResponse struct {
 	ID              string                       `json:"id"`

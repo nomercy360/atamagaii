@@ -6,6 +6,7 @@ import { hapticFeedback } from '~/lib/utils'
 import TranscriptionText from '~/components/transcription-text'
 import { audioService } from '~/lib/audio-service'
 import ProgressBar from '~/components/progress-bar'
+import AllDoneAnimation from '~/components/all-done-animation'
 
 const getFrontFaceClasses = (isFlipped: boolean, isTrans: boolean) => {
 	let opacityClass = ''
@@ -524,8 +525,10 @@ export default function Cards() {
 				</Show>
 
 				<Show when={!cards.loading && !currentCard()}>
-					<div class="w-full flex flex-col items-center justify-center h-[300px]">
-						<p class="text-muted-foreground mb-2">No cards available for review.</p>
+					<div class="w-full flex flex-col items-center justify-center h-[400px]">
+						<AllDoneAnimation width={60} height={60} class="mb-2" />
+						<p class="text-xl font-medium text-center mb-4">All done for today!</p>
+						<p class="text-muted-foreground mb-4 text-center">You've completed all your cards for this session.</p>
 						<button
 							onClick={() => {
 								setNeedMoreCards(true)
@@ -533,11 +536,11 @@ export default function Cards() {
 							}}
 							class="mb-4 px-4 py-2 bg-primary text-primary-foreground rounded-md"
 						>
-							Retry
+							Check Again
 						</button>
 						<button
 							onClick={() => navigate('/')}
-							class="mt-4 text-primary"
+							class="mt-2 text-primary"
 						>
 							Back to decks
 						</button>

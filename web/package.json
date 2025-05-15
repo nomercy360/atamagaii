@@ -19,6 +19,7 @@
     "vite-plugin-solid": "^2.11.0"
   },
   "dependencies": {
+    "@lottiefiles/dotlottie-web": "^0.44.0",
     "@solidjs/router": "^0.15.1",
     "@tanstack/solid-query": "^5.62.2",
     "class-variance-authority": "^0.7.1",
