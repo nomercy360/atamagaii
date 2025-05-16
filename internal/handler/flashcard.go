@@ -259,16 +259,25 @@ func (h *Handler) GetStats(c echo.Context) error {
 		return err
 	}
 
+	// Get due cards count
 	dueCount, err := h.db.GetDueCardCount(userID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch statistics")
 	}
 
-	stats := map[string]interface{}{
-		"due_cards": dueCount,
+	// Get study statistics
+	studyStats, err := h.db.GetUserStudyStats(userID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch study statistics")
 	}
 
-	return c.JSON(http.StatusOK, stats)
+	// Combine both statistics types in the response
+	response := map[string]interface{}{
+		"due_cards": dueCount,
+		"study_stats": studyStats,
+	}
+
+	return c.JSON(http.StatusOK, response)
 }
 
 func (h *Handler) GetCard(c echo.Context) error {

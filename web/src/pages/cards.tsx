@@ -42,12 +42,12 @@ export default function Cards() {
 	const [cardIndex, setCardIndex] = createSignal(0)
 	const [flipped, setFlipped] = createSignal(false)
 	const [isTransitioning, setIsTransitioning] = createSignal(false)
-	const [timeSpentMs, setTimeSpentMs] = createSignal(0)
-	const [startTime, setStartTime] = createSignal<number | null>(null)
-	const [isTimerActive, setIsTimerActive] = createSignal(false)
 	const [settingsOpen, setSettingsOpen] = createSignal(false)
 	const [feedbackType, setFeedbackType] = createSignal<'again' | 'good' | null>(null)
 	const [showFeedback, setShowFeedback] = createSignal(false)
+	const [timerStart, setTimerStart] = createSignal<number>(0)
+	const [timeAccumulated, setTimeAccumulated] = createSignal<number>(0)
+	const [timerPaused, setTimerPaused] = createSignal<boolean>(false)
 	const [deckMetrics, setDeckMetrics] = createSignal<DeckProgress>({
 		new_cards: 0,
 		learning_cards: 0,
@@ -63,6 +63,41 @@ export default function Cards() {
 			total: total,
 			percentage: total > 0 ? Math.round((metrics.completed_today_cards / total) * 100) : 0,
 		}
+	}
+
+	// Timer functions
+	const startTimer = () => {
+		setTimerStart(Date.now())
+		setTimerPaused(false)
+	}
+
+	const pauseTimer = () => {
+		if (timerStart() > 0 && !timerPaused()) {
+			// Add the elapsed time since the timer started to the accumulated time
+			setTimeAccumulated(timeAccumulated() + (Date.now() - timerStart()))
+			setTimerPaused(true)
+		}
+	}
+
+	const resumeTimer = () => {
+		if (timerPaused()) {
+			// Start the timer again from the current time
+			setTimerStart(Date.now())
+			setTimerPaused(false)
+		}
+	}
+
+	const resetTimer = () => {
+		setTimerStart(0)
+		setTimeAccumulated(0)
+		setTimerPaused(false)
+	}
+
+	const getCurrentTimeSpent = () => {
+		if (timerStart() === 0) return timeAccumulated()
+
+		// Return accumulated time + current running time
+		return timeAccumulated() + (timerPaused() ? 0 : (Date.now() - timerStart()))
 	}
 
 	const [cardBuffer, setCardBuffer] = createSignal<Card[]>([])
@@ -84,6 +119,35 @@ export default function Cards() {
 			return data
 		},
 	)
+
+	// Handle page visibility events to pause/resume timer
+	onMount(() => {
+		const handleVisibilityChange = () => {
+			if (document.hidden) {
+				// Tab is hidden, pause the timer
+				pauseTimer()
+			} else {
+				// Tab is visible again, resume the timer if there's a current card
+				// Timer should run on both front and back sides
+				if (currentCard()) {
+					resumeTimer()
+				}
+			}
+		}
+
+		// Start the timer when component mounts if there's a card
+		if (currentCard()) {
+			startTimer()
+		}
+
+		// Listen for visibility changes
+		document.addEventListener('visibilitychange', handleVisibilityChange)
+
+		// Clean up event listener
+		onCleanup(() => {
+			document.removeEventListener('visibilitychange', handleVisibilityChange)
+		})
+	})
 
 	const [cards, { refetch: refetchCards }] = createResource<Card[], boolean>(
 		() => needMoreCards() && cardBuffer().length === 0,
@@ -116,74 +180,23 @@ export default function Cards() {
 		return buffer[idx]
 	}
 
-	const handleVisibilityChange = () => {
-		if (document.visibilityState === 'hidden') {
-			pauseTimer()
-		} else if (document.visibilityState === 'visible' && currentCard()) {
+	// Start timer when a new card is shown (on either side)
+	createEffect(() => {
+		// We need to access cardIndex() for this effect to run when card changes
+		const currentIdx = cardIndex()
+		const hasCard = currentCard() !== null
+
+		if (hasCard && !isTransitioning() && document.visibilityState === 'visible') {
+			// Reset and start the timer when a new card is shown
+			// Timer runs on both front and back sides
+			resetTimer()
 			startTimer()
 		}
-	}
-
-	const startTimer = () => {
-		if (!isTimerActive()) {
-			setStartTime(Date.now())
-			setIsTimerActive(true)
-		}
-	}
-
-	const pauseTimer = () => {
-		if (isTimerActive() && startTime() !== null) {
-			const now = Date.now()
-			const elapsedMs = now - startTime()!
-			const newTotal = timeSpentMs() + elapsedMs
-			setTimeSpentMs(newTotal)
-			setStartTime(null)
-			setIsTimerActive(false)
-		}
-	}
+	})
 
 	const stopAllAudio = () => {
 		audioService.stopAll()
 	}
-
-	const resetTimer = () => {
-		setTimeSpentMs(0)
-		setStartTime(Date.now())
-		setIsTimerActive(true)
-	}
-
-	const getCurrentTimeSpent = () => {
-		let total = timeSpentMs()
-		if (isTimerActive() && startTime() !== null) {
-			const now = Date.now()
-			const current = now - startTime()!
-			total += current
-			// console.log('Current session time:', current, 'ms, total with previous:', total, 'ms')
-		} else {
-			// console.log('Timer inactive, returning accumulated time:', total, 'ms')
-		}
-		return total
-	}
-
-	onMount(() => {
-		createEffect(() => {
-			if (currentCard() && startTime() === null) {
-				console.log('onMount/Effect: First card available, resetting timer.')
-				resetTimer()
-			}
-		})
-
-		document.addEventListener('visibilitychange', handleVisibilityChange)
-		window.addEventListener('beforeunload', pauseTimer)
-		document.addEventListener('click', handleClickOutside)
-	})
-
-	onCleanup(() => {
-		document.removeEventListener('visibilitychange', handleVisibilityChange)
-		window.removeEventListener('beforeunload', pauseTimer)
-		document.removeEventListener('click', handleClickOutside)
-		pauseTimer()
-	})
 
 	const playCardAudio = () => {
 		const card = currentCard()
@@ -260,14 +273,22 @@ export default function Cards() {
 		setTimeout(() => {
 			setFlipped(false)
 			setCardIndex(prevIndex => prevIndex + 1)
+
+			// Reset timer for the next card
+			resetTimer()
+
 			setTimeout(() => {
 				setIsTransitioning(false)
-				resetTimer()
+
+				// Start timer for the new card once transition is complete
+				startTimer()
 			}, 50)
-		}, 300)
+		}, 200)
 	}
 
 	const handleReview = async (cardId: string, rating: number) => {
+		// Explicitly pause the timer when an answer button is clicked
+		// This captures the full time spent on both sides of the card
 		pauseTimer()
 
 		const finalTimeSpent = getCurrentTimeSpent()
@@ -282,7 +303,11 @@ export default function Cards() {
 			setShowFeedback(false)
 		}, 200)
 
-		const timeToSend = finalTimeSpent > 0 ? finalTimeSpent : 1000
+		// Ensure we send at least a minimum time value
+		// This prevents extremely short times if users immediately answer
+		const timeToSend = Math.max(finalTimeSpent, 1000)
+
+		console.log(`Total time spent on card (both sides): ${timeToSend}ms`)
 
 		handleNextCard()
 
