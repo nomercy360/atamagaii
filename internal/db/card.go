@@ -468,20 +468,38 @@ func SortCardsForReview(cards []Card, referenceTime time.Time) {
 			return catA < catB
 		}
 
-		// Same category; use secondary sort
+		// Sort by appropriate fields based on card state
 		switch catA {
-		case 0, 1: // Sort by next review time
-			aTime := time.Time{}
-			bTime := time.Time{}
-			if a.NextReview != nil {
-				aTime = *a.NextReview
+		case 0, 3: // Learning/relearning cards (due now or in future)
+			// Sort by last_reviewed_at
+			if a.LastReviewedAt == nil && b.LastReviewedAt == nil {
+				return a.CreatedAt.Before(b.CreatedAt) // Fallback to creation time if both have no review time
 			}
-			if b.NextReview != nil {
-				bTime = *b.NextReview
+			if a.LastReviewedAt == nil {
+				return true // Prioritize cards that haven't been reviewed yet
 			}
-			return aTime.Before(bTime)
-		case 2, 3: // Sort by creation time
-			return a.CreatedAt.Before(b.CreatedAt)
+			if b.LastReviewedAt == nil {
+				return false // Prioritize cards that haven't been reviewed yet
+			}
+			return a.LastReviewedAt.Before(*b.LastReviewedAt) // Earlier reviewed first
+
+		case 1: // Review cards
+			// For review cards, sort by next_review time
+			if a.NextReview == nil && b.NextReview == nil {
+				return a.CreatedAt.Before(b.CreatedAt) // Fallback to creation time
+			}
+			if a.NextReview == nil {
+				return true // Prioritize cards with no next review time
+			}
+			if b.NextReview == nil {
+				return false // Prioritize cards with no next review time
+			}
+			return a.NextReview.Before(*b.NextReview) // Earlier due date first
+
+		case 2: // New cards
+			// Sort by created_at
+			return a.CreatedAt.Before(b.CreatedAt) // Older cards first
+
 		default:
 			return false
 		}

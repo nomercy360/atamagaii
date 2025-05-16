@@ -15,7 +15,8 @@ export interface TranscriptionTextProps {
 type TranscriptionSegment =
 	| { type: 'ruby'; base: string; text: string }
 	| { type: 'text'; content: string }
-	| { type: 'bold'; content: string; segments?: TranscriptionSegment[] };
+	| { type: 'bold'; content: string; segments?: TranscriptionSegment[] }
+	| { type: 'linebreak' };
 
 // Helper function to get the appropriate regex for transcription based on language
 const getTranscriptionRegex = (language: string, transcriptionType: string): RegExp => {
@@ -51,12 +52,20 @@ const parseTextToSegments = (text: string, language = 'ja', transcriptionType = 
 		return segments
 	}
 
-	// Step 1: Handle HTML tags like <b> separately to prevent interference with transcription parsing
+	// Step 1: Handle HTML tags like <b> and <br/> separately to prevent interference with transcription parsing
 	const htmlTags = new Map<string, { type: string, content: string }>()
 	let tagCounter = 0
 
+	// Replace <br/> tags with placeholders
+	let processedText = text.replace(/<br\s*\/?>|<br\s*>/g, () => {
+		const placeholder = `__HTML_TAG_${tagCounter}__`
+		htmlTags.set(placeholder, { type: 'linebreak', content: '' })
+		tagCounter++
+		return placeholder
+	})
+
 	// Replace bold tags with placeholders
-	let processedText = text.replace(/<b>(.+?)<\/b>/g, (_, content) => {
+	processedText = processedText.replace(/<b>(.+?)<\/b>/g, (_, content) => {
 		const placeholder = `__HTML_TAG_${tagCounter}__`
 		htmlTags.set(placeholder, { type: 'bold', content })
 		tagCounter++
@@ -116,7 +125,10 @@ const processPlainTextWithTags = (
 		const tagInfo = htmlTags.get(placeholder)
 
 		if (tagInfo) {
-			if (tagInfo.type === 'bold') {
+			if (tagInfo.type === 'linebreak') {
+				// Add a linebreak segment
+				segments.push({ type: 'linebreak' })
+			} else if (tagInfo.type === 'bold') {
 				// For bold tags, check if there's transcription inside
 				const transcriptionRegex = getTranscriptionRegex(language, transcriptionType)
 				if (tagInfo.content.includes('[') && tagInfo.content.match(transcriptionRegex)) {
@@ -182,7 +194,7 @@ const getFontClass = (language: string): string => {
  * TranscriptionText component for displaying text with reading aids for multiple languages
  * Supports:
  * - Transcription format: text[reading] (e.g., Japanese: "会[あ]う", Chinese: "你[nǐ]好[hǎo]")
- * - HTML tags: Currently supports <b> for bold text
+ * - HTML tags: Currently supports <b> for bold text and <br/> for line breaks
  * - Can handle nested tags and transcriptions
  * - Supports multiple languages (Japanese, Chinese, Thai, Georgian, etc.)
  */
@@ -249,6 +261,9 @@ export default function TranscriptionText(props: TranscriptionTextProps): JSX.El
 			}
 			// Simple bold text
 			return <span class="font-bold">{segment.content}</span>
+		} else if (segment.type === 'linebreak') {
+			// Render a line break
+			return <br />
 		} else {
 			// Plain text
 			return <>{segment.content}</>
