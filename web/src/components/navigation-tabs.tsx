@@ -6,12 +6,12 @@ export default function NavigationTabs(props: any) {
 	const location = useLocation()
 	return (
 		<>
-			<div class="fixed bottom-0 left-0 right-0 bg-card border-t border-border">
+			<div class="z-20 fixed bottom-0 left-0 right-0 bg-card border-t border-border">
 				<div class="container mx-auto px-4">
 					<div class="flex justify-around py-3">
 						<Link
 							href="/"
-							class={cn('w-full flex flex-col items-center space-y-1 text-neutral-400', location.pathname === '/' && 'text-white')}
+							class={cn('w-full flex flex-col items-center space-y-1 text-secondary-foreground', location.pathname === '/' && 'text-white')}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -34,8 +34,31 @@ export default function NavigationTabs(props: any) {
 							<span class="text-sm">Рейтинг</span>
 						</Link>
 						<Link
+							href="/stats"
+							class={cn('w-full flex flex-col items-center space-y-1 text-secondary-foreground', location.pathname === '/stats' && 'text-white')}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="24"
+								height="24"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								class="size-6"
+							>
+								<rect width="18" height="18" x="3" y="3" rx="2" />
+								<path d="M9 9h.01" />
+								<path d="M15 15h.01" />
+								<path d="M15 9h.01" />
+								<path d="M9 15h.01" />
+							</svg>
+							<span class="text-sm">Статистика</span>
+						</Link>
+						<Link
 							href="/profile"
-							class={cn('w-full flex flex-col items-center space-y-1 text-neutral-400', location.pathname === '/profile' && 'text-white')}
+							class={cn('w-full flex flex-col items-center space-y-1 text-secondary-foreground', location.pathname === '/profile' && 'text-white')}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"

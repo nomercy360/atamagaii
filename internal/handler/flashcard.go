@@ -45,6 +45,7 @@ func (h *Handler) AddFlashcardRoutes(g *echo.Group) {
 
 	g.POST("/cards/:id/review", h.ReviewCard)
 	g.GET("/stats", h.GetStats)
+	g.GET("/stats/history", h.GetStudyHistory)
 }
 
 func (h *Handler) GetDecks(c echo.Context) error {
@@ -278,6 +279,26 @@ func (h *Handler) GetStats(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, response)
+}
+
+func (h *Handler) GetStudyHistory(c echo.Context) error {
+	userID, err := GetUserIDFromToken(c)
+	if err != nil {
+		return err
+	}
+
+	// Parse the days parameter, default to 100 days
+	days := parseIntQuery(c, "days", 100)
+	
+	// Get study history
+	history, err := h.db.GetUserStudyHistory(userID, days)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch study history").WithInternal(err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"history": history,
+	})
 }
 
 func (h *Handler) GetCard(c echo.Context) error {

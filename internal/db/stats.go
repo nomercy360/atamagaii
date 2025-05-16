@@ -24,6 +24,13 @@ type StudyStats struct {
 	StreakDays int `json:"streak_days"`
 }
 
+// StudyHistoryItem represents study activity for a single day
+type StudyHistoryItem struct {
+	Date        string `json:"date"`         // Format: "YYYY-MM-DD"
+	CardCount   int    `json:"card_count"`   // Number of cards studied on this day
+	TimeSpentMs int    `json:"time_spent_ms"` // Time spent studying on this day in milliseconds
+}
+
 // GetUserStudyStats retrieves study statistics for a user
 func (s *Storage) GetUserStudyStats(userID string) (StudyStats, error) {
 	stats := StudyStats{}
@@ -124,4 +131,63 @@ func (s *Storage) GetUserStudyStats(userID string) (StudyStats, error) {
 	stats.StreakDays = 0
 
 	return stats, nil
+}
+
+// GetUserStudyHistory retrieves study history for a user for the last N days
+func (s *Storage) GetUserStudyHistory(userID string, days int) ([]StudyHistoryItem, error) {
+	history := []StudyHistoryItem{}
+
+	// Default to 100 days if not specified
+	if days <= 0 {
+		days = 100
+	}
+
+	// Calculate the start date (N days ago)
+	now := time.Now()
+	startDate := now.AddDate(0, 0, -days)
+	
+	// Format dates
+	startDateStr := startDate.Format("2006-01-02")
+	endDateStr := now.Format("2006-01-02")
+
+	// Query to get daily activity
+	query := `
+		SELECT 
+			DATE(r.reviewed_at) as study_date,
+			COUNT(*) as card_count,
+			SUM(r.time_spent_ms) as time_spent_ms
+		FROM reviews r
+		JOIN cards c ON c.id = r.card_id AND c.user_id = r.user_id
+		WHERE r.user_id = ? 
+		AND c.deleted_at IS NULL
+		AND DATE(r.reviewed_at) >= DATE(?)
+		AND DATE(r.reviewed_at) <= DATE(?)
+		GROUP BY DATE(r.reviewed_at)
+		ORDER BY DATE(r.reviewed_at) ASC
+	`
+
+	rows, err := s.db.Query(query, userID, startDateStr, endDateStr)
+	if err != nil {
+		return history, err
+	}
+	defer rows.Close()
+
+	// Process results
+	for rows.Next() {
+		var item StudyHistoryItem
+		var dateStr string
+		
+		if err := rows.Scan(&dateStr, &item.CardCount, &item.TimeSpentMs); err != nil {
+			return history, err
+		}
+		
+		item.Date = dateStr
+		history = append(history, item)
+	}
+
+	if err = rows.Err(); err != nil {
+		return history, err
+	}
+
+	return history, nil
 }

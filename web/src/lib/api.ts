@@ -126,10 +126,33 @@ export interface CardProgress {
 	last_reviewed_at?: string
 }
 
-export interface Stats {
-	due_cards: number
+export interface StudyStats {
+	cards_studied_today: number;
+	avg_time_per_card_ms: number;
+	total_time_studied_ms: number;
+	new_cards_today: number;
+	review_cards_today: number;
+	total_cards: number;
+	total_time_studied: string;
+	study_days: number;
+	total_reviews: number;
+	streak_days: number;
+}
 
-	[key: string]: any
+export interface StudyHistoryItem {
+	date: string;
+	card_count: number;
+	time_spent_ms: number;
+}
+
+export interface Stats {
+	due_cards: number;
+	study_stats: StudyStats;
+	[key: string]: any;
+}
+
+export interface StudyHistory {
+	history: StudyHistoryItem[];
 }
 
 export interface AuthTelegramRequest {
@@ -270,6 +293,24 @@ export async function generateCard(request: GenerateCardRequest): Promise<{
 	return apiRequest(`/cards/generate`, {
 		method: 'POST',
 		body: JSON.stringify(request),
+	})
+}
+
+export async function getStats(): Promise<{
+	data: Stats | null
+	error: string | null
+}> {
+	return apiRequest('/stats', {
+		method: 'GET',
+	})
+}
+
+export async function getStudyHistory(days: number = 100): Promise<{
+	data: StudyHistory | null
+	error: string | null
+}> {
+	return apiRequest(`/stats/history?days=${days}`, {
+		method: 'GET',
 	})
 }
 

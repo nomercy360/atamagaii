@@ -21,10 +21,10 @@
   "dependencies": {
     "@lottiefiles/dotlottie-web": "^0.44.0",
     "@solidjs/router": "^0.15.1",
-    "@tanstack/solid-query": "^5.62.2",
+    "@tanstack/solid-query": "^5.76.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "solid-js": "^1.9.3",
+    "solid-js": "^1.9.6",
     "solid-transition-group": "^0.2.3",
     "tailwind-merge": "^2.5.5"
   }
