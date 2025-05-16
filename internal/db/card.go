@@ -352,32 +352,25 @@ func (s *Storage) GetCardsForReview(
 	limit int,
 	newCardsLimitForDay int,
 ) ([]Card, error) {
-	reviewLimit := newCardsLimitForDay * 10
+	// reviewLimit := newCardsLimitForDay * 10
 
-	reviewCards, err := s.GetDueCards(userID, deckID, reviewLimit)
+	reviewCards, err := s.GetDueCards(userID, deckID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("error getting review cards: %w", err)
 	}
 
-	if len(reviewCards) >= limit {
-		SortCardsForReview(reviewCards, time.Now())
-		return reviewCards[:limit], nil
-	}
-
-	newCardsNeeded := limit - len(reviewCards)
-	if newCardsNeeded <= 0 {
-		return reviewCards, nil
-	}
-
-	newCards, err := s.GetNewCards(userID, deckID, newCardsNeeded, newCardsLimitForDay)
+	newCards, err := s.GetNewCards(userID, deckID, limit, newCardsLimitForDay)
 	if err != nil {
 		return nil, fmt.Errorf("error getting new cards: %w", err)
 	}
 
 	combinedCards := append(reviewCards, newCards...)
 
-	// Sort cards according to the spaced repetition algorithm priority
 	SortCardsForReview(combinedCards, time.Now())
+
+	if len(combinedCards) > limit {
+		combinedCards = combinedCards[:limit]
+	}
 
 	return combinedCards, nil
 }
