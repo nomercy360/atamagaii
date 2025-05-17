@@ -21,6 +21,12 @@
           "name": "Kaishi 1.5k",
           "description": "Всем знакомая колода кайши, с русскими переводами.",
           "level": "beginner"
+        },
+        {
+          "id": "minna_with_audio_8.json",
+          "name": "Minna no Nihongo 8 Lesson",
+          "description": "Vocabulary from Minna no Nihongo 8 lesson with audio",
+          "level": "beginner"
         }
       ]
     },

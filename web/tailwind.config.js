@@ -12,10 +12,10 @@ module.exports = {
 		},
 		extend: {
 			fontFamily: {
-				jp: ['"Noto Serif JP"', 'sans-serif'],          // Japanese
-				zh: ['"Noto Serif SC"', 'sans-serif'],          // Chinese (Simplified)
-				th: ['"Noto Serif Thai"', 'sans-serif'],        // Thai
-				ka: ['"Noto Serif Georgian"', 'sans-serif'],    // Georgian
+				jp: ['"Noto Sans JP"', 'sans-serif'],          // Japanese
+				zh: ['"Noto Sans SC"', 'sans-serif'],          // Chinese (Simplified)
+				th: ['"Noto Sans Thai"', 'sans-serif'],        // Thai
+				ka: ['"Noto Sans Georgian"', 'sans-serif'],    // Georgian
 			},
 			colors: {
 				border: 'hsl(var(--border))',
