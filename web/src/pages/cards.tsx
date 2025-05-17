@@ -180,17 +180,46 @@ export default function Cards() {
 		return buffer[idx]
 	}
 
-	// Start timer when a new card is shown (on either side)
+	// Start timer and preload audio when a new card is shown
 	createEffect(() => {
 		// We need to access cardIndex() for this effect to run when card changes
 		const currentIdx = cardIndex()
 		const hasCard = currentCard() !== null
+		const card = currentCard()
 
 		if (hasCard && !isTransitioning() && document.visibilityState === 'visible') {
 			// Reset and start the timer when a new card is shown
 			// Timer runs on both front and back sides
 			resetTimer()
 			startTimer()
+			
+			// Preload audio files for current card and next card if they exist
+			if (card) {
+				const audioFiles = []
+				if (card.fields.audio_word) {
+					audioFiles.push(card.fields.audio_word)
+				}
+				if (card.fields.audio_example) {
+					audioFiles.push(card.fields.audio_example)
+				}
+				
+				// Try to preload next card audio if available
+				const nextIdx = currentIdx + 1
+				const buffer = cardBuffer()
+				if (buffer.length > nextIdx) {
+					const nextCard = buffer[nextIdx]
+					if (nextCard?.fields.audio_word) {
+						audioFiles.push(nextCard.fields.audio_word)
+					}
+					if (nextCard?.fields.audio_example) {
+						audioFiles.push(nextCard.fields.audio_example)
+					}
+				}
+				
+				if (audioFiles.length > 0) {
+					audioService.preloadMultipleAudio(audioFiles)
+				}
+			}
 		}
 	})
 
@@ -372,7 +401,7 @@ export default function Cards() {
 						) : (
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 								<path d="M5 13L9 17L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-											stroke-linejoin="round" />
+										stroke-linejoin="round" />
 							</svg>
 						)}
 					</div>
@@ -404,7 +433,7 @@ export default function Cards() {
 									>
 										<svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 											<path d="M2 12C2 12 5.5 5 12 5C18.5 5 22 12 22 12C22 12 18.5 19 12 19C5.5 19 2 12 2 12Z"
-														stroke="currentColor" stroke-width="2" />
+													stroke="currentColor" stroke-width="2" />
 											<path
 												d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
 												stroke="currentColor" stroke-width="2" />
@@ -418,7 +447,7 @@ export default function Cards() {
 									>
 										<svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 											<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" stroke="currentColor"
-														stroke-width="2" />
+													stroke-width="2" />
 										</svg>
 										Edit Card
 									</button>
