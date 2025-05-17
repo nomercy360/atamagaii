@@ -29,7 +29,7 @@ export default function EditCard() {
 		example_en: '',
 		example_ru: '',
 		frequency: 0,
-		language_code: 'ja',
+		language_code: 'jp',
 		transcription_type: 'furigana',
 		audio_word: '',
 		audio_example: '',

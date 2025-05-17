@@ -7,8 +7,6 @@ export interface TranscriptionTextProps {
 	rtClass?: string;
 	language?: string;           // ISO 639-1 language code (e.g., "ja", "zh", "en")
 	transcriptionType?: string;  // Type of transcription (furigana, pinyin, etc.)
-	secondaryText?: string;      // Secondary text to display below the main text (for Thai language)
-	secondaryTextSize?: 'xs' | 'sm' | 'base' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl';
 }
 
 // Type for parsed segments
@@ -199,14 +197,10 @@ const getFontClass = (language: string): string => {
  * - Supports multiple languages (Japanese, Chinese, Thai, Georgian, etc.)
  */
 export default function TranscriptionText(props: TranscriptionTextProps): JSX.Element {
-	const [local, others] = splitProps(props, ['text', 'class', 'textSize', 'rtClass', 'language', 'transcriptionType', 'secondaryText', 'secondaryTextSize'])
+	const [local, others] = splitProps(props, ['text', 'class', 'textSize', 'rtClass', 'language', 'transcriptionType'])
 
 	const currentTextSize = createMemo(() => {
 		return local.textSize || 'base'
-	})
-
-	const secondaryTextSize = createMemo(() => {
-		return local.secondaryTextSize || 'sm'
 	})
 
 	const defaultRtClass = createMemo(() => {
@@ -214,7 +208,7 @@ export default function TranscriptionText(props: TranscriptionTextProps): JSX.El
 	})
 
 	const finalRtClasses = createMemo(() => {
-		return `${defaultRtClass()} ${local.rtClass || ''}`
+		return `font-normal ${defaultRtClass()} ${local.rtClass || ''}`
 	})
 
 	const language = createMemo(() => {
@@ -232,11 +226,6 @@ export default function TranscriptionText(props: TranscriptionTextProps): JSX.El
 	// Parse the input text into segments
 	const segments = createMemo(() =>
 		parseTextToSegments(local.text, language(), transcriptionType()),
-	)
-
-	// Parse secondary text if available
-	const secondarySegments = createMemo(() =>
-		local.secondaryText ? parseTextToSegments(local.secondaryText, language(), transcriptionType()) : [],
 	)
 
 	// Recursive renderer for segments (to handle nested structures)
@@ -269,24 +258,6 @@ export default function TranscriptionText(props: TranscriptionTextProps): JSX.El
 			return <>{segment.content}</>
 		}
 	}
-
-	// // For Thai language with secondaryText, show the main text and secondary text below
-	// if (language() === 'th' && local.secondaryText) {
-	// 	return (
-	// 		<div class={`${local.class || ''}`}>
-	// 			<p class={`text-${currentTextSize()} leading-relaxed ${fontClass()}`} {...others}>
-	// 				<For each={segments()}>
-	// 					{(segment) => renderSegment(segment)}
-	// 				</For>
-	// 			</p>
-	// 			<p class={`text-${secondaryTextSize()} leading-tight ${fontClass()} text-muted-foreground mt-1`}>
-	// 				<For each={secondarySegments()}>
-	// 					{(segment) => renderSegment(segment)}
-	// 				</For>
-	// 			</p>
-	// 		</div>
-	// 	)
-	// }
 
 	// Default rendering for other languages
 	return (

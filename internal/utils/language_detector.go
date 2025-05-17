@@ -15,7 +15,7 @@ func InitLanguageDetector() {
 }
 
 // DetectLanguage detects the language of the given text
-// Returns ISO 639-1 language code (e.g., "ja", "th", "ka", "en")
+// Returns ISO 639-1 language code (e.g., "jp", "th", "ge", "en")
 func DetectLanguage(text string) string {
 	// Initialize detector if it hasn't been initialized yet
 	if languageDetector == nil {
@@ -37,13 +37,13 @@ func DetectLanguage(text string) string {
 // GetDefaultTranscriptionType returns the default transcription type for the given language code
 func GetDefaultTranscriptionType(languageCode string) string {
 	switch languageCode {
-	case "ja":
+	case "jp":
 		return "furigana"
 	case "zh":
 		return "pinyin"
 	case "th":
 		return "thai_romanization"
-	case "ka":
+	case "ge":
 		return "mkhedruli"
 	default:
 		return "none"

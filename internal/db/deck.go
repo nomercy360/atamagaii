@@ -12,7 +12,6 @@ import (
 type Deck struct {
 	ID                string          `db:"id" json:"id"`
 	Name              string          `db:"name" json:"name"`
-	Description       string          `db:"description" json:"description"`
 	Level             string          `db:"level" json:"level"`
 	LanguageCode      string          `db:"language_code" json:"language_code"`           // ISO 639-1 language code (e.g., "ja", "en", "th")
 	TranscriptionType string          `db:"transcription_type" json:"transcription_type"` // Type of transcription/reading aids
@@ -24,26 +23,26 @@ type Deck struct {
 	Stats             *DeckStatistics `json:"stats,omitempty"`
 }
 
-func (s *Storage) CreateDeck(userID, name, description, level string, languageCode string, transcriptionType string) (*Deck, error) {
+func (s *Storage) CreateDeck(userID, name, level string, languageCode string, transcriptionType string) (*Deck, error) {
 	deckID := nanoid.Must()
 	now := time.Now()
 	defaultNewCardsPerDay := 20
 
 	// Default to Japanese if no language code specified
 	if languageCode == "" {
-		languageCode = "ja"
+		languageCode = "jp"
 	}
 
 	// Default transcription type based on language
 	if transcriptionType == "" {
 		switch languageCode {
-		case "ja":
+		case "jp":
 			transcriptionType = "furigana"
 		case "zh":
 			transcriptionType = "pinyin"
 		case "th":
 			transcriptionType = "thai_romanization"
-		case "ka":
+		case "ge":
 			transcriptionType = "mkhedruli"
 		default:
 			transcriptionType = "none"
@@ -51,11 +50,11 @@ func (s *Storage) CreateDeck(userID, name, description, level string, languageCo
 	}
 
 	query := `
-		INSERT INTO decks (id, name, description, level, language_code, transcription_type, new_cards_per_day, user_id, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO decks (id, name, level, language_code, transcription_type, new_cards_per_day, user_id, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
-	_, err := s.db.Exec(query, deckID, name, description, level, languageCode, transcriptionType, defaultNewCardsPerDay, userID, now, now)
+	_, err := s.db.Exec(query, deckID, name, level, languageCode, transcriptionType, defaultNewCardsPerDay, userID, now, now)
 	if err != nil {
 		return nil, fmt.Errorf("error creating deck: %w", err)
 	}
@@ -63,7 +62,6 @@ func (s *Storage) CreateDeck(userID, name, description, level string, languageCo
 	return &Deck{
 		ID:                deckID,
 		Name:              name,
-		Description:       description,
 		Level:             level,
 		LanguageCode:      languageCode,
 		TranscriptionType: transcriptionType,
@@ -76,7 +74,7 @@ func (s *Storage) CreateDeck(userID, name, description, level string, languageCo
 
 func (s *Storage) GetDecks(userID string) ([]Deck, error) {
 	query := `
-		SELECT id, name, description, level, language_code, transcription_type, new_cards_per_day, user_id, created_at, updated_at, deleted_at
+		SELECT id, name, level, language_code, transcription_type, new_cards_per_day, user_id, created_at, updated_at, deleted_at
 		FROM decks
 		WHERE user_id = ? AND deleted_at IS NULL
 	`
@@ -92,7 +90,6 @@ func (s *Storage) GetDecks(userID string) ([]Deck, error) {
 		if err := rows.Scan(
 			&deck.ID,
 			&deck.Name,
-			&deck.Description,
 			&deck.Level,
 			&deck.LanguageCode,
 			&deck.TranscriptionType,
@@ -123,7 +120,7 @@ func (s *Storage) GetDecks(userID string) ([]Deck, error) {
 
 func (s *Storage) GetDeck(deckID string) (*Deck, error) {
 	query := `
-		SELECT id, name, description, level, language_code, transcription_type, new_cards_per_day, user_id, created_at, updated_at, deleted_at
+		SELECT id, name, level, language_code, transcription_type, new_cards_per_day, user_id, created_at, updated_at, deleted_at
 		FROM decks
 		WHERE id = ? AND deleted_at IS NULL
 	`
@@ -132,7 +129,6 @@ func (s *Storage) GetDeck(deckID string) (*Deck, error) {
 	err := s.db.QueryRow(query, deckID).Scan(
 		&deck.ID,
 		&deck.Name,
-		&deck.Description,
 		&deck.Level,
 		&deck.LanguageCode,
 		&deck.TranscriptionType,
@@ -160,19 +156,15 @@ func (s *Storage) GetDeck(deckID string) (*Deck, error) {
 	return &deck, nil
 }
 
-func (s *Storage) UpdateDeckNewCardsPerDay(deckID string, newCardsPerDay int) error {
-	if newCardsPerDay < 0 {
-		return fmt.Errorf("new cards per day cannot be negative")
-	}
-
+func (s *Storage) UpdateDeckSettings(deckID string, deck *Deck) error {
 	query := `
 		UPDATE decks
-		SET new_cards_per_day = ?, updated_at = ?
+		SET new_cards_per_day = ?, name = ?, updated_at = ?
 		WHERE id = ? AND deleted_at IS NULL
 	`
 
 	now := time.Now()
-	result, err := s.db.Exec(query, newCardsPerDay, now, deckID)
+	result, err := s.db.Exec(query, deck.NewCardsPerDay, deck.Name, now, deckID)
 	if err != nil {
 		return fmt.Errorf("error updating deck new cards per day: %w", err)
 	}
@@ -351,9 +343,9 @@ func (s *Storage) GetDeckStatistics(userID string, deckID string, newCardsPerDay
 
 func (s *Storage) GetOrCreateGeneratedDeck(userID string, languageCode string, transcriptionType string) (*Deck, error) {
 	query := `
-		SELECT id, name, description, level, language_code, transcription_type, new_cards_per_day, user_id, created_at, updated_at, deleted_at
+		SELECT id, name, level, language_code, transcription_type, new_cards_per_day, user_id, created_at, updated_at, deleted_at
 		FROM decks
-		WHERE user_id = ? AND language_code = ? AND description LIKE 'Generated deck for %' AND deleted_at IS NULL
+		WHERE user_id = ? AND language_code = ? AND name LIKE 'Generated %' AND deleted_at IS NULL
 		LIMIT 1
 	`
 
@@ -361,7 +353,6 @@ func (s *Storage) GetOrCreateGeneratedDeck(userID string, languageCode string, t
 	err := s.db.QueryRow(query, userID, languageCode).Scan(
 		&deck.ID,
 		&deck.Name,
-		&deck.Description,
 		&deck.Level,
 		&deck.LanguageCode,
 		&deck.TranscriptionType,
@@ -385,10 +376,9 @@ func (s *Storage) GetOrCreateGeneratedDeck(userID string, languageCode string, t
 		languageName := utils.GetLanguageNameFromCode(languageCode)
 
 		name := fmt.Sprintf("Generated %s Cards", languageName)
-		description := fmt.Sprintf("Generated deck for %s language", languageName)
 		level := "mixed"
 
-		return s.CreateDeck(userID, name, description, level, languageCode, transcriptionType)
+		return s.CreateDeck(userID, name, level, languageCode, transcriptionType)
 	}
 
 	return nil, fmt.Errorf("error finding generated deck: %w", err)

@@ -17,13 +17,13 @@ type ReviewCardRequest struct {
 }
 
 type CreateDeckFromFileRequest struct {
-	Name        string `json:"name" validate:"required"`
-	Description string `json:"description"`
-	FileName    string `json:"file_name" validate:"required"` // e.g., "vocab_n5.json"
+	Name     string `json:"name" validate:"required"`
+	FileName string `json:"file_name" validate:"required"` // e.g., "vocab_n5.json"
 }
 
 type UpdateDeckSettingsRequest struct {
-	NewCardsPerDay int `json:"new_cards_per_day" validate:"required,min=1,max=500"`
+	NewCardsPerDay int    `json:"new_cards_per_day" validate:"required,min=1,max=500"`
+	Name           string `json:"name" validate:"required"`
 }
 
 type UpdateCardRequest struct {
@@ -274,7 +274,7 @@ func (h *Handler) GetStats(c echo.Context) error {
 
 	// Combine both statistics types in the response
 	response := map[string]interface{}{
-		"due_cards": dueCount,
+		"due_cards":   dueCount,
 		"study_stats": studyStats,
 	}
 
@@ -289,7 +289,7 @@ func (h *Handler) GetStudyHistory(c echo.Context) error {
 
 	// Parse the days parameter, default to 100 days
 	days := parseIntQuery(c, "days", 100)
-	
+
 	// Get study history
 	history, err := h.db.GetUserStudyHistory(userID, days)
 	if err != nil {
@@ -360,7 +360,10 @@ func (h *Handler) UpdateDeckSettings(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	if err := h.db.UpdateDeckNewCardsPerDay(deckID, req.NewCardsPerDay); err != nil {
+	deck.NewCardsPerDay = req.NewCardsPerDay
+	deck.Name = req.Name
+
+	if err := h.db.UpdateDeckSettings(deckID, deck); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update deck settings: "+err.Error())
 	}
 

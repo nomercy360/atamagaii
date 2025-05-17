@@ -5,13 +5,78 @@ import { useMainButton } from '~/lib/useMainButton'
 import { useBackButton } from '~/lib/useBackButton'
 import { showToast } from '~/lib/toast-service'
 
+type FlagProps = {
+	code: string;
+	clsName?: string;
+	width?: number;
+	height?: number;
+}
+
+export function FlagIcon({ code, width = 512, height = 512, clsName }: FlagProps) {
+	const flags = {
+		th: (
+			<svg width={width}
+					 height={height}
+					 viewBox="0 0 512 512"
+					 fill="none"
+					 xmlns="http://www.w3.org/2000/svg"
+					 class={clsName}>
+				<rect width="512" height="512" fill="var(--flag-palette-white, #eeeeee)" />
+				<path
+					fill-rule="evenodd"
+					clip-rule="evenodd"
+					d="M512 0H0V85.3333H512V0ZM512 426.666H0V511.999H512V426.666Z"
+					fill="var(--flag-palette-bright-red, #d80027)"
+				/>
+				<rect y="170.668" width="512" height="170.667" fill="var(--flag-palette-navy, #002266)" />
+			</svg>
+		),
+		ge: (
+			<svg width={width}
+					 height={height}
+					 viewBox="0 0 512 512"
+					 fill="none"
+					 xmlns="http://www.w3.org/2000/svg"
+					 class={clsName}>
+				<rect width="512" height="512" fill="var(--flag-palette-white, #eeeeee)" />
+				<path
+					d="M512 288V224H288V0H224V224H0V288H224V512H288V288H512Z"
+					fill="var(--flag-palette-bright-red, #d80027)"
+				/>
+				<path
+					fill-rule="evenodd"
+					clip-rule="evenodd"
+					d="M384 64V96H352V128H384V160H416V128H448V96H416V64H384ZM96 384V352H128V384H160V416H128V448H96V416H64V384H96ZM384 384V352H416V384H448V416H416V448H384V416H352V384H384ZM96 96V64H128V96H160V128H128V160H96V128H64V96H96Z"
+					fill="var(--flag-palette-bright-red, #d80027)"
+				/>
+			</svg>
+		),
+		jp: (
+			<svg
+				width={width}
+				height={height}
+				viewBox="0 0 512 512"
+				fill="none"
+				xmlns="http://www.w3.org/2000/svg"
+				class={clsName}>
+				<rect width="512" height="512" fill="var(--flag-palette-white, #eeeeee)" />
+				<path
+					d="M256 368C317.856 368 368 317.856 368 256C368 194.144 317.856 144 256 144C194.144 144 144 194.144 144 256C144 317.856 194.144 368 256 368Z"
+					fill="var(--flag-palette-bright-red, #d80027)"
+				/>
+			</svg>
+		),
+	}
+
+	return flags[code as keyof typeof flags] || null
+}
+
 export default function ImportDeck() {
 	const navigate = useNavigate()
 	const mainButton = useMainButton()
 	const backButton = useBackButton()
 
 	const [name, setName] = createSignal('')
-	const [description, setDescription] = createSignal('')
 	const [selectedFile, setSelectedFile] = createSignal<string | null>(null)
 	const [selectedLanguage, setSelectedLanguage] = createSignal<string | null>(null)
 	const [isLoading, setIsLoading] = createSignal(false)
@@ -32,7 +97,7 @@ export default function ImportDeck() {
 	})
 
 	onMount(() => {
-		mainButton.setVisible('Import Deck')
+		mainButton.setVisible('Add Deck')
 		mainButton.disable()
 
 		mainButton.onClick(handleImport)
@@ -44,10 +109,10 @@ export default function ImportDeck() {
 	})
 
 	const updateMainButton = () => {
-		if (name() && description() && selectedFile()) {
-			mainButton.enable('Import Deck')
+		if (name() && selectedFile()) {
+			mainButton.enable('Add Deck')
 		} else {
-			mainButton.disable('Import Deck')
+			mainButton.disable('Add Deck')
 		}
 	}
 
@@ -55,13 +120,12 @@ export default function ImportDeck() {
 		setSelectedFile(fileId)
 		if (deck) {
 			if (!name()) setName(deck.name)
-			if (!description()) setDescription(deck.description)
 		}
 		updateMainButton()
 	}
 
 	const handleImport = async () => {
-		if (!name() || !description() || !selectedFile()) {
+		if (!name() || !selectedFile()) {
 			setError('Please fill all fields and select a deck')
 			return
 		}
@@ -73,7 +137,6 @@ export default function ImportDeck() {
 		try {
 			const { data, error } = await importDeck({
 				name: name(),
-				description: description(),
 				file_name: selectedFile()!,
 			})
 
@@ -100,55 +163,17 @@ export default function ImportDeck() {
 	}
 
 	return (
-		<div class="container mx-auto px-4 py-6 max-w-md overflow-y-auto h-screen">
-			<h1 class="text-2xl font-bold mb-6">Import Deck</h1>
+		<div class=" container mx-auto px-4 py-6 max-w-md overflow-y-auto h-screen">
+			<h1 class=" text-2xl font-bold mb-6">New Deck</h1>
 
-			<div class="space-y-4">
+			<div class=" space-y-4">
 				{error() && (
-					<div class="p-3 rounded-md bg-error/20 text-error-foreground text-sm">
+					<div class=" p-3 rounded-md bg-error/20 text-error-foreground text-sm">
 						{error()}
-					</div>
-				)}
-
-				<div class="space-y-2">
-					<label for="name" class="text-sm font-medium">
-						Deck Name
-					</label>
-					<input
-						id="name"
-						type="text"
-						value={name()}
-						onInput={(e) => {
-							setName(e.currentTarget.value)
-							updateMainButton()
-						}}
-						class="w-full px-3 py-2 border border-border rounded-md bg-card text-foreground"
-						placeholder="Enter deck name"
-						disabled={isLoading()}
-					/>
-				</div>
-
-				<div class="space-y-2">
-					<label for="description" class="text-sm font-medium">
-						Description
-					</label>
-					<textarea
-						id="description"
-						value={description()}
-						onInput={(e) => {
-							setDescription(e.currentTarget.value)
-							updateMainButton()
-						}}
-						class="w-full px-3 py-2 border border-border rounded-md bg-card text-foreground h-20 resize-none"
-						placeholder="Enter deck description"
-						disabled={isLoading()}
-					/>
-				</div>
+					</div>)
+				}
 
 				<div class="space-y-4">
-					<label class="text-sm font-medium mb-2 block">
-						Select Language
-					</label>
 					<Show when={!availableDecksData.loading} fallback={<div class="text-sm">Loading available decks...</div>}>
 						<div class="space-y-4">
 							<div class="flex flex-wrap gap-2">
@@ -157,10 +182,13 @@ export default function ImportDeck() {
 										<button
 											type="button"
 											onClick={() => setSelectedLanguage(language.code)}
-											class={`px-3 py-2 rounded-md text-sm font-medium
-												${selectedLanguage() === language.code ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground border border-border'}`}
+											class={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2
+												${selectedLanguage() === language.code ? 'bg-secondary text-secondary-foreground border' : 'bg-card text-foreground border border-border'}`}
 											disabled={isLoading()}
 										>
+											<span class="size-4 inline-block">
+												<FlagIcon clsName="rounded-full" code={language.code} width={16} height={16} />
+											</span>
 											{language.name}
 										</button>
 									)}
@@ -187,7 +215,6 @@ export default function ImportDeck() {
 													</div>
 													<div>
 														<p class="font-medium">{deck.name}</p>
-														<p class="text-xs text-muted-foreground">{deck.description}</p>
 														<p class="text-xs text-muted-foreground mt-1">Level: {deck.level}</p>
 													</div>
 												</button>

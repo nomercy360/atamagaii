@@ -56,7 +56,6 @@ export interface User {
 export interface Deck {
 	id: string
 	name: string
-	description: string
 	level: string
 	new_cards_per_day: number
 	user_id: string
@@ -166,13 +165,11 @@ export interface AuthTelegramResponse {
 
 export interface CreateDeckRequest {
 	name: string
-	description: string
 	file_name: string
 }
 
 export interface ImportDeckRequest {
 	name: string
-	description: string
 	file_name: string
 }
 
@@ -185,7 +182,6 @@ export interface ImportDeckResponse {
 export interface AvailableDeck {
 	id: string
 	name: string
-	description: string
 	level: string
 }
 
@@ -237,6 +233,7 @@ export interface CardReviewResponse {
 
 export interface UpdateDeckSettingsRequest {
 	new_cards_per_day: number
+	name?: string
 }
 
 export async function updateDeckSettings(deckId: string, settings: UpdateDeckSettingsRequest): Promise<{

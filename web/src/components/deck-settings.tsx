@@ -10,12 +10,14 @@ interface DeckSettingsProps {
 
 export default function DeckSettings(props: DeckSettingsProps) {
 	const [newCardsPerDay, setNewCardsPerDay] = createSignal(props.deck.new_cards_per_day)
+	const [deckName, setDeckName] = createSignal(props.deck.name)
 	const [loading, setLoading] = createSignal(false)
 	const [error, setError] = createSignal<string | null>(null)
 	const [showDeleteConfirm, setShowDeleteConfirm] = createSignal(false)
 
 	createEffect(() => {
 		setNewCardsPerDay(props.deck.new_cards_per_day)
+		setDeckName(props.deck.name)
 	})
 
 	const handleSubmit = async (e: Event) => {
@@ -23,8 +25,16 @@ export default function DeckSettings(props: DeckSettingsProps) {
 		setLoading(true)
 		setError(null)
 
+		// Validate deck name is not empty
+		if (!deckName().trim()) {
+			setError("Deck name cannot be empty")
+			setLoading(false)
+			return
+		}
+
 		const { data, error } = await updateDeckSettings(props.deck.id, {
 			new_cards_per_day: newCardsPerDay(),
+			name: deckName()
 		})
 
 		setLoading(false)
@@ -109,6 +119,19 @@ export default function DeckSettings(props: DeckSettingsProps) {
 				}>
 					<h2 class="text-xl font-bold mb-4">Deck Settings</h2>
 					<form onSubmit={handleSubmit}>
+						<div class="mb-4">
+							<label class="block text-sm font-medium mb-1">
+								Deck Name
+							</label>
+							<input
+								type="text"
+								value={deckName()}
+								onInput={(e) => setDeckName(e.currentTarget.value)}
+								class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-foreground bg-background"
+								placeholder="Enter deck name"
+							/>
+						</div>
+
 						<div class="mb-4">
 							<label class="block text-sm font-medium mb-1">
 								New Cards Per Day

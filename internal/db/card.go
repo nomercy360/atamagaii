@@ -45,7 +45,7 @@ type VocabularyItem struct {
 
 	// Metadata
 	Frequency         int    `json:"frequency,omitempty"`          // Usage frequency data
-	LanguageCode      string `json:"language_code"`                // ISO 639-1 language code (e.g., "ja", "zh", "en")
+	LanguageCode      string `json:"language_code"`                // ISO 639-1 language code (e.g., "jp", "zh", "en")
 	TranscriptionType string `json:"transcription_type,omitempty"` // Type of transcription (furigana, pinyin, etc.)
 
 	// Media

@@ -470,7 +470,7 @@ export default function Cards() {
 									<TranscriptionText
 										text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
 										textSize="5xl"
-										language={currentCard()?.fields.language_code || 'ja'}
+										language={currentCard()?.fields.language_code || 'jp'}
 										transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 									/>
 								</div>
@@ -480,7 +480,7 @@ export default function Cards() {
 										<TranscriptionText
 											text={currentCard()?.fields.example_native || currentCard()?.fields.example_native || ''}
 											textSize="xl"
-											language={currentCard()?.fields.language_code || 'ja'}
+											language={currentCard()?.fields.language_code || 'jp'}
 											transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 										/>
 									</div>
@@ -494,14 +494,14 @@ export default function Cards() {
 											<TranscriptionText
 												text={currentCard()?.fields.term_with_transcription || currentCard()?.fields.term_with_transcription!}
 												textSize="5xl"
-												language={currentCard()?.fields.language_code || 'ja'}
+												language={currentCard()?.fields.language_code || 'jp'}
 												transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 											/>
 										) : (
 											<TranscriptionText
 												text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
 												textSize="5xl"
-												language={currentCard()?.fields.language_code || 'ja'}
+												language={currentCard()?.fields.language_code || 'jp'}
 												transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 											/>
 										)}
@@ -521,7 +521,7 @@ export default function Cards() {
 										 </span>
 									</Show>
 								</div>
-								<div class="text-center text-xl font-normal mb-8">{currentCard()?.fields.meaning_ru}</div>
+								<div class="text-center text-xl font-normal mb-8 mt-3">{currentCard()?.fields.meaning_ru}</div>
 								<Show when={currentCard()?.fields.example_native}>
 									<div class="text-sm space-y-2 w-full">
 										<div class="bg-muted rounded-md p-2">
@@ -531,7 +531,7 @@ export default function Cards() {
 														<TranscriptionText
 															text={currentCard()?.fields.example_with_transcription || ''}
 															textSize="2xl"
-															language={currentCard()?.fields.language_code || 'ja'}
+															language={currentCard()?.fields.language_code || 'jp'}
 															rtClass={cn('opacity-70 font-normal')}
 															transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 														/>
@@ -539,7 +539,7 @@ export default function Cards() {
 														<TranscriptionText
 															text={currentCard()?.fields.example_native || ''}
 															textSize="2xl"
-															language={currentCard()?.fields.language_code || 'ja'}
+															language={currentCard()?.fields.language_code || 'jp'}
 															transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 														/>
 													)}

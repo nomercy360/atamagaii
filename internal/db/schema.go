@@ -18,7 +18,6 @@ func (s *Storage) UpdateSchema() error {
 	CREATE TABLE IF NOT EXISTS decks (
 		id TEXT PRIMARY KEY,
 		name TEXT NOT NULL,
-		description TEXT,
 		new_cards_per_day INTEGER DEFAULT 7,
 		level TEXT,
 		language_code TEXT DEFAULT 'ja',

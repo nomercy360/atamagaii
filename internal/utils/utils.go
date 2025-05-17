@@ -25,7 +25,7 @@ func FindDirUp(dirName string, maxDepth int) (string, error) {
 
 func GetLanguageNameFromCode(code string) string {
 	languages := map[string]string{
-		"ja": "Japanese",
+		"jp": "Japanese",
 		"en": "English",
 		"es": "Spanish",
 		"ru": "Russian",
@@ -39,7 +39,7 @@ func GetLanguageNameFromCode(code string) string {
 		"tr": "Turkish",
 		"th": "Thai",
 		"hi": "Hindi",
-		"ka": "Georgian",
+		"ge": "Georgian",
 		"vi": "Vietnamese",
 	}
 

@@ -25,10 +25,9 @@ type LanguageGroup struct {
 
 // DeckInfo represents information about an available deck for import
 type DeckInfo struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Level       string `json:"level"`
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Level string `json:"level"`
 }
 
 func (h *Handler) CreateDeckFromFile(c echo.Context) error {
@@ -93,9 +92,9 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 				deckFound = true
 
 				switch languageCode {
-				case "ja":
+				case "jp":
 					transcriptionType = "furigana"
-				case "ka":
+				case "ge":
 					transcriptionType = "transliteration"
 				case "th":
 					transcriptionType = "aua"
@@ -116,7 +115,7 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Deck with ID %s not found in available decks", req.FileName))
 	}
 
-	deck, err := h.db.CreateDeck(userID, req.Name, req.Description, level, languageCode, transcriptionType)
+	deck, err := h.db.CreateDeck(userID, req.Name, level, languageCode, transcriptionType)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to create deck: %v", err))
 	}

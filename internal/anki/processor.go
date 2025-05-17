@@ -278,7 +278,7 @@ func (p *Processor) UploadMediaFiles(ctx context.Context, mediaFiles []MediaFile
 
 func (p *Processor) detectLanguageFromNotes(notes []Note, fieldMapping map[string]int) string {
 
-	defaultLanguage := "ja"
+	defaultLanguage := "jp"
 
 	sampleSize := 5
 	if len(notes) < sampleSize {
@@ -301,7 +301,7 @@ func (p *Processor) detectLanguageFromNotes(notes []Note, fieldMapping map[strin
 
 		japanesePattern := regexp.MustCompile(`[\p{Hiragana}\p{Katakana}\p{Han}]`)
 		if japanesePattern.MatchString(wordField) {
-			return "ja"
+			return "jp"
 		}
 
 		chinesePattern := regexp.MustCompile(`[\p{Han}]`)
@@ -316,7 +316,7 @@ func (p *Processor) detectLanguageFromNotes(notes []Note, fieldMapping map[strin
 
 		georgianPattern := regexp.MustCompile(`[\u10A0-\u10FF]`)
 		if georgianPattern.MatchString(wordField) {
-			return "ka"
+			return "ge"
 		}
 	}
 
@@ -325,7 +325,7 @@ func (p *Processor) detectLanguageFromNotes(notes []Note, fieldMapping map[strin
 
 func (p *Processor) inferTranscriptionType(language string, fieldMapping map[string]int) string {
 	switch language {
-	case "ja":
+	case "jp":
 		if _, ok := fieldMapping["Word Furigana"]; ok {
 			return "furigana"
 		}
@@ -337,20 +337,20 @@ func (p *Processor) inferTranscriptionType(language string, fieldMapping map[str
 		if _, ok := fieldMapping["Word Romanization"]; ok {
 			return "thai_romanization"
 		}
-	case "ka":
+	case "ge":
 		if _, ok := fieldMapping["Word Transliteration"]; ok {
 			return "mkhedruli"
 		}
 	}
 
 	switch language {
-	case "ja":
+	case "jp":
 		return "furigana"
 	case "zh":
 		return "pinyin"
 	case "th":
 		return "thai_romanization"
-	case "ka":
+	case "ge":
 		return "mkhedruli"
 	default:
 		return "none"
@@ -428,7 +428,7 @@ func (p *Processor) ConvertToVocabularyItems(ankiExport *Export, mediaURLs map[s
 			transcriptionField = "Word Romanization"
 			termWithTranscriptionField = "Word With Romanization"
 			exampleWithTranscriptionField = "Sentence With Romanization"
-		case "ka":
+		case "ge":
 			transcriptionField = "Word Transliteration"
 			termWithTranscriptionField = "Word With Transliteration"
 			exampleWithTranscriptionField = "Sentence With Transliteration"
@@ -498,7 +498,7 @@ func (p *Processor) ImportDeck(ctx context.Context, userID, deckName, zipFilePat
 	}
 
 	if languageCode == "" {
-		languageCode = "ja"
+		languageCode = "jp"
 	}
 
 	transcriptionType := p.inferTranscriptionType(languageCode, map[string]int{})
@@ -510,7 +510,7 @@ func (p *Processor) ImportDeck(ctx context.Context, userID, deckName, zipFilePat
 		vocabItems[i].TranscriptionType = transcriptionType
 	}
 
-	deck, err := p.db.CreateDeck(userID, result.DeckName, fmt.Sprintf("Imported from Anki: %s", result.DeckName), "", languageCode, transcriptionType)
+	deck, err := p.db.CreateDeck(userID, result.DeckName, "", languageCode, transcriptionType)
 	if err != nil {
 		return result, fmt.Errorf("failed to create deck: %w", err)
 	}
