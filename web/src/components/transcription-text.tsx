@@ -232,7 +232,7 @@ export default function TranscriptionText(props: TranscriptionTextProps): JSX.El
 	const renderSegment = (segment: TranscriptionSegment): JSX.Element => {
 		if (segment.type === 'ruby') {
 			return (
-				<ruby class={`${language() == 'th' ? 'ruby-under' : ''}`}>
+				<ruby class={`font-normal ${language() == 'th' ? 'ruby-under' : ''}`}>
 					{segment.base}
 					<rt class={finalRtClasses()}>{segment.text}</rt>
 				</ruby>
@@ -241,7 +241,7 @@ export default function TranscriptionText(props: TranscriptionTextProps): JSX.El
 			if (segment.segments) {
 				// If it has nested segments, render those within the bold context
 				return (
-					<span class="font-bold">
+					<span class="font-semibold">
 						<For each={segment.segments}>
 							{(nestedSegment) => renderSegment(nestedSegment)}
 						</For>
@@ -249,7 +249,7 @@ export default function TranscriptionText(props: TranscriptionTextProps): JSX.El
 				)
 			}
 			// Simple bold text
-			return <span class="font-bold">{segment.content}</span>
+			return <span class="font-medium">{segment.content}</span>
 		} else if (segment.type === 'linebreak') {
 			// Render a line break
 			return <br />

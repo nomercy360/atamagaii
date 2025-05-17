@@ -286,7 +286,11 @@ export default function Cards() {
 		}
 
 		if (isTransitioning()) return
+
+		// Only flip if card is not already flipped
+		// This prevents the click from both flipping and rating
 		if (!flipped()) {
+			e.stopPropagation() // Prevent click from propagating to rating handlers
 			hapticFeedback('impact', 'light')
 
 			setFlipped(true)
@@ -466,29 +470,25 @@ export default function Cards() {
 							onClick={handleCardFlip}
 						>
 							<div class={getFrontFaceClasses(flipped(), isTransitioning())}>
-								<div class="text-5xl font-semibold">
+								<TranscriptionText
+									text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
+									textSize="5xl"
+									language={currentCard()?.fields.language_code || 'jp'}
+									transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+								/>
+								<Show
+									when={currentCard()?.fields.example_native || currentCard()?.fields.example_native}>
 									<TranscriptionText
-										text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
-										textSize="5xl"
+										text={currentCard()?.fields.example_native || currentCard()?.fields.example_native || ''}
+										textSize="xl"
 										language={currentCard()?.fields.language_code || 'jp'}
 										transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 									/>
-								</div>
-								<Show
-									when={currentCard()?.fields.example_native || currentCard()?.fields.example_native}>
-									<div class="text-2xl p-3 mb-2 max-w-full">
-										<TranscriptionText
-											text={currentCard()?.fields.example_native || currentCard()?.fields.example_native || ''}
-											textSize="xl"
-											language={currentCard()?.fields.language_code || 'jp'}
-											transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
-										/>
-									</div>
 								</Show>
 							</div>
 
 							<div class={getBackFaceClasses(flipped(), isTransitioning())}>
-								<div class="text-5xl font-semibold flex flex-col items-center">
+								<div class="flex flex-col items-center">
 									<div class="flex items-center gap-2 pl-8">
 										{currentCard()?.fields.term_with_transcription || currentCard()?.fields.term_with_transcription ? (
 											<TranscriptionText
@@ -594,7 +594,34 @@ export default function Cards() {
 
 			{/* Review buttons - show only when card is flipped */}
 			<Show when={flipped() && currentCard() && !isTransitioning()}>
-				<div class="h-28 fixed bottom-0 left-0 right-0 bg-background border-t border-border">
+				{/* Click areas for rating cards by screen side click */}
+				<div class="fixed inset-0 w-full h-full pointer-events-auto" onClick={(e) => {
+					// Don't handle clicks if the settings dropdown is open
+					if (settingsOpen()) return
+
+					// Ignore clicks on settings button or dropdown
+					if (e.target instanceof Element) {
+						const isMenuButton = (e.target as Element).closest('button[aria-label="Card settings"]')
+						const isMenuContent = (e.target as Element).closest('.settings-dropdown')
+						if (isMenuButton || isMenuContent) return
+					}
+
+					// Get click position relative to window width
+					const x = e.clientX
+					const windowWidth = window.innerWidth
+
+					// Determine if click was on left or right side
+					if (x < windowWidth / 2) {
+						// Left side - "Again"
+						handleReview(currentCard()!.id, 1)
+					} else {
+						// Right side - "Good"
+						handleReview(currentCard()!.id, 2)
+					}
+				}}>
+				</div>
+
+				<div class="h-28 fixed bottom-0 left-0 right-0 bg-background border-t border-border z-10">
 					<div class="mx-auto px-4 py-4">
 						<div class="grid grid-cols-2 gap-4">
 							<button
