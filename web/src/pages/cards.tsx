@@ -2,7 +2,7 @@ import { createSignal, createResource, Show, createEffect, onMount, onCleanup } 
 import { apiRequest, Card, CardReviewResponse, Deck, DeckProgress } from '~/lib/api'
 import { useParams, useNavigate } from '@solidjs/router'
 import AudioButton from '~/components/audio-button'
-import { hapticFeedback } from '~/lib/utils'
+import { cn, hapticFeedback } from '~/lib/utils'
 import TranscriptionText from '~/components/transcription-text'
 import { audioService } from '~/lib/audio-service'
 import ProgressBar from '~/components/progress-bar'
@@ -192,7 +192,7 @@ export default function Cards() {
 			// Timer runs on both front and back sides
 			resetTimer()
 			startTimer()
-			
+
 			// Preload audio files for current card and next card if they exist
 			if (card) {
 				const audioFiles = []
@@ -202,7 +202,7 @@ export default function Cards() {
 				if (card.fields.audio_example) {
 					audioFiles.push(card.fields.audio_example)
 				}
-				
+
 				// Try to preload next card audio if available
 				const nextIdx = currentIdx + 1
 				const buffer = cardBuffer()
@@ -215,7 +215,7 @@ export default function Cards() {
 						audioFiles.push(nextCard.fields.audio_example)
 					}
 				}
-				
+
 				if (audioFiles.length > 0) {
 					audioService.preloadMultipleAudio(audioFiles)
 				}
@@ -401,7 +401,7 @@ export default function Cards() {
 						) : (
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 								<path d="M5 13L9 17L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-										stroke-linejoin="round" />
+											stroke-linejoin="round" />
 							</svg>
 						)}
 					</div>
@@ -433,7 +433,7 @@ export default function Cards() {
 									>
 										<svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 											<path d="M2 12C2 12 5.5 5 12 5C18.5 5 22 12 22 12C22 12 18.5 19 12 19C5.5 19 2 12 2 12Z"
-													stroke="currentColor" stroke-width="2" />
+														stroke="currentColor" stroke-width="2" />
 											<path
 												d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
 												stroke="currentColor" stroke-width="2" />
@@ -447,7 +447,7 @@ export default function Cards() {
 									>
 										<svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 											<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" stroke="currentColor"
-													stroke-width="2" />
+														stroke-width="2" />
 										</svg>
 										Edit Card
 									</button>
@@ -527,31 +527,21 @@ export default function Cards() {
 										<div class="bg-muted rounded-md p-2">
 											<div class="flex items-start justify-between mb-1">
 												<p class="flex-grow">
-													{currentCard()?.fields.language_code === 'th' ? (
+													{currentCard()?.fields.example_with_transcription ? (
 														<TranscriptionText
-															text={currentCard()?.fields.example_native || ''}
-															secondaryText={currentCard()?.fields.example_with_transcription || ''}
+															text={currentCard()?.fields.example_with_transcription || ''}
 															textSize="2xl"
-															secondaryTextSize="sm"
-															language="th"
+															language={currentCard()?.fields.language_code || 'ja'}
+															rtClass={cn('opacity-70 font-normal')}
 															transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 														/>
 													) : (
-														currentCard()?.fields.example_with_transcription ? (
-															<TranscriptionText
-																text={currentCard()?.fields.example_with_transcription || ''}
-																textSize="2xl"
-																language={currentCard()?.fields.language_code || 'ja'}
-																transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
-															/>
-														) : (
-															<TranscriptionText
-																text={currentCard()?.fields.example_native || ''}
-																textSize="2xl"
-																language={currentCard()?.fields.language_code || 'ja'}
-																transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
-															/>
-														)
+														<TranscriptionText
+															text={currentCard()?.fields.example_native || ''}
+															textSize="2xl"
+															language={currentCard()?.fields.language_code || 'ja'}
+															transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+														/>
 													)}
 												</p>
 												<Show when={currentCard()?.fields.audio_example}>

@@ -21,28 +21,28 @@ type TranscriptionSegment =
 // Helper function to get the appropriate regex for transcription based on language
 const getTranscriptionRegex = (language: string, transcriptionType: string): RegExp => {
 	// Default pattern for most languages with [pronunciation] format
-	let pattern = /(\S+)\[([^\]]+)]/g;
+	let pattern = /(\S+)\[([^\]]+)]/g
 
 	switch (language) {
 		case 'ja':
 			// Japanese kanji with furigana
-			pattern = /([一-龯]+)\[([^\]]+)]/g;
-			break;
+			pattern = /([一-龯]+)\[([^\]]+)]/g
+			break
 		case 'zh':
 			// Chinese characters with pinyin
-			pattern = /([一-龯\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]+)\[([^\]]+)]/g;
-			break;
+			pattern = /([一-龯\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]+)\[([^\]]+)]/g
+			break
 		case 'th':
 			// Thai script with romanization (any Thai character)
-			pattern = /([\u0E00-\u0E7F]+)\[([^\]]+)]/g;
-			break;
+			pattern = /([\u0E00-\u0E7F]+)\[([^\]]+)]/g
+			break
 		case 'ka':
 			// Georgian with transliteration (Mkhedruli script)
-			pattern = /([\u10A0-\u10FF]+)\[([^\]]+)]/g;
-			break;
+			pattern = /([\u10A0-\u10FF]+)\[([^\]]+)]/g
+			break
 	}
 
-	return pattern;
+	return pattern
 }
 
 // Helper function to parse the text into segments
@@ -105,7 +105,7 @@ const processPlainTextWithTags = (
 	segments: TranscriptionSegment[],
 	htmlTags: Map<string, { type: string, content: string }>,
 	language = 'ja',
-	transcriptionType = 'furigana'
+	transcriptionType = 'furigana',
 ) => {
 	const tagRegex = /__HTML_TAG_(\d+)__/g
 	let lastIndex = 0
@@ -116,7 +116,7 @@ const processPlainTextWithTags = (
 		if (match.index > lastIndex) {
 			segments.push({
 				type: 'text',
-				content: text.substring(lastIndex, match.index)
+				content: text.substring(lastIndex, match.index),
 			})
 		}
 
@@ -137,13 +137,13 @@ const processPlainTextWithTags = (
 					segments.push({
 						type: 'bold',
 						content: '', // Empty as we'll use the segments instead
-						segments: boldSegments
+						segments: boldSegments,
 					})
 				} else {
 					// Regular bold text without transcription
 					segments.push({
 						type: 'bold',
-						content: tagInfo.content
+						content: tagInfo.content,
 					})
 				}
 			}
@@ -156,7 +156,7 @@ const processPlainTextWithTags = (
 	if (lastIndex < text.length) {
 		segments.push({
 			type: 'text',
-			content: text.substring(lastIndex)
+			content: text.substring(lastIndex),
 		})
 	}
 }
@@ -178,15 +178,15 @@ const RT_SIZE_MAP = {
 const getFontClass = (language: string): string => {
 	switch (language) {
 		case 'ja':
-			return 'font-jp'; // Japanese font
+			return 'font-jp' // Japanese font
 		case 'zh':
-			return 'font-zh'; // Chinese font
+			return 'font-zh' // Chinese font
 		case 'th':
-			return 'font-th'; // Thai font
+			return 'font-th' // Thai font
 		case 'ka':
-			return 'font-ka'; // Georgian font
+			return 'font-ka' // Georgian font
 		default:
-			return ''; // Default font
+			return '' // Default font
 	}
 }
 
@@ -231,19 +231,19 @@ export default function TranscriptionText(props: TranscriptionTextProps): JSX.El
 
 	// Parse the input text into segments
 	const segments = createMemo(() =>
-		parseTextToSegments(local.text, language(), transcriptionType())
+		parseTextToSegments(local.text, language(), transcriptionType()),
 	)
 
 	// Parse secondary text if available
-	const secondarySegments = createMemo(() => 
-		local.secondaryText ? parseTextToSegments(local.secondaryText, language(), transcriptionType()) : []
+	const secondarySegments = createMemo(() =>
+		local.secondaryText ? parseTextToSegments(local.secondaryText, language(), transcriptionType()) : [],
 	)
 
 	// Recursive renderer for segments (to handle nested structures)
 	const renderSegment = (segment: TranscriptionSegment): JSX.Element => {
 		if (segment.type === 'ruby') {
 			return (
-				<ruby>
+				<ruby class={`${language() == 'th' ? 'ruby-under' : ''}`}>
 					{segment.base}
 					<rt class={finalRtClasses()}>{segment.text}</rt>
 				</ruby>
@@ -270,23 +270,23 @@ export default function TranscriptionText(props: TranscriptionTextProps): JSX.El
 		}
 	}
 
-	// For Thai language with secondaryText, show the main text and secondary text below
-	if (language() === 'th' && local.secondaryText) {
-		return (
-			<div class={`${local.class || ''}`}>
-				<p class={`text-${currentTextSize()} leading-relaxed ${fontClass()}`} {...others}>
-					<For each={segments()}>
-						{(segment) => renderSegment(segment)}
-					</For>
-				</p>
-				<p class={`text-${secondaryTextSize()} leading-tight ${fontClass()} text-muted-foreground mt-1`}>
-					<For each={secondarySegments()}>
-						{(segment) => renderSegment(segment)}
-					</For>
-				</p>
-			</div>
-		)
-	}
+	// // For Thai language with secondaryText, show the main text and secondary text below
+	// if (language() === 'th' && local.secondaryText) {
+	// 	return (
+	// 		<div class={`${local.class || ''}`}>
+	// 			<p class={`text-${currentTextSize()} leading-relaxed ${fontClass()}`} {...others}>
+	// 				<For each={segments()}>
+	// 					{(segment) => renderSegment(segment)}
+	// 				</For>
+	// 			</p>
+	// 			<p class={`text-${secondaryTextSize()} leading-tight ${fontClass()} text-muted-foreground mt-1`}>
+	// 				<For each={secondarySegments()}>
+	// 					{(segment) => renderSegment(segment)}
+	// 				</For>
+	// 			</p>
+	// 		</div>
+	// 	)
+	// }
 
 	// Default rendering for other languages
 	return (

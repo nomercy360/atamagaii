@@ -107,6 +107,12 @@
     }
 }
 
+@layer utilities {
+    .ruby-under {
+        ruby-position: under;
+    }
+}
+
 @media (max-width: 640px) {
     .container {
         @apply px-4;

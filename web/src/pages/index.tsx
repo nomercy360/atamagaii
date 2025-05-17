@@ -67,7 +67,7 @@ export default function Index() {
 						<For each={decks()}>
 							{(deck) => (
 								<div
-									class="bg-card w-full text-card-foreground p-4 rounded-lg border transition-colors flex justify-between items-center">
+									class="bg-card w-full text-card-foreground p-4 rounded-xl transition-colors flex justify-between items-center">
 									<button
 										onClick={() => handleSelectDeck(deck.id)}
 										class="flex-1 flex justify-between items-center text-start"
@@ -94,7 +94,6 @@ export default function Index() {
 												</Show>
 											</div>
 										</div>
-										<span class="text-primary text-sm font-medium">{deck.level}</span>
 									</button>
 									<button
 										onClick={(e) => {
