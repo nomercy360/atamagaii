@@ -211,14 +211,14 @@ func (s *Storage) DeleteDeck(deckID string) error {
 	if err != nil {
 		return fmt.Errorf("error fetching card IDs: %w", err)
 	}
-	
+
 	// Store card IDs and user IDs to mark reviews as deleted
 	type CardInfo struct {
 		ID     string
 		UserID string
 	}
 	var cardInfos []CardInfo
-	
+
 	for rows.Next() {
 		var cardInfo CardInfo
 		if err := rows.Scan(&cardInfo.ID, &cardInfo.UserID); err != nil {
@@ -228,7 +228,7 @@ func (s *Storage) DeleteDeck(deckID string) error {
 		cardInfos = append(cardInfos, cardInfo)
 	}
 	rows.Close()
-	
+
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("error iterating card rows: %w", err)
 	}
@@ -262,20 +262,6 @@ func (s *Storage) DeleteDeck(deckID string) error {
 	_, err = tx.Exec(cardsQuery, now, now, deckID)
 	if err != nil {
 		return fmt.Errorf("error marking cards as deleted: %w", err)
-	}
-	
-	// Mark reviews as deleted
-	// Process each card's reviews
-	for _, cardInfo := range cardInfos {
-		reviewsQuery := `
-			UPDATE reviews
-			SET deleted_at = ?
-			WHERE card_id = ? AND user_id = ?
-		`
-		_, err = tx.Exec(reviewsQuery, now, cardInfo.ID, cardInfo.UserID)
-		if err != nil {
-			return fmt.Errorf("error marking reviews as deleted for card %s: %w", cardInfo.ID, err)
-		}
 	}
 
 	if err := tx.Commit(); err != nil {
