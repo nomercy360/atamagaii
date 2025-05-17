@@ -595,7 +595,7 @@ export default function Cards() {
 			{/* Review buttons - show only when card is flipped */}
 			<Show when={flipped() && currentCard() && !isTransitioning()}>
 				{/* Click areas for rating cards by screen side click */}
-				<div class="fixed inset-0 w-full h-full pointer-events-auto" onClick={(e) => {
+				<div class="fixed inset-0 bottom-28 w-full pointer-events-auto" onClick={(e) => {
 					// Don't handle clicks if the settings dropdown is open
 					if (settingsOpen()) return
 
