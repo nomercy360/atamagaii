@@ -5,6 +5,7 @@ import Cards from '~/pages/cards'
 import ImportDeck from '~/pages/import-deck'
 import EditCard from '~/pages/edit-card'
 import Statistics from '~/pages/stats'
+import Profile from '~/pages/profile'
 
 
 export const routes: RouteDefinition[] = [
@@ -19,6 +20,10 @@ export const routes: RouteDefinition[] = [
 			{
 				'path': '/stats',
 				'component': Statistics,
+			},
+			{
+				'path': '/profile',
+				'component': Profile,
 			},
 		],
 	},

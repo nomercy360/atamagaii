@@ -62,19 +62,18 @@ export default function Index() {
 						Import Deck
 					</button>
 				</div>
-				<div class="space-y-3">
+				<div class="space-y-2">
 					<Show when={!decks.loading} fallback={<p class="text-muted-foreground">Loading decks...</p>}>
 						<For each={decks()}>
 							{(deck) => (
 								<div
-									class="bg-card w-full text-card-foreground p-4 rounded-lg shadow-sm transition-colors flex justify-between items-center">
+									class="bg-card w-full text-card-foreground p-4 rounded-lg border transition-colors flex justify-between items-center">
 									<button
 										onClick={() => handleSelectDeck(deck.id)}
 										class="flex-1 flex justify-between items-center text-start"
 									>
 										<div>
 											<h4 class="font-medium">{deck.name}</h4>
-											<p class="text-xs text-muted-foreground">{deck.description}</p>
 											<p class="text-xs text-muted-foreground mt-1">
 												{deck.new_cards_per_day} new cards per day
 											</p>
