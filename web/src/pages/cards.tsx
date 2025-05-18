@@ -520,13 +520,14 @@ export default function Cards() {
 										 </span>
 									</Show>
 								</div>
-								<div class="text-center text-xl font-normal mb-8 mt-3">{currentCard()?.fields.meaning_ru}</div>
+								<div
+									class="text-center text-xl font-normal mb-8 mt-3">{currentCard()?.fields.meaning_ru || currentCard()?.fields.meaning_en}</div>
 								<Show when={currentCard()?.fields.example_native}>
 									<div class="text-sm space-y-2 w-full">
 										<div class="bg-muted rounded-md p-2">
 											<div class="flex items-start justify-between mb-1">
 												<p class="flex-grow">
-													{currentCard()?.fields.example_with_transcription ? (
+													{currentCard()?.fields.example_with_transcription && currentCard()?.fields?.language_code !== 'ge' ? (
 														<TranscriptionText
 															text={currentCard()?.fields.example_with_transcription || ''}
 															textSize="xl"
@@ -552,7 +553,14 @@ export default function Cards() {
 													/>
 												</Show>
 											</div>
-											<p class="text-xs text-muted-foreground">{currentCard()?.fields.example_ru}</p>
+											<Show when={currentCard()?.fields.language_code === 'ge'}>
+												<p class="text-sm text-muted-foreground">
+													{currentCard()?.fields.example_with_transcription}
+												</p>
+											</Show>
+											<p class="text-xs text-muted-foreground">
+												{currentCard()?.fields.example_ru || currentCard()?.fields.example_en}
+											</p>
 										</div>
 									</div>
 								</Show>

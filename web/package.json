@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@lottiefiles/dotlottie-web": "^0.44.0",
+    "@solid-primitives/i18n": "^2.2.1",
     "@solidjs/router": "^0.15.1",
     "@tanstack/solid-query": "^5.76.0",
     "class-variance-authority": "^0.7.1",
