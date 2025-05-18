@@ -2,6 +2,7 @@ package ai
 
 import (
 	"atamagaii/internal/contract"
+	"atamagaii/internal/db"
 	"atamagaii/internal/utils"
 	"context"
 	"encoding/json"
@@ -104,6 +105,112 @@ func (c *OpenAIClient) GenerateCardContent(ctx context.Context, term string, lan
 	}
 
 	return &vocabularyCard, nil
+}
+
+// GenerateTask creates a task for the specified card
+func (c *OpenAIClient) GenerateTask(ctx context.Context, card *db.Card, templateName string) (*db.TaskContent, error) {
+	// Extract vocabulary item from card fields
+	var vocabItem db.VocabularyItem
+	if err := json.Unmarshal([]byte(card.Fields), &vocabItem); err != nil {
+		return nil, fmt.Errorf("error unmarshaling card fields: %w", err)
+	}
+
+	// Determine language code to use for template
+	languageCode := "ja" // Default to Japanese
+	if vocabItem.LanguageCode != "" {
+		// Map language code from the card to template directory format
+		switch vocabItem.LanguageCode {
+		case "jp", "ja":
+			languageCode = "ja"
+		case "ka", "ge":
+			languageCode = "ka"
+		case "th":
+			languageCode = "th"
+		}
+	}
+
+	// Find template directory
+	openAIDir, err := utils.FindDirUp("data", 3)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find templates directory: %w", err)
+	}
+
+	// Load template file
+	filePath := filepath.Join(openAIDir, "templates", languageCode, templateName)
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("template file %s does not exist (looked in %s)", filePath, openAIDir)
+	}
+
+	fileData, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading template file %s: %w", filePath, err)
+	}
+
+	// Construct target word from vocabulary item
+	targetWord := vocabItem.Term
+	if vocabItem.MeaningEn != "" {
+		targetWord = fmt.Sprintf("%s (%s) %s", vocabItem.MeaningEn, vocabItem.TermWithTranscription, vocabItem.Term)
+	}
+
+	// Replace placeholders in template
+	text := string(fileData)
+	text = strings.ReplaceAll(text, "{{targetWord}}", targetWord)
+	text = strings.ReplaceAll(text, "{{knownWords}}", "") // Could be populated with user's known words in the future
+
+	// Prepare and send request
+	payload := strings.NewReader(text)
+	req, err := http.NewRequest(http.MethodPost, "https://api.openai.com/v1/responses", payload)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.apiKey))
+
+	// Define response structure
+	type Response struct {
+		Output []struct {
+			Content []struct {
+				Type string `json:"type"`
+				Text string `json:"text"`
+			}
+		}
+	}
+
+	// Execute request
+	httpClient := &http.Client{}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error: received status code %d", resp.StatusCode)
+	}
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %w", err)
+	}
+
+	// Parse response
+	response := &Response{}
+	if err := json.Unmarshal(responseBody, response); err != nil {
+		return nil, fmt.Errorf("error parsing response: %w", err)
+	}
+
+	if len(response.Output) == 0 || len(response.Output[0].Content) == 0 {
+		return nil, fmt.Errorf("no content found in response")
+	}
+
+	// Parse task content
+	var taskContent db.TaskContent
+	if err := json.Unmarshal([]byte(response.Output[0].Content[0].Text), &taskContent); err != nil {
+		return nil, fmt.Errorf("error parsing task content: %w", err)
+	}
+
+	return &taskContent, nil
 }
 
 func (c *OpenAIClient) GenerateAudio(ctx context.Context, text string, language string) (string, error) {

@@ -11,6 +11,9 @@ import (
 	"strconv"
 )
 
+// DefaultTaskDelayMinutes is the default delay in minutes before a task is shown after a card enters review state
+const DefaultTaskDelayMinutes = 2
+
 type ReviewCardRequest struct {
 	Rating      int `json:"rating" validate:"required,min=1,max=2"`
 	TimeSpentMs int `json:"time_spent_ms" validate:"required"`

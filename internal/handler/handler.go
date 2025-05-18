@@ -54,6 +54,10 @@ func (h *Handler) RegisterRoutes(e *echo.Echo) {
 
 	h.AddFlashcardRoutes(v1)
 	h.AddAnkiImportRoutes(v1)
+
+	// Task routes
+	v1.GET("/tasks", h.GetTasks)
+	v1.POST("/tasks/submit", h.SubmitTaskResponse)
 }
 
 func GetUserIDFromToken(c echo.Context) (string, error) {

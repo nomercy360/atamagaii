@@ -383,3 +383,57 @@ func (s *Storage) GetOrCreateGeneratedDeck(userID string, languageCode string, t
 
 	return nil, fmt.Errorf("error finding generated deck: %w", err)
 }
+
+// GetCardsByDeckID gets all cards for a specific deck
+func (s *Storage) GetCardsByDeckID(deckID, userID string) ([]Card, error) {
+	query := `
+		SELECT id, deck_id, fields, user_id, next_review, interval, ease, 
+		       review_count, laps_count, last_reviewed_at, first_reviewed_at, state,
+		       learning_step, created_at, updated_at, deleted_at
+		FROM cards
+		WHERE deck_id = ? AND user_id = ? AND deleted_at IS NULL
+		ORDER BY created_at DESC
+	`
+
+	rows, err := s.db.Query(query, deckID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting cards for deck: %w", err)
+	}
+	defer rows.Close()
+
+	var cards []Card
+	for rows.Next() {
+		var card Card
+		var intervalNs int64
+
+		if err := rows.Scan(
+			&card.ID,
+			&card.DeckID,
+			&card.Fields,
+			&card.UserID,
+			&card.NextReview,
+			&intervalNs,
+			&card.Ease,
+			&card.ReviewCount,
+			&card.LapsCount,
+			&card.LastReviewedAt,
+			&card.FirstReviewedAt,
+			&card.State,
+			&card.LearningStep,
+			&card.CreatedAt,
+			&card.UpdatedAt,
+			&card.DeletedAt,
+		); err != nil {
+			return nil, fmt.Errorf("error scanning card: %w", err)
+		}
+
+		card.Interval = time.Duration(intervalNs)
+		cards = append(cards, card)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating card rows: %w", err)
+	}
+
+	return cards, nil
+}

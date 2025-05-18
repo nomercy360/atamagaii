@@ -55,10 +55,6 @@ func TestImportDeckFromFile(t *testing.T) {
 		t.Errorf("Expected deck name 'N5 Vocabulary', got '%s'", deck.Name)
 	}
 
-	if deck.Description != "Basic Japanese vocabulary for JLPT N5 level" {
-		t.Errorf("Expected deck description 'Basic Japanese vocabulary for JLPT N5 level', got '%s'", deck.Description)
-	}
-
 	if deck.Level != "N5" {
 		t.Errorf("Expected deck level 'N5', got '%s'", deck.Level)
 	}

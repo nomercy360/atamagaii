@@ -472,7 +472,7 @@ export default function Cards() {
 							<div class={getFrontFaceClasses(flipped(), isTransitioning())}>
 								<TranscriptionText
 									text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
-									textSize="5xl"
+									textSize="3xl"
 									language={currentCard()?.fields.language_code || 'jp'}
 									transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 								/>
@@ -480,7 +480,7 @@ export default function Cards() {
 									when={currentCard()?.fields.example_native || currentCard()?.fields.example_native}>
 									<TranscriptionText
 										text={currentCard()?.fields.example_native || currentCard()?.fields.example_native || ''}
-										textSize="xl"
+										textSize="lg"
 										language={currentCard()?.fields.language_code || 'jp'}
 										transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 									/>
@@ -493,14 +493,14 @@ export default function Cards() {
 										{currentCard()?.fields.term_with_transcription || currentCard()?.fields.term_with_transcription ? (
 											<TranscriptionText
 												text={currentCard()?.fields.term_with_transcription || currentCard()?.fields.term_with_transcription!}
-												textSize="5xl"
+												textSize="3xl"
 												language={currentCard()?.fields.language_code || 'jp'}
 												transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 											/>
 										) : (
 											<TranscriptionText
 												text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
-												textSize="5xl"
+												textSize="3xl"
 												language={currentCard()?.fields.language_code || 'jp'}
 												transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 											/>
@@ -530,7 +530,7 @@ export default function Cards() {
 													{currentCard()?.fields.example_with_transcription ? (
 														<TranscriptionText
 															text={currentCard()?.fields.example_with_transcription || ''}
-															textSize="2xl"
+															textSize="xl"
 															language={currentCard()?.fields.language_code || 'jp'}
 															rtClass={cn('opacity-70 font-normal')}
 															transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}

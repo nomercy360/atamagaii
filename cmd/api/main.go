@@ -4,6 +4,7 @@ import (
 	"atamagaii/internal/ai"
 	"atamagaii/internal/db"
 	"atamagaii/internal/handler"
+	"atamagaii/internal/job"
 	"atamagaii/internal/middleware"
 	"atamagaii/internal/storage"
 	"atamagaii/internal/utils"
@@ -17,6 +18,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 type Config struct {
@@ -128,11 +132,39 @@ func main() {
 	utils.InitLanguageDetector()
 	log.Println("Language detector initialized")
 
+	// Start task generation job
+	taskGenerator := job.NewTaskGenerator(dbStorage, openaiClient)
+	go taskGenerator.Start()
+	log.Println("Task generation job started")
+
 	h.RegisterRoutes(e)
 
-	port := "8080"
-	log.Printf("Starting server on port %s", port)
-	if err := e.Start(":" + port); err != nil && err != http.ErrServerClosed {
+	// Set up graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		port := "8080"
+		log.Printf("Starting server on port %s", port)
+		if err := e.Start(":" + port); err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	// Wait for shutdown signal
+	<-quit
+	log.Println("Shutting down server...")
+
+	// Stop the task generator
+	taskGenerator.Stop()
+
+	// Shutdown Echo server with a timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := e.Shutdown(ctx); err != nil {
 		log.Fatal(err)
 	}
+
+	log.Println("Server gracefully stopped")
 }

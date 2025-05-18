@@ -71,18 +71,28 @@ func (s *Storage) UpdateSchema() error {
 		type TEXT,
 		content TEXT,
 		answer TEXT,
-		difficulty TEXT
-	);
-	
-	CREATE TABLE IF NOT EXISTS user_tasks (
-		id TEXT PRIMARY KEY,
-		user_id INTEGER,
-		task_id INTEGER,
-		completion_at TIMESTAMP,
-		time_spent_ms INTEGER,
+		card_id TEXT,
+		user_id TEXT,
+		completed_at TIMESTAMP,
+		user_response TEXT,
 		is_correct BOOLEAN,
-		FOREIGN KEY (user_id) REFERENCES users(id),
-		FOREIGN KEY (task_id) REFERENCES tasks(id)
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		deleted_at TIMESTAMP,
+		FOREIGN KEY (card_id, user_id) REFERENCES cards(id, user_id),
+		FOREIGN KEY (user_id) REFERENCES users(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS task_submissions (
+		id TEXT PRIMARY KEY,
+		task_id TEXT,
+		user_id TEXT,
+		-- TODO: implement other fields that are possible needed
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		deleted_at TIMESTAMP,
+		FOREIGN KEY (task_id) REFERENCES tasks(id),
+		FOREIGN KEY (user_id) REFERENCES users(id)
 	);
 
 	-- Create index on next_review to speed up due card queries
@@ -93,6 +103,12 @@ func (s *Storage) UpdateSchema() error {
 	
 	-- Create index on user_id for deck queries
 	CREATE INDEX IF NOT EXISTS idx_decks_user_id ON decks(user_id);
+	
+	-- Create index on card_id and completed_at for retrieving due tasks
+	CREATE INDEX IF NOT EXISTS idx_tasks_card_completed ON tasks(card_id, completed_at);
+	
+	-- Create index on user_id and completed_at for retrieving user's incomplete tasks
+	CREATE INDEX IF NOT EXISTS idx_tasks_user_completed ON tasks(user_id, completed_at);
 	`
 
 	_, err := s.db.Exec(schema)

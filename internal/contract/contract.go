@@ -77,3 +77,38 @@ type PotentialIntervalsForDisplay struct {
 	Again string `json:"again"`
 	Good  string `json:"good"`
 }
+
+// TaskResponse represents a task with its card data for the API
+type TaskResponse struct {
+	ID           string        `json:"id"`
+	Type         string        `json:"type"`
+	Content      TaskContent   `json:"content"`
+	CompletedAt  *time.Time    `json:"completed_at,omitempty"`
+	UserResponse *string       `json:"user_response,omitempty"`
+	IsCorrect    *bool         `json:"is_correct,omitempty"`
+	CreatedAt    time.Time     `json:"created_at"`
+	Card         *CardResponse `json:"card,omitempty"`
+}
+
+type TaskContent struct {
+	CorrectAnswer string `json:"-"`
+	Options       struct {
+		A string `json:"a"`
+		B string `json:"b"`
+		C string `json:"c"`
+		D string `json:"d"`
+	} `json:"options"`
+	Question string `json:"question"`
+}
+
+// SubmitTaskRequest represents the request to submit a task answer
+type SubmitTaskRequest struct {
+	TaskID   string `json:"task_id" validate:"required"`
+	Response string `json:"response" validate:"required"`
+}
+
+// SubmitTaskResponse represents the response for submitting a task answer
+type SubmitTaskResponse struct {
+	Task      TaskResponse `json:"task"`
+	IsCorrect bool         `json:"is_correct"`
+}

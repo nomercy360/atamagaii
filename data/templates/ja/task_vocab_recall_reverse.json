@@ -1,0 +1,144 @@
+{
+  "model": "gpt-4.1-mini",
+  "input": [
+    {
+      "role": "system",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Create a Vocabulary Recall Test task for studying Japanese in an Anki-like app. The task should:\n\t•\tBe a text-based question asking the user to select the correct Japanese word (written in kanji or kana) for a given English meaning (e.g., “fast” → 速い).\n\t•\tProvide four multiple-choice answer options in Japanese, where:\n\t•\tOne option is the correct Japanese word.\n\t•\tThe other three options are distractors that are designed to be tricky, such as:\n\t•\tHomophones or similar-sounding words with different meanings (e.g., 早い vs. 速い).\n\t•\tWords that are semantically related (e.g., 高い vs. 安い).\n\t•\tCommon learner mistakes (e.g., using the wrong kanji for a known reading).\n\t•\tClearly indicate which option is correct.\n\t•\tUse vocabulary appropriate for beginner to intermediate learners (JLPT N5–N3), assuming knowledge of basic kanji and common vocabulary (e.g., 木, 林, 学校, 行く, 見る, 高い, etc.).\n\nThese learner known words may be possible used as inspiration for distractors but do not have to be included directly as choices: {{knownWords}}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Word to use: fast (speed) 速い"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"question\": \"What is the correct Japanese word for “fast (speed)”?\",\n  \"options\": {\n    \"a\": \"速い\",\n    \"b\": \"早い\",\n    \"c\": \"高い\",\n    \"d\": \"遅い\"\n  },\n  \"correct_answer\": \"a\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Word to use: to eat たべる"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"question\": \"What is the correct Japanese word for “fast (speed)”?\",\n  \"options\": {\n    \"a\": \"のむ\",\n    \"b\": \"たべる\",\n    \"c\": \"みる\",\n    \"d\": \"はなす\"\n  },\n  \"correct_answer\": \"b\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Word to use: to gather 集まる "
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"options\": {\n    \"a\": \"集まる\",\n    \"b\": \"集める\",\n    \"c\": \"散る\",\n    \"d\": \"別れる\"\n  },\n  \"question\": \"What is the correct Japanese word for “to gather”?\",\n  \"correct_answer\": \"a\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Word to use: {{targetWord}}"
+        }
+      ]
+    }
+  ],
+  "text": {
+    "format": {
+      "type": "json_schema",
+      "name": "question_format",
+      "schema": {
+        "type": "object",
+        "required": [
+          "question",
+          "options",
+          "correct_answer"
+        ],
+        "properties": {
+          "options": {
+            "type": "object",
+            "required": [
+              "a",
+              "b",
+              "c",
+              "d"
+            ],
+            "properties": {
+              "a": {
+                "type": "string",
+                "description": "Text for option a."
+              },
+              "b": {
+                "type": "string",
+                "description": "Text for option b."
+              },
+              "c": {
+                "type": "string",
+                "description": "Text for option c."
+              },
+              "d": {
+                "type": "string",
+                "description": "Text for option d."
+              }
+            },
+            "description": "The available answer options.",
+            "additionalProperties": false
+          },
+          "question": {
+            "type": "string",
+            "description": "The Japanese word and the text of the question."
+          },
+          "correct_answer": {
+            "enum": [
+              "a",
+              "b",
+              "c",
+              "d"
+            ],
+            "type": "string",
+            "description": "The correct option letter along with its meaning."
+          }
+        },
+        "additionalProperties": false
+      },
+      "strict": true
+    }
+  },
+  "reasoning": {},
+  "tools": [],
+  "temperature": 0.8,
+  "max_output_tokens": 2048,
+  "top_p": 0.8,
+  "store": true
+}
