@@ -304,11 +304,6 @@ func (p *Processor) detectLanguageFromNotes(notes []Note, fieldMapping map[strin
 			return "jp"
 		}
 
-		chinesePattern := regexp.MustCompile(`[\p{Han}]`)
-		if chinesePattern.MatchString(wordField) && !japanesePattern.MatchString(wordField) {
-			return "zh"
-		}
-
 		thaiPattern := regexp.MustCompile(`[\u0E00-\u0E7F]`)
 		if thaiPattern.MatchString(wordField) {
 			return "th"
@@ -329,10 +324,6 @@ func (p *Processor) inferTranscriptionType(language string, fieldMapping map[str
 		if _, ok := fieldMapping["Word Furigana"]; ok {
 			return "furigana"
 		}
-	case "zh":
-		if _, ok := fieldMapping["Word Pinyin"]; ok {
-			return "pinyin"
-		}
 	case "th":
 		if _, ok := fieldMapping["Word Romanization"]; ok {
 			return "thai_romanization"
@@ -346,8 +337,6 @@ func (p *Processor) inferTranscriptionType(language string, fieldMapping map[str
 	switch language {
 	case "jp":
 		return "furigana"
-	case "zh":
-		return "pinyin"
 	case "th":
 		return "thai_romanization"
 	case "ge":
@@ -420,10 +409,6 @@ func (p *Processor) ConvertToVocabularyItems(ankiExport *Export, mediaURLs map[s
 		exampleWithTranscriptionField := "Sentence Furigana"
 
 		switch language {
-		case "zh":
-			transcriptionField = "Word Pinyin"
-			termWithTranscriptionField = "Word With Pinyin"
-			exampleWithTranscriptionField = "Sentence With Pinyin"
 		case "th":
 			transcriptionField = "Word Romanization"
 			termWithTranscriptionField = "Word With Romanization"

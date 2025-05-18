@@ -9,8 +9,15 @@ var languageDetector lingua.LanguageDetector
 
 // InitLanguageDetector initializes the language detector with common languages
 func InitLanguageDetector() {
+	languages := []lingua.Language{
+		lingua.English,
+		lingua.Japanese,
+		lingua.Thai,
+		lingua.Georgian,
+	}
+
 	languageDetector = lingua.NewLanguageDetectorBuilder().
-		FromAllLanguages().
+		FromLanguages(languages...).
 		Build()
 }
 
@@ -39,8 +46,6 @@ func GetDefaultTranscriptionType(languageCode string) string {
 	switch languageCode {
 	case "jp":
 		return "furigana"
-	case "zh":
-		return "pinyin"
 	case "th":
 		return "thai_romanization"
 	case "ge":

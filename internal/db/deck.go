@@ -38,8 +38,6 @@ func (s *Storage) CreateDeck(userID, name, level string, languageCode string, tr
 		switch languageCode {
 		case "jp":
 			transcriptionType = "furigana"
-		case "zh":
-			transcriptionType = "pinyin"
 		case "th":
 			transcriptionType = "thai_romanization"
 		case "ge":

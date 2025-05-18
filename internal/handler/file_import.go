@@ -98,8 +98,6 @@ func (h *Handler) CreateDeckFromFile(c echo.Context) error {
 					transcriptionType = "transliteration"
 				case "th":
 					transcriptionType = "aua"
-				case "zh":
-					transcriptionType = "pinyin"
 				default:
 					transcriptionType = "none"
 				}

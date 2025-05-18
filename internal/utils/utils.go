@@ -29,7 +29,6 @@ func GetLanguageNameFromCode(code string) string {
 		"en": "English",
 		"es": "Spanish",
 		"ru": "Russian",
-		"zh": "Chinese",
 		"ko": "Korean",
 		"fr": "French",
 		"de": "German",
