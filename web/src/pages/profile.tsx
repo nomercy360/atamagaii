@@ -1,9 +1,11 @@
 import { createSignal, Show } from 'solid-js'
 import { store } from '~/store'
+import { useTranslations } from '~/i18n/locale-context'
 
 export default function Profile() {
 	const [userName, setUserName] = createSignal(store.user.name || '')
 	const [saved, setSaved] = createSignal(false)
+	const { t } = useTranslations()
 
 	const saveProfile = () => {
 		setSaved(true)
@@ -34,7 +36,7 @@ export default function Profile() {
 				<div class="w-full">
 					<div class="mb-6">
 						<label class="block text-sm font-medium mb-2">
-							Имя пользователя
+							{t('profile.username')}
 						</label>
 						<div class="text-lg p-4 rounded-md border border-border bg-card">
 							{store.user.username || 'Not set'}
@@ -43,7 +45,7 @@ export default function Profile() {
 
 					<div class="mb-6">
 						<label class="block text-sm font-medium mb-2">
-							Отображаемое имя
+							{t('profile.displayName')}
 						</label>
 						<input
 							type="text"
@@ -55,7 +57,7 @@ export default function Profile() {
 
 					<div class="mb-6">
 						<label class="block text-sm font-medium mb-2">
-							Уровень
+							{t('profile.level')}
 						</label>
 						<div class="text-lg p-4 rounded-md border border-border bg-card">
 							{store.user.level || 'N5'}
@@ -64,7 +66,7 @@ export default function Profile() {
 
 					<div class="mb-6">
 						<label class="block text-sm font-medium mb-2">
-							Очки
+							{t('profile.points')}
 						</label>
 						<div class="text-lg p-4 rounded-md border border-border bg-card">
 							{store.user.points || '0'}
@@ -75,7 +77,7 @@ export default function Profile() {
 						onClick={saveProfile}
 						class="w-full p-4 bg-primary text-primary-foreground rounded-md font-medium mt-4"
 					>
-						{saved() ? 'Сохранено!' : 'Сохранить'}
+						{saved() ? t('common.saved') : t('common.save')}
 					</button>
 				</div>
 			</div>

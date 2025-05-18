@@ -1,9 +1,9 @@
-import { createEffect, createSignal, Match, Switch, onMount } from 'solid-js'
+import { createEffect, createSignal, Match, Switch } from 'solid-js'
 import { setToken, setUser } from './store'
 import { API_BASE_URL } from '~/lib/api'
 import { NavigationProvider } from './lib/useNavigation'
-import { useNavigate } from '@solidjs/router'
 import { QueryClient, QueryClientProvider } from '@tanstack/solid-query'
+import { LocaleContextProvider } from '~/i18n/locale-context'
 
 export const queryClient = new QueryClient({
 	defaultOptions: {
@@ -69,6 +69,13 @@ export default function App(props: any) {
 			setUser(data.user)
 			setToken(data.token)
 
+			// Set language based on user preference if available
+			if (data.user?.language_code) {
+				const langCode = data.user.language_code
+				// Store language preference
+				localStorage.setItem('locale', langCode === 'ru' ? 'ru' : 'en')
+			}
+
 			window.Telegram.WebApp.ready()
 			window.Telegram.WebApp.expand()
 			window.Telegram.WebApp.disableClosingConfirmation()
@@ -87,25 +94,27 @@ export default function App(props: any) {
 		}
 	})
 	return (
-		<NavigationProvider>
-			<QueryClientProvider client={queryClient}>
-				<Switch>
-					<Match when={isAuthenticated()}>
-						{props.children}
-					</Match>
-					<Match when={!isAuthenticated() && isLoading()}>
-						<div class="min-h-screen w-full flex-col items-start justify-center bg-background" />
-					</Match>
-					<Match when={!isAuthenticated() && !isLoading()}>
-						<div
-							class="flex text-center h-screen w-full flex-col items-center justify-center text-3xl">
-							<p>
-								Today nothing is gonna work
-							</p>
-						</div>
-					</Match>
-				</Switch>
-			</QueryClientProvider>
-		</NavigationProvider>
+		<LocaleContextProvider>
+			<NavigationProvider>
+				<QueryClientProvider client={queryClient}>
+					<Switch>
+						<Match when={isAuthenticated()}>
+							{props.children}
+						</Match>
+						<Match when={!isAuthenticated() && isLoading()}>
+							<div class="min-h-screen w-full flex-col items-start justify-center bg-background" />
+						</Match>
+						<Match when={!isAuthenticated() && !isLoading()}>
+							<div
+								class="flex text-center h-screen w-full flex-col items-center justify-center text-3xl">
+								<p>
+									Today nothing is gonna work
+								</p>
+							</div>
+						</Match>
+					</Switch>
+				</QueryClientProvider>
+			</NavigationProvider>
+		</LocaleContextProvider>
 	)
 }

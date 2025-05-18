@@ -1,20 +1,18 @@
 import { createSignal, createResource, Show, onMount, onCleanup } from 'solid-js'
 import { useParams, useNavigate } from '@solidjs/router'
-import { apiRequest, Card, CardFields, updateCard, UpdateCardRequest, getCard, generateCard } from '~/lib/api'
+import { Card, CardFields, updateCard, UpdateCardRequest, getCard, generateCard } from '~/lib/api'
 import AudioButton from '~/components/audio-button'
 import { useMainButton } from '~/lib/useMainButton'
-import { useBackButton } from '~/lib/useBackButton'
 import { showToast } from '~/lib/toast-service'
 
 export default function EditCard() {
 	const params = useParams()
 	const navigate = useNavigate()
 	const mainButton = useMainButton()
-	const backButton = useBackButton()
 
 	const [loading, setLoading] = createSignal(false)
 	const [error, setError] = createSignal<string | null>(null)
-	const [formValid, setFormValid] = createSignal(false)
+	const [_, setFormValid] = createSignal(false)
 	const [generatingAI, setGeneratingAI] = createSignal(false)
 
 	// Default empty card fields

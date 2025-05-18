@@ -1,0 +1,46 @@
+export const dict = {
+	common: {
+		loading: 'Loading...',
+		error: 'An error occurred',
+		success: 'Success',
+		save: 'Save',
+		saved: 'Saved!',
+	},
+	navigation: {
+		home: 'Home',
+		cards: 'Cards',
+		tasks: 'Tasks',
+		stats: 'Statistics',
+		profile: 'Profile',
+		importDeck: 'Import Deck',
+	},
+	deck: {
+		settings: 'Deck Settings',
+		cards: 'Cards',
+		progress: 'Progress',
+	},
+	card: {
+		front: 'Front',
+		back: 'Back',
+		edit: 'Edit Card',
+		delete: 'Delete Card',
+		new: 'New Card',
+		save: 'Save Card',
+	},
+	task: {
+		complete: 'Complete',
+		skip: 'Skip',
+		next: 'Next',
+		previous: 'Previous',
+		submit: 'Submit Answer',
+	},
+	profile: {
+		language: 'Language',
+		darkMode: 'Dark Mode',
+		logout: 'Logout',
+		username: 'Username',
+		displayName: 'Display Name',
+		level: 'Level',
+		points: 'Points',
+	},
+} as const

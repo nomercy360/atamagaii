@@ -51,6 +51,7 @@ export interface User {
 	points: number
 	created_at: string
 	updated_at: string
+	language_code: string
 }
 
 export interface Deck {

@@ -11,6 +11,7 @@ func (s *Storage) UpdateSchema() error {
 	   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	   username TEXT,
 	   avatar_url TEXT,
+	   language_code TEXT,
 	   name TEXT,
 	   points REAL DEFAULT 0
     );

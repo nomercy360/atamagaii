@@ -1,5 +1,5 @@
 import { createStore } from 'solid-js/store'
-import { User as ApiUser, Stats as ApiStats } from '~/lib/api'
+import { User as ApiUser, Stats as ApiStats, StudyStats } from '~/lib/api'
 
 // Use the same User type as defined in the API
 export type User = ApiUser
@@ -15,8 +15,9 @@ export const [store, setStore] = createStore<{
 	user: {} as User,
 	token: null,
 	stats: {
-		due_cards: 0
-	}
+		due_cards: 0,
+		study_stats: {} as StudyStats,
+	},
 })
 
 export const setUser = (user: User) => setStore('user', user)

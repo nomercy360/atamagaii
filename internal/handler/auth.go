@@ -58,15 +58,21 @@ func (h *Handler) TelegramAuth(c echo.Context) error {
 		}
 	}
 
+	languageCode := "en"
+	if data.User.LanguageCode != "" {
+		languageCode = data.User.LanguageCode
+	}
+
 	user, err := h.db.GetUser(data.User.ID)
 	if err != nil && errors.Is(err, db.ErrNotFound) {
 		imgUrl := fmt.Sprintf("%s/avatars/%d.svg", "https://assets.peatch.io", rand.Intn(30)+1)
 		create := db.User{
-			ID:         nanoid.Must(),
-			Username:   &username,
-			TelegramID: data.User.ID,
-			Name:       name,
-			AvatarURL:  &imgUrl,
+			ID:           nanoid.Must(),
+			Username:     &username,
+			TelegramID:   data.User.ID,
+			Name:         name,
+			AvatarURL:    &imgUrl,
+			LanguageCode: languageCode,
 		}
 
 		if err = h.db.SaveUser(&create); err != nil {

@@ -1,5 +1,5 @@
 import { createSignal, onCleanup, onMount, For, createResource, Show } from 'solid-js'
-import { importDeck, getAvailableDecks, LanguageGroup, AvailableDeck } from '~/lib/api'
+import { importDeck, getAvailableDecks, AvailableDeck } from '~/lib/api'
 import { useNavigate } from '@solidjs/router'
 import { useMainButton } from '~/lib/useMainButton'
 import { useBackButton } from '~/lib/useBackButton'

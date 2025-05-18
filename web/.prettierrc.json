@@ -20,6 +20,15 @@
   "jsxSingleQuote": false,
   "quoteProps": "as-needed",
   "plugins": [
-    "prettier-plugin-tailwindcss"
-  ]
+    "prettier-plugin-tailwindcss",
+    "@trivago/prettier-plugin-sort-imports"
+  ],
+  "trimTrailingWhitespace": true,
+  "embeddedLanguageFormatting": "auto",
+  "singleAttributePerLine": true,
+  "tailwindFunctions": ["clsx", "cva", "tv"],
+  "importOrder": ["^@/(.*)$", "^~/(.*)$", "^[./]"],
+  "importOrderSeparation": true,
+  "importOrderSortSpecifiers": true,
+  "proseWrap": "always"
 }

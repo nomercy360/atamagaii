@@ -12,8 +12,8 @@ const (
 	MaxReviewIntervalDays int = 365 * 10 // Maximum review interval in days
 
 	// LearningStep1Duration Learning steps (durations) - used for initial learning and relearning
-	LearningStep1Duration time.Duration = 1 * time.Minute
-	LearningStep2Duration time.Duration = 10 * time.Minute
+	LearningStep1Duration = 1 * time.Minute
+	LearningStep2Duration = 10 * time.Minute
 	// GraduateToReviewIntervalDays Graduation interval (when moving from Learning/Relearning to Review state)
 	GraduateToReviewIntervalDays float64 = 1.0 // Days, for "Good"
 
@@ -209,8 +209,13 @@ func calculateNextReviewParameters(
 	case StateNew:
 		params.State = StateLearning
 		params.LearningStep = 1
-		params.Interval = LearningStep1Duration
-		// Ease already set to DefaultEase
+		if rating == RatingAgain {
+			params.Interval = LearningStep1Duration
+		} else if rating == RatingGood {
+			params.LearningStep = 2
+			params.Interval = LearningStep2Duration
+		}
+		// Ease is set to DefaultEase for new cards, no adjustment here
 
 	case StateLearning:
 		if rating == RatingAgain {

@@ -1,0 +1,46 @@
+export const dict = {
+	common: {
+		loading: 'Загрузка...',
+		error: 'Произошла ошибка',
+		success: 'Успешно',
+		save: 'Сохранить',
+		saved: 'Сохранено!',
+	},
+	navigation: {
+		home: 'Главная',
+		cards: 'Карточки',
+		tasks: 'Задания',
+		stats: 'Статистика',
+		profile: 'Профиль',
+		importDeck: 'Импорт колоды',
+	},
+	deck: {
+		settings: 'Настройки колоды',
+		cards: 'Карточки',
+		progress: 'Прогресс',
+	},
+	card: {
+		front: 'Передняя сторона',
+		back: 'Задняя сторона',
+		edit: 'Редактировать карточку',
+		delete: 'Удалить карточку',
+		new: 'Новая карточка',
+		save: 'Сохранить карточку',
+	},
+	task: {
+		complete: 'Завершить',
+		skip: 'Пропустить',
+		next: 'Далее',
+		previous: 'Назад',
+		submit: 'Отправить ответ',
+	},
+	profile: {
+		language: 'Язык',
+		darkMode: 'Темная тема',
+		logout: 'Выйти',
+		username: 'Имя пользователя',
+		displayName: 'Отображаемое имя',
+		level: 'Уровень',
+		points: 'Очки',
+	},
+} as const

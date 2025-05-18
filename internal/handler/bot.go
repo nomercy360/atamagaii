@@ -67,14 +67,20 @@ func (h *Handler) handleUpdate(update tgbotapi.Update) (msg *telegram.SendMessag
 	}
 
 	if err != nil && errors.Is(err, db.ErrNotFound) {
+		languageCode := "en"
+		if update.Message != nil && update.Message.From.LanguageCode != "" {
+			languageCode = update.Message.From.LanguageCode
+		}
+
 		imgUrl := fmt.Sprintf("%s/avatars/%d.svg", "https://assets.peatch.io", rand.Intn(30)+1)
 
 		newUser := &db.User{
-			ID:         nanoid.Must(),
-			TelegramID: chatID,
-			Username:   username,
-			Name:       name,
-			AvatarURL:  &imgUrl,
+			ID:           nanoid.Must(),
+			TelegramID:   chatID,
+			Username:     username,
+			Name:         name,
+			AvatarURL:    &imgUrl,
+			LanguageCode: languageCode,
 		}
 
 		if err := h.db.SaveUser(newUser); err != nil {
