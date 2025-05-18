@@ -1,9 +1,10 @@
-import { createSignal, createResource, Show, createEffect } from 'solid-js'
+import { createSignal, createResource, Show, createEffect, onMount, onCleanup } from 'solid-js'
 import { apiRequest } from '~/lib/api'
 import { useNavigate, useParams } from '@solidjs/router'
 import { cn, hapticFeedback } from '~/lib/utils'
-import ProgressBar from '~/components/progress-bar'
 import Animation from '~/components/all-done-animation'
+import { useMainButton } from '~/lib/useMainButton'
+import ProgressBar from '~/components/progress-bar'
 
 // Task interfaces
 interface TaskOption {
@@ -36,6 +37,7 @@ interface SubmitTaskResponse {
 export default function Task() {
 	const navigate = useNavigate()
 	const params = useParams()
+	const mainButton = useMainButton()
 	const [taskIndex, setTaskIndex] = createSignal(0)
 	const [selectedOption, setSelectedOption] = createSignal<string | null>(null)
 	const [isSubmitting, setIsSubmitting] = createSignal(false)
@@ -47,8 +49,8 @@ export default function Task() {
 	// Function to fetch tasks
 	const fetchTasks = async () => {
 		const deckId = params.deckId
-		const endpoint = deckId ? `/tasks?limit=10&deck_id=${deckId}` : '/tasks?limit=10'
-		
+		const endpoint = deckId ? `/tasks?limit=30&deck_id=${deckId}` : '/tasks?limit=30'
+
 		const { data, error } = await apiRequest<Task[]>(endpoint)
 
 		if (error) {
@@ -84,14 +86,34 @@ export default function Task() {
 		return buffer[idx]
 	}
 
-	// Check if we need to fetch more tasks
-	createEffect(() => {
-		const buffer = taskBuffer()
-		const idx = taskIndex()
+	// Initialize and clean up mainButton
+	onMount(() => {
+		mainButton.hide()
+		mainButton.onClick(handleSubmitTask)
+	})
 
-		// If we're approaching the end of our buffer, fetch more tasks
-		if (buffer.length > 0 && idx >= buffer.length - 2 && needMoreTasks()) {
-			fetchTasks()
+	onCleanup(() => {
+		mainButton.hide()
+		mainButton.offClick(handleSubmitTask)
+	})
+
+	// Update mainButton state based on current selection
+	createEffect(() => {
+		const option = selectedOption()
+		const task = currentTask()
+		const isTaskSubmitting = isSubmitting()
+		const showingFeedback = showFeedback()
+
+		if (task && option && !isTaskSubmitting && !showingFeedback) {
+			mainButton.enable('Submit Answer')
+		} else if (isTaskSubmitting) {
+			mainButton.showProgress(true)
+		} else if (showingFeedback) {
+			// Feedback handling is done in the submission handler
+		} else if (task) {
+			mainButton.disable('Select an Answer')
+		} else {
+			mainButton.hide()
 		}
 	})
 
@@ -108,6 +130,7 @@ export default function Task() {
 		if (!task || !option || isSubmitting() || showFeedback()) return
 
 		setIsSubmitting(true)
+		mainButton.showProgress(true)
 
 		const { data, error } = await apiRequest<SubmitTaskResponse>('/tasks/submit', {
 			method: 'POST',
@@ -120,6 +143,7 @@ export default function Task() {
 		if (error) {
 			console.error('Failed to submit task:', error)
 			setIsSubmitting(false)
+			mainButton.hideProgress()
 			return
 		}
 
@@ -128,6 +152,26 @@ export default function Task() {
 		setShowFeedback(true)
 		hapticFeedback('impact', data?.is_correct ? 'light' : 'medium')
 		setIsSubmitting(false)
+		mainButton.hideProgress()
+
+		// Update mainButton with color based on feedback
+		if (data?.is_correct) {
+			// Green for correct answers
+			mainButton.setParams({
+				text: 'Correct!',
+				color: '#4CAF50', // success green
+				textColor: '#FFFFFF',
+				isEnabled: false,
+			})
+		} else {
+			// Red for incorrect answers
+			mainButton.setParams({
+				text: 'Incorrect!',
+				color: '#F44336', // error red
+				textColor: '#FFFFFF',
+				isEnabled: false,
+			})
+		}
 
 		// Hide feedback after delay
 		setTimeout(() => {
@@ -185,12 +229,16 @@ export default function Task() {
 					</div>
 				</div>
 			</Show>
+			<ProgressBar
+				total={taskBuffer().length}
+				completed={taskIndex() + 1}
+			/>
 
 			<div class="w-full flex-grow flex flex-col items-center justify-start">
 				<Show when={currentTask()}>
 					<div class="w-full flex flex-col items-center">
 						<div class="w-full p-6 mb-6">
-							<h2 class="text-xl font-semibold mb-4 text-center">{currentTask()?.content.question}</h2>
+							<h2 class="text-xl font-semibold mb-8 text-center">{currentTask()?.content.question}</h2>
 
 							<div class="space-y-3">
 								{Object.entries(currentTask()?.content.options || {}).map(([key, value]) => (
@@ -227,28 +275,7 @@ export default function Task() {
 								))}
 							</div>
 
-							<button
-								onClick={handleSubmitTask}
-								disabled={!selectedOption() || isSubmitting() || showFeedback()}
-								class={cn(
-									'w-full mt-6 py-3 rounded-md font-medium transition-colors',
-									showFeedback() && feedbackType() === 'correct'
-										? 'bg-success text-success-foreground cursor-not-allowed'
-										: showFeedback() && feedbackType() === 'incorrect'
-											? 'bg-error text-error-foreground cursor-not-allowed'
-											: selectedOption() && !isSubmitting()
-												? 'bg-primary text-primary-foreground'
-												: 'bg-muted text-muted-foreground cursor-not-allowed',
-								)}
-							>
-								{isSubmitting()
-									? 'Submitting...'
-									: showFeedback() && feedbackType() === 'correct'
-										? 'Correct!'
-										: showFeedback() && feedbackType() === 'incorrect'
-											? 'Incorrect!'
-											: 'Submit Answer'}
-							</button>
+							{/* Note: Custom submit button removed in favor of Telegram's native MainButton */}
 						</div>
 					</div>
 				</Show>

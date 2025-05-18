@@ -5,7 +5,6 @@ import AudioButton from '~/components/audio-button'
 import { cn, hapticFeedback } from '~/lib/utils'
 import TranscriptionText from '~/components/transcription-text'
 import { audioService } from '~/lib/audio-service'
-import ProgressBar from '~/components/progress-bar'
 import AllDoneAnimation from '~/components/all-done-animation'
 
 const getFrontFaceClasses = (isFlipped: boolean, isTrans: boolean) => {

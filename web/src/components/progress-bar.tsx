@@ -16,15 +16,15 @@ export default function ProgressBar(props: ProgressBarProps) {
     <div class="w-full mb-2">
       <div class="flex items-center justify-between mb-1">
         <div class="text-xs text-muted-foreground">
-          <span class="font-medium">{props.completed}</span> / {props.total} cards
+          <span class="font-medium">{props.completed}</span> / {props.total} tasks
           <Show when={props.showPercentage}>
             <span class="ml-1">({percentage()}%)</span>
           </Show>
         </div>
       </div>
       <div class="w-full bg-muted rounded-full h-2.5">
-        <div 
-          class="bg-primary h-2.5 rounded-full transition-all duration-200" 
+        <div
+          class="bg-primary h-2.5 rounded-full transition-all duration-200"
           style={{ width: `${percentage()}%` }}
         />
       </div>
