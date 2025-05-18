@@ -18,47 +18,20 @@ export const queryClient = new QueryClient({
 	},
 })
 
-// Create type definition for Telegram WebApp
-declare global {
-  interface Window {
-    Telegram: {
-      WebApp: {
-        initData: string;
-        initDataUnsafe: {
-          start_param: string;
-        };
-        ready: () => void;
-        expand: () => void;
-        disableClosingConfirmation: () => void;
-        disableVerticalSwipes: () => void;
-        requestWriteAccess: () => void;
-        colorScheme: 'light' | 'dark';
-        onEvent: (eventType: string, callback: () => void) => void;
-        offEvent: (eventType: string, callback: () => void) => void;
-        CloudStorage: {
-          removeItem: (key: string) => void;
-        };
-      };
-    };
-  }
-}
-
 export default function App(props: any) {
 	const [isAuthenticated, setIsAuthenticated] = createSignal(false)
 	const [isLoading, setIsLoading] = createSignal(true)
 
-	const navigate = useNavigate()
-  
 	// Set up theme based on Telegram colorScheme
 	createEffect(() => {
 		// Get the color scheme from Telegram WebApp
 		const scheme = window.Telegram?.WebApp?.colorScheme || 'dark'
-		
+
 		// Remove both theme classes to avoid conflicts
 		document.documentElement.classList.remove('light', 'dark')
 		// Add the appropriate theme class
 		document.documentElement.classList.add(scheme)
-		
+
 		// Set up event listener for theme changes
 		if (window.Telegram?.WebApp) {
 			const handleThemeChange = () => {
@@ -66,7 +39,7 @@ export default function App(props: any) {
 				document.documentElement.classList.remove('light', 'dark')
 				document.documentElement.classList.add(newScheme)
 			}
-			
+
 			window.Telegram.WebApp.onEvent('themeChanged', handleThemeChange)
 		}
 	})
@@ -76,7 +49,6 @@ export default function App(props: any) {
 			console.log('WEBAPP:', window.Telegram)
 
 			const initData = window.Telegram.WebApp.initData
-			const startapp = window.Telegram.WebApp.initDataUnsafe.start_param
 
 			const resp = await fetch(`${API_BASE_URL}/auth/telegram`, {
 				method: 'POST',

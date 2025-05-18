@@ -9,7 +9,6 @@ import (
 	"strconv"
 )
 
-// GetTasks handles the GET /api/tasks endpoint to retrieve tasks for a user
 func (h *Handler) GetTasks(c echo.Context) error {
 	userID, _ := GetUserIDFromToken(c)
 	limitParam := c.QueryParam("limit")

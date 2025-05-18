@@ -172,12 +172,7 @@ func (s *Storage) GetCardsForTaskGeneration() ([]Card, error) {
 	return cards, nil
 }
 
-// GetTasksDueForUser retrieves tasks that are due for a user, filtering out completed tasks
-// and only including tasks from cards that have been in review state for at least delayMinutes
-func (s *Storage) GetTasksDueForUser(userID string, delayMinutes int) ([]Task, error) {
-	// Calculate the cutoff time for tasks based on delay minutes
-	cutoffTime := time.Now().Add(-time.Duration(delayMinutes) * time.Minute)
-
+func (s *Storage) GetTasksDueForUser(userID string, limit int) ([]Task, error) {
 	query := `
 		SELECT t.id, t.type, t.content, t.answer, t.card_id, t.user_id, 
 		       t.completed_at, t.user_response, t.is_correct, 
@@ -188,10 +183,11 @@ func (s *Storage) GetTasksDueForUser(userID string, delayMinutes int) ([]Task, e
 		  AND t.deleted_at IS NULL
 		  AND t.completed_at IS NULL
 		  AND c.state = ?
-		  AND c.last_reviewed_at <= ?
+		ORDER BY t.created_at
+		LIMIT ?
 	`
 
-	rows, err := s.db.Query(query, userID, StateReview, cutoffTime)
+	rows, err := s.db.Query(query, userID, StateReview, limit)
 	if err != nil {
 		return nil, fmt.Errorf("error getting due tasks for user: %w", err)
 	}
