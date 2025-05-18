@@ -172,7 +172,7 @@ func (s *Storage) GetCardsForTaskGeneration() ([]Card, error) {
 	return cards, nil
 }
 
-func (s *Storage) GetTasksDueForUser(userID string, limit int) ([]Task, error) {
+func (s *Storage) GetTasksDueForUser(userID string, limit int, deckID string) ([]Task, error) {
 	query := `
 		SELECT t.id, t.type, t.content, t.answer, t.card_id, t.user_id, 
 		       t.completed_at, t.user_response, t.is_correct, 
@@ -183,11 +183,19 @@ func (s *Storage) GetTasksDueForUser(userID string, limit int) ([]Task, error) {
 		  AND t.deleted_at IS NULL
 		  AND t.completed_at IS NULL
 		  AND c.state = ?
-		ORDER BY t.created_at
-		LIMIT ?
 	`
+	
+	args := []interface{}{userID, StateReview}
+	
+	if deckID != "" {
+		query += " AND c.deck_id = ?"
+		args = append(args, deckID)
+	}
+	
+	query += " ORDER BY t.created_at LIMIT ?"
+	args = append(args, limit)
 
-	rows, err := s.db.Query(query, userID, StateReview, limit)
+	rows, err := s.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error getting due tasks for user: %w", err)
 	}
@@ -220,6 +228,52 @@ func (s *Storage) GetTasksDueForUser(userID string, limit int) ([]Task, error) {
 	}
 
 	return tasks, nil
+}
+
+// TasksPerDeck represents a summary of tasks for a specific deck
+type TasksPerDeck struct {
+	DeckID     string `json:"deck_id"`
+	DeckName   string `json:"deck_name"`
+	TotalTasks int    `json:"total_tasks"`
+}
+
+// GetTaskStatsByDeck returns a summary of available tasks per deck for a user
+func (s *Storage) GetTaskStatsByDeck(userID string) ([]TasksPerDeck, error) {
+	query := `
+		SELECT d.id, d.name, COUNT(t.id) as task_count
+		FROM decks d
+		LEFT JOIN cards c ON d.id = c.deck_id
+		LEFT JOIN tasks t ON c.id = t.card_id
+		WHERE d.user_id = ?
+		  AND d.deleted_at IS NULL
+		  AND (t.user_id = ? OR t.user_id IS NULL)
+		  AND (t.deleted_at IS NULL OR t.deleted_at IS NULL)
+		  AND (t.completed_at IS NULL OR t.completed_at IS NULL)
+		GROUP BY d.id, d.name
+		HAVING COUNT(t.id) > 0
+		ORDER BY d.name
+	`
+
+	rows, err := s.db.Query(query, userID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting task stats by deck: %w", err)
+	}
+	defer rows.Close()
+
+	var stats []TasksPerDeck
+	for rows.Next() {
+		var stat TasksPerDeck
+		if err := rows.Scan(&stat.DeckID, &stat.DeckName, &stat.TotalTasks); err != nil {
+			return nil, fmt.Errorf("error scanning task stats: %w", err)
+		}
+		stats = append(stats, stat)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating task stats rows: %w", err)
+	}
+
+	return stats, nil
 }
 
 // UnmarshalTaskContent unmarshals the task content string into a TaskContent struct

@@ -57,6 +57,7 @@ func (h *Handler) RegisterRoutes(e *echo.Echo) {
 
 	// Task routes
 	v1.GET("/tasks", h.GetTasks)
+	v1.GET("/tasks/by-deck", h.GetTasksPerDeck)
 	v1.POST("/tasks/submit", h.SubmitTaskResponse)
 }
 

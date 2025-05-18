@@ -12,6 +12,7 @@ import (
 func (h *Handler) GetTasks(c echo.Context) error {
 	userID, _ := GetUserIDFromToken(c)
 	limitParam := c.QueryParam("limit")
+	deckID := c.QueryParam("deck_id")
 
 	limit := 10
 	if limitParam != "" {
@@ -21,7 +22,7 @@ func (h *Handler) GetTasks(c echo.Context) error {
 		}
 	}
 
-	tasks, err := h.db.GetTasksDueForUser(userID, limit)
+	tasks, err := h.db.GetTasksDueForUser(userID, limit, deckID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error retrieving tasks: %v", err))
 	}
@@ -46,6 +47,18 @@ func (h *Handler) GetTasks(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, taskResponses)
+}
+
+// GetTasksPerDeck returns a list of tasks grouped by deck
+func (h *Handler) GetTasksPerDeck(c echo.Context) error {
+	userID, _ := GetUserIDFromToken(c)
+	
+	tasksPerDeck, err := h.db.GetTaskStatsByDeck(userID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error retrieving tasks stats: %v", err))
+	}
+	
+	return c.JSON(http.StatusOK, tasksPerDeck)
 }
 
 // SubmitTaskResponse handles the POST /api/tasks/submit endpoint to submit a task response

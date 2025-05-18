@@ -1,13 +1,16 @@
 import { onMount, onCleanup, createSignal } from 'solid-js'
 import { DotLottie } from '@lottiefiles/dotlottie-web'
 
-interface AllDoneAnimationProps {
+interface AnimationProps {
 	class?: string;
 	width?: number;
 	height?: number;
+	src?: string;
+	loop?: boolean;
+	canvasClass?: string;
 }
 
-export default function AllDoneAnimation(props: AllDoneAnimationProps) {
+export default function Animation(props: AnimationProps) {
 	const [canvasRef, setCanvasRef] = createSignal<HTMLCanvasElement | null>(null)
 	const [containerRef, setContainerRef] = createSignal<HTMLDivElement | null>(null)
 	let animation: DotLottie | undefined
@@ -15,6 +18,8 @@ export default function AllDoneAnimation(props: AllDoneAnimationProps) {
 	const devicePixelRatio = window.devicePixelRatio || 1
 	const width = props.width || 200
 	const height = props.height || 200
+	const src = props.src || '/all-done.json'
+	const loop = props.loop !== undefined ? props.loop : true
 
 	const initAnimation = () => {
 		if (!canvasRef()) return
@@ -37,9 +42,9 @@ export default function AllDoneAnimation(props: AllDoneAnimationProps) {
 
 		animation = new DotLottie({
 			autoplay: true,
-			loop: true,
+			loop: loop,
 			canvas: canvas,
-			src: '/all-done.json'
+			src: src
 		})
 	}
 
@@ -58,7 +63,7 @@ export default function AllDoneAnimation(props: AllDoneAnimationProps) {
 		>
 			<canvas
 				ref={setCanvasRef}
-				class="mb-4"
+				class={props.canvasClass || "mb-4"}
 				style={{"image-rendering": "crisp-edges"}}
 			/>
 		</div>

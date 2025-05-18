@@ -311,4 +311,19 @@ export async function getStudyHistory(days: number = 100): Promise<{
 	})
 }
 
+export interface TasksPerDeck {
+	deck_id: string;
+	deck_name: string;
+	total_tasks: number;
+}
+
+export async function getTasksPerDeck(): Promise<{
+	data: TasksPerDeck[] | null
+	error: string | null
+}> {
+	return apiRequest('/tasks/by-deck', {
+		method: 'GET',
+	})
+}
+
 

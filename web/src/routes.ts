@@ -7,6 +7,7 @@ import EditCard from '~/pages/edit-card'
 import Statistics from '~/pages/stats'
 import Profile from '~/pages/profile'
 import Tasks from '~/pages/tasks'
+import Task from '~/pages/task'
 
 
 export const routes: RouteDefinition[] = [
@@ -43,5 +44,9 @@ export const routes: RouteDefinition[] = [
 	{
 		'path': '/edit-card/:deckId/:cardId',
 		'component': EditCard,
+	},
+	{
+		'path': '/tasks/:deckId',
+		'component': Task,
 	},
 ]
