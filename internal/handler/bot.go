@@ -15,6 +15,7 @@ import (
 	nanoid "github.com/matoous/go-nanoid/v2"
 	"log"
 	"math/rand"
+	"regexp"
 	"strings"
 )
 
@@ -173,8 +174,29 @@ func (h *Handler) handleUpdate(update tgbotapi.Update) (msg *telegram.SendMessag
 	return msg
 }
 
+func DetectLanguageFromString(text string) string {
+	defaultLanguage := "jp"
+
+	japanesePattern := regexp.MustCompile(`[\p{Hiragana}\p{Katakana}\p{Han}]`)
+	if japanesePattern.MatchString(text) {
+		return "jp"
+	}
+
+	thaiPattern := regexp.MustCompile("[\u0E00-\u0E7F]")
+	if thaiPattern.MatchString(text) {
+		return "th"
+	}
+
+	georgianPattern := regexp.MustCompile("[\u10A0-\u10FF]")
+	if georgianPattern.MatchString(text) {
+		return "ge"
+	}
+
+	return defaultLanguage
+}
+
 func (h *Handler) createCardFromMessage(userID string, messageText string) (*contract.CardResponse, string, error) {
-	languageCode := utils.DetectLanguage(messageText)
+	languageCode := DetectLanguageFromString(messageText)
 
 	transcriptionType := utils.GetDefaultTranscriptionType(languageCode)
 

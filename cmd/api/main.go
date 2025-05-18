@@ -7,7 +7,6 @@ import (
 	"atamagaii/internal/job"
 	"atamagaii/internal/middleware"
 	"atamagaii/internal/storage"
-	"atamagaii/internal/utils"
 	"context"
 	"fmt"
 	"github.com/go-playground/validator/v10"
@@ -127,10 +126,6 @@ func main() {
 	} else if !ok {
 		log.Fatalf("Failed to set webhook: %v", err)
 	}
-
-	// Initialize language detector
-	utils.InitLanguageDetector()
-	log.Println("Language detector initialized")
 
 	// Start task generation job
 	taskGenerator := job.NewTaskGenerator(dbStorage, openaiClient)

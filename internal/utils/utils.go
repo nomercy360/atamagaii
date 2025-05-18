@@ -47,3 +47,18 @@ func GetLanguageNameFromCode(code string) string {
 	}
 	return "Unknown"
 }
+
+// GetDefaultTranscriptionType returns the default transcription type for the given language code
+func GetDefaultTranscriptionType(languageCode string) string {
+	switch languageCode {
+	case "jp":
+		return "furigana"
+
+	case "th":
+		return "thai_romanization"
+	case "ge":
+		return "mkhedruli"
+	default:
+		return "none"
+	}
+}
