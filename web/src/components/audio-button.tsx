@@ -76,7 +76,7 @@ export default function AudioButton(props: AudioButtonProps) {
 			onClick={handlePlay}
 			onMouseDown={(e) => e.stopPropagation()}
 			onTouchStart={(e) => e.stopPropagation()}
-			class={`${sizeClasses[size]} shrink-0 p-1 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors relative z-10`}
+			class={`${sizeClasses[size]} shrink-0 p-1 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors relative z-[999]`}
 			aria-label={props.label || 'Play audio'}
 			disabled={!props.audioUrl}
 			type="button"

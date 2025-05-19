@@ -1,6 +1,7 @@
-import { createSignal, createResource, Show, createEffect, onMount, onCleanup } from 'solid-js'
+import { createSignal, Show, createEffect, onMount, onCleanup, createResource } from 'solid-js'
 import { apiRequest, Card, CardReviewResponse, Deck, DeckProgress } from '~/lib/api'
 import { useParams, useNavigate } from '@solidjs/router'
+import { useQuery } from '@tanstack/solid-query'
 import AudioButton from '~/components/audio-button'
 import { cn, hapticFeedback } from '~/lib/utils'
 import TranscriptionText from '~/components/transcription-text'
@@ -102,13 +103,14 @@ export default function Cards() {
 	const [cardBuffer, setCardBuffer] = createSignal<Card[]>([])
 	const [needMoreCards, setNeedMoreCards] = createSignal(true)
 
-	const [deck, { refetch: refetchDeck }] = createResource<Deck | null>(
-		async () => {
+	const deckQuery = useQuery(() => ({
+		queryKey: ['deck', params.deckId],
+		queryFn: async () => {
 			if (!params.deckId) return null
 			const { data, error } = await apiRequest<Deck>(`/decks/${params.deckId}`)
 			if (error) {
 				console.error(`Failed to fetch deck ${params.deckId}:`, error)
-				return null
+				throw new Error(error)
 			}
 
 			if (data?.stats) {
@@ -117,7 +119,7 @@ export default function Cards() {
 
 			return data
 		},
-	)
+	}))
 
 	// Handle page visibility events to pause/resume timer
 	onMount(() => {
@@ -385,6 +387,16 @@ export default function Cards() {
 		})()
 	}
 
+	const CardSkeleton = () => (
+		<div class="w-full relative min-h-[500px] mt-6">
+			<div class="absolute inset-0 w-full flex flex-col items-center justify-center p-4">
+				<div class="w-3/4 h-12 bg-muted rounded-md animate-pulse mb-6"></div>
+				<div class="w-full h-8 bg-muted rounded-md animate-pulse mb-2"></div>
+				<div class="w-5/6 h-8 bg-muted rounded-md animate-pulse"></div>
+			</div>
+		</div>
+	)
+
 	return (
 		<div class="container mx-auto px-2 py-6 max-w-md flex flex-col items-center min-h-screen">
 			<Show when={showFeedback()}>
@@ -411,7 +423,7 @@ export default function Cards() {
 				</div>
 			</Show>
 
-			<Show when={deck() && !deck.loading}>
+			<Show when={deckQuery.data && !deckQuery.isPending}>
 				<div class="absolute top-5 right-5 z-20">
 					<div class="relative">
 						<button
@@ -507,7 +519,7 @@ export default function Cards() {
 										<Show when={currentCard()?.fields.audio_word}>
 											<AudioButton
 												audioUrl={currentCard()?.fields.audio_word || ''}
-												size="sm"
+												size="md"
 												label="Play word pronunciation"
 												type="word"
 											/>
@@ -547,7 +559,7 @@ export default function Cards() {
 												<Show when={currentCard()?.fields.audio_example}>
 													<AudioButton
 														audioUrl={currentCard()?.fields.audio_example || ''}
-														size="sm"
+														size="md"
 														label="Play example audio"
 														type="example"
 													/>
@@ -570,9 +582,7 @@ export default function Cards() {
 				</Show>
 
 				<Show when={cards.loading}>
-					<div class="w-full flex flex-col items-center justify-center h-[300px]">
-						<p class="text-muted-foreground">Loading cards...</p>
-					</div>
+					<CardSkeleton />
 				</Show>
 
 				<Show when={!cards.loading && !currentCard()}>
@@ -606,7 +616,7 @@ export default function Cards() {
 					// Don't handle clicks if the settings dropdown is open
 					if (settingsOpen()) return
 
-					// Ignore clicks on settings button or dropdown
+					// Ignore clicks on settings button or dropdown or audio buttons
 					if (e.target instanceof Element) {
 						const isMenuButton = (e.target as Element).closest('button[aria-label="Card settings"]')
 						const isMenuContent = (e.target as Element).closest('.settings-dropdown')
@@ -659,7 +669,7 @@ export default function Cards() {
 			</Show>
 
 			{/* Deck metrics - show only when card is not flipped */}
-			<Show when={!flipped() && currentCard() && !isTransitioning() && deck() && !deck.loading}>
+			<Show when={!flipped() && currentCard() && !isTransitioning() && deckQuery.data && !deckQuery.isPending}>
 				<div class="h-28 fixed bottom-0 left-0 right-0 bg-background border-t border-border">
 					<div class="mx-auto px-4 py-4">
 						<div class="flex justify-center gap-3">

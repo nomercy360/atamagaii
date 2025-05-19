@@ -1,20 +1,41 @@
-import { createResource, For, Show, createSignal } from 'solid-js'
+import { For, Show, createSignal } from 'solid-js'
 import { apiRequest, Deck } from '~/lib/api'
 import { useNavigate } from '@solidjs/router'
+import { useQuery } from '@tanstack/solid-query'
 import DeckSettings from '~/components/deck-settings'
+
+const DeckSkeleton = () => (
+	<div class="space-y-3">
+		{Array(3).fill(0).map((_, i) => (
+			<div class="bg-card w-full text-card-foreground p-4 rounded-xl">
+				<div class="flex justify-between items-center">
+					<div class="w-full">
+						<div class="h-5 bg-muted rounded animate-pulse w-2/3 mb-2"></div>
+						<div class="h-3 bg-muted rounded animate-pulse w-1/3 mb-2"></div>
+						<div class="h-3 bg-muted rounded animate-pulse w-1/2"></div>
+					</div>
+					<div class="ml-4 w-6 h-6 rounded-full bg-muted animate-pulse"></div>
+				</div>
+			</div>
+		))}
+	</div>
+)
 
 export default function Index() {
 	const navigate = useNavigate()
 	const [selectedDeck, setSelectedDeck] = createSignal<Deck | null>(null)
 
-	const [decks, { refetch }] = createResource<Deck[]>(async () => {
-		const { data, error } = await apiRequest<Deck[]>('/decks')
-		if (error) {
-			console.error('Failed to fetch decks:', error)
-			return []
+	const decksQuery = useQuery(() => ({
+		queryKey: ['decks'],
+		queryFn: async () => {
+			const { data, error } = await apiRequest<Deck[]>('/decks')
+			if (error) {
+				console.error('Failed to fetch decks:', error)
+				return []
+			}
+			return data || []
 		}
-		return data || []
-	})
+	}))
 
 	const handleSelectDeck = (deckId: string) => {
 		navigate(`/cards/${deckId}`)
@@ -25,12 +46,12 @@ export default function Index() {
 	}
 
 	const handleUpdateDeck = (updatedDeck: Deck) => {
-		refetch()
+		decksQuery.refetch()
 	}
 
 	const handleDeleteDeck = () => {
 		// When a deck is deleted, refresh both decks and stats
-		refetch()
+		decksQuery.refetch()
 	}
 
 	return (
@@ -56,8 +77,8 @@ export default function Index() {
 					</button>
 				</div>
 				<div class="space-y-2">
-					<Show when={!decks.loading} fallback={<p class="text-muted-foreground">Loading decks...</p>}>
-						<For each={decks()}>
+					<Show when={!decksQuery.isPending} fallback={<DeckSkeleton />}>
+						<For each={decksQuery.data}>
 							{(deck) => (
 								<div
 									class="bg-card w-full text-card-foreground p-4 rounded-xl transition-colors flex justify-between items-center">
@@ -116,7 +137,7 @@ export default function Index() {
 							)}
 						</For>
 
-						{decks() && decks()!.length === 0 && (
+						{decksQuery.data && decksQuery.data.length === 0 && (
 							<div class="text-center py-8">
 								<p class="text-muted-foreground mb-4">No decks found</p>
 								<button

@@ -236,8 +236,8 @@ func calculateNextReviewParameters(
 	case StateReview:
 		if rating == RatingAgain { // Lapse
 			params.State = StateRelearning
-			params.LearningStep = 1
-			params.Interval = LearningStep1Duration
+			params.LearningStep = 2
+			params.Interval = LearningStep2Duration
 			params.Ease = math.Max(MinEaseFactor, effectivePrevEase-0.20) // Use ease before this review
 		} else if rating == RatingGood {
 			// State remains StateReview
