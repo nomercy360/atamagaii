@@ -6,7 +6,7 @@ export default function NavigationTabs(props: any) {
 	const location = useLocation()
 	return (
 		<>
-			<div class="z-20 fixed bottom-0 left-0 right-0 bg-card border-t border-border">
+			<div class="h-24 z-20 fixed bottom-0 left-0 right-0 bg-card border-t border-border">
 				<div class="container mx-auto px-4">
 					<div class="flex justify-around py-3">
 						<Link

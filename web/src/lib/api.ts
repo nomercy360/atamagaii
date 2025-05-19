@@ -62,6 +62,7 @@ export interface Deck {
 	user_id: string
 	created_at: string
 	updated_at: string
+	language_code: string
 	deleted_at?: string
 	stats?: DeckProgress
 	completed_today_cards?: number

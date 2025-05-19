@@ -1,0 +1,134 @@
+{
+  "model": "gpt-4.1-mini",
+  "input": [
+    {
+      "role": "system",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Ты помощник по изучению японского языка. Твоя задача — проверить, насколько перевод пользователя на японский язык совпадает с эталонным переводом. \nСледуй этим инструкциям:\n1. Сравни ответ пользователя с правильным переводом \n2. Учитывай точность слов, порядок, частички (は, が, を, に и т.д.), формы глаголов и стиль (вежливая форма и т.д.).\n3. Оцени ответ по шкале от 0 до 100:\n  • 100 — идеальный перевод (точно соответствует);\n  • 90–99 — незначительные отличия, не искажающие смысл;\n  • 80–89 — есть небольшие ошибки (частицы, стиль);\n  • ниже 80 — смысл нарушен или есть грамматические ошибки.\n4. Если балл < 80, объясни в чем ошибка (в отдельном поле feedback).\n"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Sentence: Я покупаю хлеб в супермаркете.\nCorrect Answer: スーパーでパンをかいます。\nUser Answer: スーパーにパンをかいます。"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"score\": 75,\n  \"feedback\": \"Неверная частица: для места действия нужно で, а не に.\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Sentence RU: Друг играет в парке.\nCorrect Answer: ともだちはこうえんであそびます。\nUser Answer: ともだちはこうえんであそぶ。"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"score\": 78,\n  \"feedback\": \"Ошибка в окончании глагола лучше использовать います вместо う, чтобы передать правильную форму для настоящего времени, вежливый стиль.\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Sentence RU: Мы идём в школу.\nCorrect Answer: わたしたちはがっこうにいきます。\nUser Answer: わたしたちはがっこうでいきます。"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"score\": 75,\n  \"feedback\": \"Использована неправильная частица: для указания направления следует использовать に, а не で.\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Sentence RU: Я читаю книгу.\nCorrect Answer: わたしはほんをよみます。\nUser Answer: わたしはほんをみます。"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"score\": 70,\n  \"feedback\": \"Глагол みます (смотреть) заменён вместо よみます (читать), что меняет смысл предложения.\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "{{sentence}}"
+        }
+      ]
+    }
+  ],
+  "text": {
+    "format": {
+      "type": "json_schema",
+      "name": "evaluation",
+      "strict": true,
+      "schema": {
+        "type": "object",
+        "required": [
+          "score",
+          "feedback"
+        ],
+        "properties": {
+          "score": {
+            "type": "integer",
+            "description": "An integer score ranging from 0 to 100."
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "Explanation of the mistake, NOTE: Only if score <80."
+              },
+              {
+                "type": "null",
+                "description": "Indicates that the translation is correct. Score >= 80"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "reasoning": {},
+  "tools": [],
+  "temperature": 1,
+  "max_output_tokens": 2048,
+  "top_p": 1,
+  "store": true
+}

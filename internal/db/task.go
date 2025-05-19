@@ -184,14 +184,14 @@ func (s *Storage) GetTasksDueForUser(userID string, limit int, deckID string) ([
 		  AND t.completed_at IS NULL
 		  AND c.state = ?
 	`
-	
+
 	args := []interface{}{userID, StateReview}
-	
+
 	if deckID != "" {
 		query += " AND c.deck_id = ?"
 		args = append(args, deckID)
 	}
-	
+
 	query += " ORDER BY t.created_at LIMIT ?"
 	args = append(args, limit)
 
@@ -277,13 +277,34 @@ func (s *Storage) GetTaskStatsByDeck(userID string) ([]TasksPerDeck, error) {
 }
 
 // UnmarshalTaskContent unmarshals the task content string into a TaskContent struct
-func (t *Task) UnmarshalTaskContent() (*TaskContent, error) {
-	var content TaskContent
+func (t *Task) UnmarshalTaskContent() (interface{}, error) {
+	if t.Type == "vocab_recall_reverse" {
+		var content TaskContent
+		err := json.Unmarshal([]byte(t.Content), &content)
+		if err != nil {
+			return nil, fmt.Errorf("error unmarshaling vocab recall task content: %w", err)
+		}
+		return &content, nil
+	} else if t.Type == "sentence_translation" {
+		// For sentence translation tasks
+		var content struct {
+			SentenceRu     string `json:"sentence_ru"`
+			SentenceNative string `json:"sentence_native"`
+		}
+		err := json.Unmarshal([]byte(t.Content), &content)
+		if err != nil {
+			return nil, fmt.Errorf("error unmarshaling sentence translation task content: %w", err)
+		}
+		return &content, nil
+	}
+
+	// Default fallback
+	var content map[string]interface{}
 	err := json.Unmarshal([]byte(t.Content), &content)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshaling task content: %w", err)
 	}
-	return &content, nil
+	return content, nil
 }
 
 // SubmitTaskResponse submits a user's response to a task and marks it as completed
@@ -305,12 +326,18 @@ func (s *Storage) SubmitTaskResponse(taskID, userID, response string) (*Task, er
 	// Check if the response is correct
 	isCorrect := false
 
-	content, err := task.UnmarshalTaskContent()
-	if err != nil {
-		return nil, fmt.Errorf("error parsing task content: %w", err)
+	if task.Type == "vocab_recall_reverse" {
+		// For vocab recall tasks, we now store only the letter (A, B, C, or D)
+		// and the user should respond with that letter
+		isCorrect = task.Answer == response
+	} else if task.Type == "sentence_translation" {
+		// For sentence translation tasks, we'll initially use exact matching
+		// This could be enhanced with fuzzy matching or AI verification later
+		isCorrect = task.Answer == response
+	} else {
+		// Default fallback for other task types
+		isCorrect = task.Answer == response
 	}
-
-	isCorrect = content.CorrectAnswer == response
 
 	// Update the task as completed
 	now := time.Now()

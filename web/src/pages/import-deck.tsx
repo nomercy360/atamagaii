@@ -4,6 +4,7 @@ import { useNavigate } from '@solidjs/router'
 import { useMainButton } from '~/lib/useMainButton'
 import { useBackButton } from '~/lib/useBackButton'
 import { showToast } from '~/lib/toast-service'
+import { queryClient } from '~/App'
 
 type FlagProps = {
 	code: string;
@@ -149,6 +150,7 @@ export default function ImportDeck() {
 			}
 
 			showToast.success('Deck imported successfully!')
+			queryClient.invalidateQueries({ queryKey: ['decks'] })
 
 			setTimeout(() => {
 				navigate('/')

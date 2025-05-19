@@ -74,7 +74,7 @@ func (s *Storage) GetDecks(userID string) ([]Deck, error) {
 	query := `
 		SELECT id, name, level, language_code, transcription_type, new_cards_per_day, user_id, created_at, updated_at, deleted_at
 		FROM decks
-		WHERE user_id = ? AND deleted_at IS NULL
+		WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC
 	`
 	rows, err := s.db.Query(query, userID)
 	if err != nil {

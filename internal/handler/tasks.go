@@ -30,8 +30,24 @@ func (h *Handler) GetTasks(c echo.Context) error {
 	var taskResponses []contract.TaskResponse
 	for _, task := range tasks {
 		var content contract.TaskContent
-		if err := json.Unmarshal([]byte(task.Content), &content); err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing task content: %v", err))
+
+		if task.Type == "vocab_recall_reverse" {
+			var vocabContent contract.TaskVocabRecallContent
+			if err := json.Unmarshal([]byte(task.Content), &vocabContent); err != nil {
+				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing vocab task content: %v", err))
+			}
+			content = &vocabContent
+		} else if task.Type == "sentence_translation" {
+			var translationContent contract.TaskSentenceTranslationContent
+			if err := json.Unmarshal([]byte(task.Content), &translationContent); err != nil {
+				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing translation task content: %v", err))
+			}
+			content = &translationContent
+		} else {
+			// Fallback for unknown types
+			if err := json.Unmarshal([]byte(task.Content), &content); err != nil {
+				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing task content: %v", err))
+			}
 		}
 
 		taskResponse := contract.TaskResponse{
@@ -52,12 +68,12 @@ func (h *Handler) GetTasks(c echo.Context) error {
 // GetTasksPerDeck returns a list of tasks grouped by deck
 func (h *Handler) GetTasksPerDeck(c echo.Context) error {
 	userID, _ := GetUserIDFromToken(c)
-	
+
 	tasksPerDeck, err := h.db.GetTaskStatsByDeck(userID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error retrieving tasks stats: %v", err))
 	}
-	
+
 	return c.JSON(http.StatusOK, tasksPerDeck)
 }
 
@@ -81,8 +97,24 @@ func (h *Handler) SubmitTaskResponse(c echo.Context) error {
 
 	// Parse the task content
 	var content contract.TaskContent
-	if err := json.Unmarshal([]byte(task.Content), &content); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing task content: %v", err))
+
+	if task.Type == "vocab_recall_reverse" {
+		var vocabContent contract.TaskVocabRecallContent
+		if err := json.Unmarshal([]byte(task.Content), &vocabContent); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing vocab task content: %v", err))
+		}
+		content = &vocabContent
+	} else if task.Type == "sentence_translation" {
+		var translationContent contract.TaskSentenceTranslationContent
+		if err := json.Unmarshal([]byte(task.Content), &translationContent); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing translation task content: %v", err))
+		}
+		content = &translationContent
+	} else {
+		// Fallback for unknown types
+		if err := json.Unmarshal([]byte(task.Content), &content); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing task content: %v", err))
+		}
 	}
 
 	taskResponse := contract.TaskResponse{

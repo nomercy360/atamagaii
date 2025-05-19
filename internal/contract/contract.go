@@ -90,7 +90,11 @@ type TaskResponse struct {
 	Card         *CardResponse `json:"card,omitempty"`
 }
 
-type TaskContent struct {
+// TaskContent is an interface that can be one of multiple task content types
+type TaskContent interface{}
+
+// TaskVocabRecallContent represents the content for vocabulary recall tasks
+type TaskVocabRecallContent struct {
 	CorrectAnswer string `json:"-"`
 	Options       struct {
 		A string `json:"a"`
@@ -99,6 +103,13 @@ type TaskContent struct {
 		D string `json:"d"`
 	} `json:"options"`
 	Question string `json:"question"`
+}
+
+// TaskSentenceTranslationContent represents the content for sentence translation tasks
+type TaskSentenceTranslationContent struct {
+	SentenceRu string `json:"sentence_ru"`
+	// Note: SentenceNative is not included here anymore since it's the correct answer
+	// and is stored separately in the database
 }
 
 // SubmitTaskRequest represents the request to submit a task answer

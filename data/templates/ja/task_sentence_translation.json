@@ -1,0 +1,90 @@
+{
+  "model": "gpt-4.1-mini",
+  "input": [
+    {
+      "role": "system",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Создай задание на перевод с русского на японский для начинающего учащегося (JLPT N5–N4). \nУсловия:\n• Используй НЕ БОЛЕЕ 1–2 слов из списка выученных слов.\nРусское предложение должно быть коротким (не более 7–9 слов), с простой грамматикой.\n• Перевод должен быть на японском (хирагана + базовые кандзи, если уместно).\n"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Known Words: 死ぬ、 にわ、はしる、アメリカ、とぼだち"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"sentence_ru\": \"Я вижу собаку в саду.\",\n  \"sentence_native\": \"わたしはにわでいぬをみます。\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Known Words: スーパー、かう、 車、図書館"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n\"sentence_ru\": \"Я покупаю хлеб в супермаркете.\",\n\"sentence_native\": \"スーパーでパンをかいます。\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Known Words: {{knownWords}}"
+        }
+      ]
+    }
+  ],
+  "text": {
+    "format": {
+      "type": "json_schema",
+      "name": "sentence_schema",
+      "schema": {
+        "type": "object",
+        "required": [
+          "sentence_ru",
+          "sentence_native"
+        ],
+        "properties": {
+          "sentence_ru": {
+            "type": "string",
+            "description": "The sentence in Russian."
+          },
+          "sentence_native": {
+            "type": "string",
+            "description": "The sentence in the japanese."
+          }
+        },
+        "additionalProperties": false
+      },
+      "strict": true
+    }
+  },
+  "reasoning": {},
+  "tools": [],
+  "temperature": 0.8,
+  "max_output_tokens": 2048,
+  "top_p": 0.8,
+  "store": true
+}

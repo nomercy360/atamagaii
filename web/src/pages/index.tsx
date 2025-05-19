@@ -3,6 +3,7 @@ import { apiRequest, Deck } from '~/lib/api'
 import { useNavigate } from '@solidjs/router'
 import { useQuery } from '@tanstack/solid-query'
 import DeckSettings from '~/components/deck-settings'
+import { FlagIcon } from '~/pages/import-deck'
 
 const DeckSkeleton = () => (
 	<div class="space-y-3">
@@ -34,7 +35,7 @@ export default function Index() {
 				return []
 			}
 			return data || []
-		}
+		},
 	}))
 
 	const handleSelectDeck = (deckId: string) => {
@@ -54,8 +55,13 @@ export default function Index() {
 		decksQuery.refetch()
 	}
 
+	const getTotalCards = (deck: Deck) => {
+		if (!deck.stats) return 0
+		return deck.stats.review_cards + deck.stats.new_cards + deck.stats.learning_cards
+	}
+
 	return (
-		<div class="container mx-auto px-4 py-6 max-w-md flex flex-col items-center overflow-y-auto h-screen pb-24">
+		<div class="container mx-auto px-4 py-6 max-w-md flex flex-col items-center overflow-y-auto h-screen pb-28">
 			<div class="w-full">
 				<div class="flex justify-between items-center mb-4">
 					<h3 class="text-lg font-medium">Select a Deck</h3>
@@ -87,25 +93,26 @@ export default function Index() {
 										class="flex-1 flex justify-between items-center text-start"
 									>
 										<div>
-											<h4 class="font-medium">{deck.name}</h4>
+											<FlagIcon code={deck.language_code} width={16} height={16}
+																clsName="rounded-full inline-block mr-1" />
+											<div class="flex items-center">
+
+												<h4 class="font-medium">{deck.name}</h4>
+											</div>
 											<p class="text-xs text-muted-foreground mt-1">
 												{deck.new_cards_per_day} new cards per day
 											</p>
-											<div class="flex gap-2 text-xs text-muted-foreground mt-1">
-												<Show when={deck.stats?.new_cards && deck.stats.new_cards > 0}>
-													<span class="text-blue-500">{deck.stats?.new_cards} new</span>
-												</Show>
-												<Show when={deck.stats?.learning_cards && deck.stats.learning_cards > 0}>
-													<span class="text-yellow-500">{deck.stats?.learning_cards} learning</span>
-												</Show>
-												<Show when={deck.stats?.review_cards && deck.stats?.review_cards > 0}>
-													<span class="text-green-500">{deck.stats?.review_cards} review</span>
-												</Show>
-												<Show when={(!deck.stats?.review_cards || deck.stats?.new_cards === 0) &&
-													(!deck.stats?.learning_cards || deck.stats?.learning_cards === 0) &&
-													(!deck.stats?.review_cards || deck.stats?.review_cards === 0)}>
-													<span class="text-muted-foreground">No cards to study</span>
-												</Show>
+											<div class="flex gap-1 text-xs text-muted-foreground mt-2">
+												<svg xmlns="http://www.w3.org/2000/svg"
+														 height="24px"
+														 class="size-4"
+														 viewBox="0 -960 960 960"
+														 width="24px"
+														 fill="currentColor">
+													<path
+														d="M680-160v-640q33 0 56.5 23.5T760-720v480q0 33-23.5 56.5T680-160ZM160-80q-33 0-56.5-23.5T80-160v-640q0-33 23.5-56.5T160-880h360q33 0 56.5 23.5T600-800v640q0 33-23.5 56.5T520-80H160Zm680-160v-480q25 0 42.5 17.5T900-660v360q0 25-17.5 42.5T840-240Zm-680 80h360v-640H160v640Zm0-640v640-640Z" />
+												</svg>
+												{getTotalCards(deck)}
 											</div>
 										</div>
 									</button>
