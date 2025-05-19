@@ -9,10 +9,17 @@ import (
 	"time"
 )
 
+type TaskType string
+
+const (
+	TaskTypeVocabRecall         TaskType = "vocab_recall_reverse"
+	TaskTypeSentenceTranslation TaskType = "sentence_translation"
+)
+
 // Task represents a task in the database
 type Task struct {
 	ID           string     `db:"id" json:"id"`
-	Type         string     `db:"type" json:"type"`
+	Type         TaskType   `db:"type" json:"type"`
 	Content      string     `db:"content" json:"content"`
 	Answer       string     `db:"answer" json:"answer"`
 	CardID       string     `db:"card_id" json:"card_id"`
@@ -33,7 +40,7 @@ type TaskContent struct {
 }
 
 // AddTask adds a new task to the database
-func (s *Storage) AddTask(taskType, content, answer, cardID, userID string) (*Task, error) {
+func (s *Storage) AddTask(taskType TaskType, content, answer, cardID, userID string) (*Task, error) {
 	taskID := nanoid.Must()
 	now := time.Now()
 
@@ -172,6 +179,48 @@ func (s *Storage) GetCardsForTaskGeneration() ([]Card, error) {
 	return cards, nil
 }
 
+// GetKnownWordsFromDeck retrieves terms from cards in the same deck that the user has already studied
+func (s *Storage) GetKnownWordsFromDeck(userID, deckID string, limit int) ([]string, error) {
+	query := `
+		SELECT fields
+		FROM cards
+		WHERE user_id = ?
+		AND deck_id = ?
+		AND deleted_at IS NULL 
+		AND last_reviewed_at IS NOT NULL
+		ORDER BY last_reviewed_at DESC
+		LIMIT ?
+	`
+
+	rows, err := s.db.Query(query, userID, deckID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("error getting known words from deck: %w", err)
+	}
+	defer rows.Close()
+
+	var knownWords []string
+	for rows.Next() {
+		var fields string
+		if err := rows.Scan(&fields); err != nil {
+			return nil, fmt.Errorf("error scanning known word: %w", err)
+		}
+
+		var vocabItem VocabularyItem
+		if err := json.Unmarshal([]byte(fields), &vocabItem); err != nil {
+			continue // Skip this item if we can't parse it
+		}
+
+		// Add the term to our known words list
+		knownWords = append(knownWords, vocabItem.Term)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating known words rows: %w", err)
+	}
+
+	return knownWords, nil
+}
+
 func (s *Storage) GetTasksDueForUser(userID string, limit int, deckID string) ([]Task, error) {
 	query := `
 		SELECT t.id, t.type, t.content, t.answer, t.card_id, t.user_id, 
@@ -308,38 +357,7 @@ func (t *Task) UnmarshalTaskContent() (interface{}, error) {
 }
 
 // SubmitTaskResponse submits a user's response to a task and marks it as completed
-func (s *Storage) SubmitTaskResponse(taskID, userID, response string) (*Task, error) {
-	// First get the task to verify it exists and belongs to the user
-	task, err := s.GetTask(taskID)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving task: %w", err)
-	}
-
-	if task.UserID != userID {
-		return nil, fmt.Errorf("task does not belong to user")
-	}
-
-	if task.CompletedAt != nil {
-		return nil, fmt.Errorf("task is already completed")
-	}
-
-	// Check if the response is correct
-	isCorrect := false
-
-	if task.Type == "vocab_recall_reverse" {
-		// For vocab recall tasks, we now store only the letter (A, B, C, or D)
-		// and the user should respond with that letter
-		isCorrect = task.Answer == response
-	} else if task.Type == "sentence_translation" {
-		// For sentence translation tasks, we'll initially use exact matching
-		// This could be enhanced with fuzzy matching or AI verification later
-		isCorrect = task.Answer == response
-	} else {
-		// Default fallback for other task types
-		isCorrect = task.Answer == response
-	}
-
-	// Update the task as completed
+func (s *Storage) SubmitTaskResponse(taskID, userID, response string, isCorrect bool) error {
 	now := time.Now()
 	query := `
 		UPDATE tasks
@@ -352,23 +370,17 @@ func (s *Storage) SubmitTaskResponse(taskID, userID, response string) (*Task, er
 
 	result, err := s.db.Exec(query, now, response, isCorrect, now, taskID, userID)
 	if err != nil {
-		return nil, fmt.Errorf("error updating task completion: %w", err)
+		return fmt.Errorf("error updating task completion: %w", err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return nil, fmt.Errorf("error checking task update: %w", err)
+		return fmt.Errorf("error checking task update: %w", err)
 	}
 
 	if rowsAffected == 0 {
-		return nil, fmt.Errorf("no task updated")
+		return fmt.Errorf("no task updated")
 	}
 
-	// Return the updated task
-	task.CompletedAt = &now
-	task.UserResponse = &response
-	task.IsCorrect = &isCorrect
-	task.UpdatedAt = now
-
-	return task, nil
+	return nil
 }

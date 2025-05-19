@@ -14,10 +14,19 @@ interface TaskOption {
 	d: string;
 }
 
-interface TaskContent {
+// Interface for vocab recall task content
+interface VocabRecallContent {
 	question: string;
 	options: TaskOption;
 }
+
+// Interface for sentence translation task content
+interface SentenceTranslationContent {
+	sentence_ru: string;
+}
+
+// Union type for all task content types
+type TaskContent = VocabRecallContent | SentenceTranslationContent;
 
 interface Task {
 	id: string;
@@ -32,6 +41,7 @@ interface Task {
 interface SubmitTaskResponse {
 	task: Task;
 	is_correct: boolean;
+	feedback: string | null;
 }
 
 export default function Task() {
@@ -40,9 +50,11 @@ export default function Task() {
 	const mainButton = useMainButton()
 	const [taskIndex, setTaskIndex] = createSignal(0)
 	const [selectedOption, setSelectedOption] = createSignal<string | null>(null)
+	const [translationInput, setTranslationInput] = createSignal('')
 	const [isSubmitting, setIsSubmitting] = createSignal(false)
 	const [showFeedback, setShowFeedback] = createSignal(false)
 	const [feedbackType, setFeedbackType] = createSignal<'correct' | 'incorrect' | null>(null)
+	const [feedbackMessage, setFeedbackMessage] = createSignal<string | null>(null)
 	const [taskBuffer, setTaskBuffer] = createSignal<Task[]>([])
 	const [needMoreTasks, setNeedMoreTasks] = createSignal(true)
 
@@ -97,21 +109,36 @@ export default function Task() {
 		mainButton.offClick(handleSubmitTask)
 	})
 
-	// Update mainButton state based on current selection
+	// Update mainButton state based on current selection or input
 	createEffect(() => {
 		const option = selectedOption()
+		const translation = translationInput()
 		const task = currentTask()
 		const isTaskSubmitting = isSubmitting()
 		const showingFeedback = showFeedback()
 
-		if (task && option && !isTaskSubmitting && !showingFeedback) {
+		// If showing feedback for an incorrect answer in sentence translation
+		if (showingFeedback && feedbackType() === 'incorrect' && task?.type === 'sentence_translation') {
+			mainButton.setParams({
+				text: 'Next Task',
+				color: '#2196F3', // primary blue
+				textColor: '#FFFFFF',
+				isEnabled: true,
+			})
+		} else if (task && task.type === 'vocab_recall_reverse' && option && !isTaskSubmitting && !showingFeedback) {
+			// For vocab recall tasks, need an option selected
+			mainButton.enable('Submit Answer')
+		} else if (task && task.type === 'sentence_translation' && translation.trim() && !isTaskSubmitting && !showingFeedback) {
+			// For sentence translation tasks, need non-empty input
 			mainButton.enable('Submit Answer')
 		} else if (isTaskSubmitting) {
 			mainButton.showProgress(true)
-		} else if (showingFeedback) {
-			// Feedback handling is done in the submission handler
-		} else if (task) {
+		} else if (showingFeedback && feedbackType() === 'correct') {
+			// Feedback handling for correct answers is done in the submission handler
+		} else if (task && task.type === 'vocab_recall_reverse') {
 			mainButton.disable('Select an Answer')
+		} else if (task && task.type === 'sentence_translation') {
+			mainButton.disable('Enter Translation')
 		} else {
 			mainButton.hide()
 		}
@@ -125,9 +152,33 @@ export default function Task() {
 	// Handle task submission
 	const handleSubmitTask = async () => {
 		const task = currentTask()
-		const option = selectedOption()
+		if (!task || isSubmitting()) return
 
-		if (!task || !option || isSubmitting() || showFeedback()) return
+		// If we're showing feedback for an incorrect answer on sentence translation,
+		// and the user clicks "Next Task", move to the next task
+		if (showFeedback() && feedbackType() === 'incorrect' && task.type === 'sentence_translation') {
+			setShowFeedback(false)
+			setFeedbackMessage(null)
+			setTranslationInput('')
+			setTaskIndex(prev => prev + 1)
+			return
+		}
+
+		// Don't proceed if already showing feedback
+		if (showFeedback()) return
+
+		// Get the appropriate response based on task type
+		let response: string
+		if (task.type === 'vocab_recall_reverse') {
+			const option = selectedOption()
+			if (!option) return
+			response = option
+		} else if (task.type === 'sentence_translation') {
+			response = translationInput().trim()
+			if (!response) return
+		} else {
+			return // Unsupported task type
+		}
 
 		setIsSubmitting(true)
 		mainButton.showProgress(true)
@@ -136,7 +187,7 @@ export default function Task() {
 			method: 'POST',
 			body: JSON.stringify({
 				task_id: task.id,
-				response: option,
+				response: response,
 			}),
 		})
 
@@ -154,6 +205,11 @@ export default function Task() {
 		setIsSubmitting(false)
 		mainButton.hideProgress()
 
+		// Set feedback message if available
+		if (data?.feedback) {
+			setFeedbackMessage(data.feedback)
+		}
+
 		// Update mainButton with color based on feedback
 		if (data?.is_correct) {
 			// Green for correct answers
@@ -163,6 +219,17 @@ export default function Task() {
 				textColor: '#FFFFFF',
 				isEnabled: false,
 			})
+
+			// For correct answers, move to next task after a delay
+			setTimeout(() => {
+				setShowFeedback(false)
+				setFeedbackMessage(null)
+
+				// Move to next task, resetting inputs
+				setSelectedOption(null)
+				setTranslationInput('')
+				setTaskIndex(prev => prev + 1)
+			}, 500)
 		} else {
 			// Red for incorrect answers
 			mainButton.setParams({
@@ -171,16 +238,28 @@ export default function Task() {
 				textColor: '#FFFFFF',
 				isEnabled: false,
 			})
+
+			// For incorrect answers in sentence translation tasks, we'll show the feedback
+			// and allow the user to try again or move to the next task
+			if (task.type === 'sentence_translation') {
+				// After a short delay, change the button to allow moving to next task
+				setTimeout(() => {
+					mainButton.setParams({
+						text: 'Next Task',
+						color: '#2196F3', // primary blue
+						textColor: '#FFFFFF',
+						isEnabled: true,
+					})
+				}, 500)
+			} else {
+				// For incorrect answers in vocab recall, follow the original behavior
+				setTimeout(() => {
+					setShowFeedback(false)
+					setSelectedOption(null)
+					setTaskIndex(prev => prev + 1)
+				}, 500)
+			}
 		}
-
-		// Hide feedback after delay
-		setTimeout(() => {
-			setShowFeedback(false)
-
-			// Move to next task
-			setSelectedOption(null)
-			setTaskIndex(prev => prev + 1)
-		}, 500)
 	}
 
 	// Check again for tasks
@@ -190,7 +269,7 @@ export default function Task() {
 	}
 
 	return (
-		<div class="container mx-auto px-4 py-10 max-w-md flex flex-col items-center min-h-screen">
+		<div class="container mx-auto px-4 py-10 max-w-md flex flex-col items-center min-h-screen overflow-y-auto">
 			{/* Feedback animation */}
 			<Show when={showFeedback()}>
 				<div
@@ -238,44 +317,92 @@ export default function Task() {
 				<Show when={currentTask()}>
 					<div class="w-full flex flex-col items-center">
 						<div class="w-full p-6 mb-6">
-							<h2 class="text-xl font-semibold mb-8 text-center">{currentTask()?.content.question}</h2>
+							{/* Vocab Recall Task */}
+							<Show when={currentTask()?.type === 'vocab_recall_reverse'}>
+								<h2 class="text-xl font-semibold mb-8 text-center">
+									{(currentTask()?.content as VocabRecallContent)?.question}
+								</h2>
 
-							<div class="space-y-3">
-								{Object.entries(currentTask()?.content.options || {}).map(([key, value]) => (
-									<button
-										onClick={() => handleOptionSelect(key)}
-										disabled={showFeedback()}
-										class={cn(
-											'w-full text-left p-3 rounded-md border transition-colors',
-											showFeedback() && selectedOption() === key && feedbackType() === 'correct'
-												? 'bg-success/20 border-success'
-												: showFeedback() && selectedOption() === key && feedbackType() === 'incorrect'
-													? 'bg-error/20 border-error'
-													: selectedOption() === key
-														? 'bg-secondary border-secondary'
-														: 'border-border',
-										)}
-									>
-										<div class="flex items-center">
-											<div class={cn(
-												'w-6 h-6 rounded-full flex items-center justify-center border mr-3',
+								<div class="space-y-3">
+									{Object.entries((currentTask()?.content as VocabRecallContent)?.options || {}).map(([key, value]) => (
+										<button
+											onClick={() => handleOptionSelect(key)}
+											disabled={showFeedback()}
+											class={cn(
+												'w-full text-left p-3 rounded-md border transition-colors',
 												showFeedback() && selectedOption() === key && feedbackType() === 'correct'
-													? 'bg-success border-success text-success-foreground'
+													? 'bg-success/20 border-success'
 													: showFeedback() && selectedOption() === key && feedbackType() === 'incorrect'
-														? 'bg-error border-error text-error-foreground'
+														? 'bg-error/20 border-error'
 														: selectedOption() === key
-															? 'bg-primary border-primary text-primary-foreground'
-															: 'border-muted-foreground',
-											)}>
-												<span class="text-sm font-medium uppercase">{key}</span>
+															? 'bg-secondary border-secondary'
+															: 'border-border',
+											)}
+										>
+											<div class="flex items-center">
+												<div class={cn(
+													'w-6 h-6 rounded-full flex items-center justify-center border mr-3',
+													showFeedback() && selectedOption() === key && feedbackType() === 'correct'
+														? 'bg-success border-success text-success-foreground'
+														: showFeedback() && selectedOption() === key && feedbackType() === 'incorrect'
+															? 'bg-error border-error text-error-foreground'
+															: selectedOption() === key
+																? 'bg-primary border-primary text-primary-foreground'
+																: 'border-muted-foreground',
+												)}>
+													<span class="text-sm font-medium uppercase">{key}</span>
+												</div>
+												<span>{value}</span>
 											</div>
-											<span>{value}</span>
-										</div>
-									</button>
-								))}
-							</div>
+										</button>
+									))}
+								</div>
+							</Show>
 
-							{/* Note: Custom submit button removed in favor of Telegram's native MainButton */}
+							{/* Sentence Translation Task */}
+							<Show when={currentTask()?.type === 'sentence_translation'}>
+								<div class="space-y-6">
+									<h2 class="text-start text-sm text-secondary-foreground font-semibold mb-2">
+										Translate to Japanese
+									</h2>
+									<p class="text-lg italic">
+										{(currentTask()?.content as SentenceTranslationContent)?.sentence_ru}
+									</p>
+
+									<div class="space-y-1">
+										<label for="translation" class="text-xs font-medium">
+											Your Translation
+										</label>
+										<textarea
+											id="translation"
+											value={translationInput()}
+											onInput={(e) => setTranslationInput(e.target.value)}
+											rows={3}
+											disabled={showFeedback() && feedbackType() === 'correct'}
+											ref={(el) => {
+												if (el && !showFeedback()) {
+													setTimeout(() => el.focus(), 100)
+												}
+											}}
+											class={cn(
+												'w-full p-3 bg-transparent text-3xl rounded-md transition-colors focus:outline-none text-center resize-none',
+												showFeedback() && feedbackType() === 'correct'
+													? 'bg-success/10 border-success'
+													: showFeedback() && feedbackType() === 'incorrect'
+														? 'bg-error/10 border-error'
+														: 'border-border',
+											)}
+										/>
+									</div>
+
+									<Show when={showFeedback() && feedbackType() === 'incorrect' && feedbackMessage()}>
+										<div class="p-4 bg-error/10 border border-error rounded-md text-sm">
+											<h3 class="font-semibold mb-1">Feedback:</h3>
+											<p>{feedbackMessage()}</p>
+										</div>
+									</Show>
+								</div>
+							</Show>
 						</div>
 					</div>
 				</Show>

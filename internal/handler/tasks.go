@@ -2,6 +2,7 @@ package handler
 
 import (
 	"atamagaii/internal/contract"
+	"atamagaii/internal/db"
 	"encoding/json"
 	"fmt"
 	"github.com/labstack/echo/v4"
@@ -31,13 +32,13 @@ func (h *Handler) GetTasks(c echo.Context) error {
 	for _, task := range tasks {
 		var content contract.TaskContent
 
-		if task.Type == "vocab_recall_reverse" {
+		if task.Type == db.TaskTypeVocabRecall {
 			var vocabContent contract.TaskVocabRecallContent
 			if err := json.Unmarshal([]byte(task.Content), &vocabContent); err != nil {
 				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing vocab task content: %v", err))
 			}
 			content = &vocabContent
-		} else if task.Type == "sentence_translation" {
+		} else if task.Type == db.TaskTypeSentenceTranslation {
 			var translationContent contract.TaskSentenceTranslationContent
 			if err := json.Unmarshal([]byte(task.Content), &translationContent); err != nil {
 				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing translation task content: %v", err))
@@ -52,7 +53,7 @@ func (h *Handler) GetTasks(c echo.Context) error {
 
 		taskResponse := contract.TaskResponse{
 			ID:           task.ID,
-			Type:         task.Type,
+			Type:         string(task.Type),
 			Content:      content,
 			CompletedAt:  task.CompletedAt,
 			UserResponse: task.UserResponse,
@@ -90,50 +91,65 @@ func (h *Handler) SubmitTaskResponse(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Validation error: %v", err))
 	}
 
-	task, err := h.db.SubmitTaskResponse(req.TaskID, userID, req.Response)
+	task, err := h.db.GetTask(req.TaskID)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error submitting task response: %v", err))
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error retrieving task: %v", err))
 	}
 
-	// Parse the task content
-	var content contract.TaskContent
+	if task.UserID != userID {
+		return echo.NewHTTPError(http.StatusForbidden, "You are not allowed to submit this task")
+	}
 
-	if task.Type == "vocab_recall_reverse" {
+	if task.CompletedAt != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Task already completed")
+	}
+
+	isCorrect := false
+	var feedback *string
+
+	if task.Type == db.TaskTypeVocabRecall {
 		var vocabContent contract.TaskVocabRecallContent
 		if err := json.Unmarshal([]byte(task.Content), &vocabContent); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing vocab task content: %v", err))
 		}
-		content = &vocabContent
-	} else if task.Type == "sentence_translation" {
+
+		isCorrect = req.Response == vocabContent.CorrectAnswer
+	} else if task.Type == db.TaskTypeSentenceTranslation {
 		var translationContent contract.TaskSentenceTranslationContent
 		if err := json.Unmarshal([]byte(task.Content), &translationContent); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing translation task content: %v", err))
 		}
-		content = &translationContent
-	} else {
-		// Fallback for unknown types
-		if err := json.Unmarshal([]byte(task.Content), &content); err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing task content: %v", err))
+
+		ctx := c.Request().Context()
+		checkResult, err := h.openaiClient.CheckSentenceTranslation(
+			ctx,
+			translationContent.SentenceRu,
+			task.Answer,  // Correct answer from the DB
+			req.Response, // User-provided answer
+			"jp",         // TODO: Get the language code from the card
+		)
+
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error checking translation: %v", err))
 		}
+
+		// Update the is_correct field based on the AI check (score >= 80 is considered correct)
+		isCorrect = checkResult.Score >= 80
+		if checkResult.Feedback != nil && !isCorrect {
+			feedback = checkResult.Feedback
+		}
+	} else {
+		return echo.NewHTTPError(http.StatusNotImplemented, "Task type not implemented")
 	}
 
-	taskResponse := contract.TaskResponse{
-		ID:           task.ID,
-		Type:         task.Type,
-		Content:      content,
-		CompletedAt:  task.CompletedAt,
-		UserResponse: task.UserResponse,
-		IsCorrect:    task.IsCorrect,
-		CreatedAt:    task.CreatedAt,
+	if err := h.db.SubmitTaskResponse(req.TaskID, userID, req.Response, isCorrect); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error submitting task response: %v", err))
 	}
 
-	isCorrect := false
-	if task.IsCorrect != nil {
-		isCorrect = *task.IsCorrect
-	}
-
-	return c.JSON(http.StatusOK, contract.SubmitTaskResponse{
-		Task:      taskResponse,
+	response := contract.SubmitTaskResponse{
 		IsCorrect: isCorrect,
-	})
+		FeedBack:  feedback,
+	}
+
+	return c.JSON(http.StatusOK, response)
 }

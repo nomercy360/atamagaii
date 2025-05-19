@@ -122,4 +122,5 @@ type SubmitTaskRequest struct {
 type SubmitTaskResponse struct {
 	Task      TaskResponse `json:"task"`
 	IsCorrect bool         `json:"is_correct"`
+	FeedBack  *string      `json:"feedback"`
 }

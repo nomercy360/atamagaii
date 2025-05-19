@@ -5,19 +5,14 @@ import (
 	"atamagaii/internal/db"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 )
 
 const (
 	// TaskGenInterval is how often the task generation job runs
-	TaskGenInterval = 2 * time.Minute
-
-	// Task type constants
-	TaskTypeVocabRecall         = "vocab_recall_reverse"
-	TaskTypeSentenceTranslation = "sentence_translation"
-
-	// Template files
+	TaskGenInterval                 = 2 * time.Minute
 	TaskVocabRecallTemplate         = "task_vocab_recall_reverse.json"
 	TaskSentenceTranslationTemplate = "task_sentence_translation.json"
 )
@@ -95,17 +90,39 @@ func (tg *TaskGenerator) generateTasks() {
 		// Randomly choose between task types
 		// For now, we'll use a 50/50 split between vocab recall and sentence translation
 		// This can be adjusted later based on user preferences or card type
-		taskType := TaskTypeVocabRecall
+		taskType := db.TaskTypeVocabRecall
 		templateName := TaskVocabRecallTemplate
 
 		// Simple random selection - can be made more sophisticated later
-		if time.Now().Unix()%2 == 0 {
-			taskType = TaskTypeSentenceTranslation
+		//if time.Now().Unix()%2 == 0 {
+		if 1 == 1 {
+			taskType = db.TaskTypeSentenceTranslation
 			templateName = TaskSentenceTranslationTemplate
 		}
 
+		var vocabItem db.VocabularyItem
+		if err := json.Unmarshal([]byte(card.Fields), &vocabItem); err != nil {
+			log.Printf("error unmarshaling card fields: %v", err)
+			continue
+		}
+
+		var targetWord *string
+		if taskType == db.TaskTypeVocabRecall {
+			targetWord = &vocabItem.Term
+			if vocabItem.MeaningEn != "" {
+				res := fmt.Sprintf("%s (%s) %s", vocabItem.MeaningEn, vocabItem.TermWithTranscription, vocabItem.Term)
+				targetWord = &res
+			}
+		}
+
+		knownWords, err := tg.storage.GetKnownWordsFromDeck(card.UserID, card.DeckID, 10)
+		if err != nil {
+			log.Printf("Error getting known words for card %s: %v", card.ID, err)
+			continue
+		}
+
 		// Generate task for this card
-		taskContent, err := tg.openAIClient.GenerateTask(ctx, &card, templateName)
+		taskContent, err := tg.openAIClient.GenerateTask(ctx, vocabItem.LanguageCode, templateName, targetWord, knownWords)
 		if err != nil {
 			log.Printf("Error generating task for card %s: %v", card.ID, err)
 			continue
@@ -123,7 +140,7 @@ func (tg *TaskGenerator) generateTasks() {
 		var contentJSON []byte
 
 		// Handle different task types
-		if taskType == TaskTypeVocabRecall {
+		if taskType == db.TaskTypeVocabRecall {
 			// For vocab recall tasks, extract and store just the answer letter
 			var vocabContent struct {
 				CorrectAnswer string `json:"correct_answer"`
@@ -165,7 +182,7 @@ func (tg *TaskGenerator) generateTasks() {
 				continue
 			}
 
-		} else if taskType == TaskTypeSentenceTranslation {
+		} else if taskType == db.TaskTypeSentenceTranslation {
 			// For sentence translation tasks, extract the native sentence as correct answer
 			var translationContent struct {
 				SentenceRu     string `json:"sentence_ru"`
