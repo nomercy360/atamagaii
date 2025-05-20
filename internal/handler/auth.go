@@ -147,3 +147,73 @@ func generateJWT(userID string, chatID int64, secretKey string) (string, error) 
 
 	return t, nil
 }
+
+// UpdateUserHandler handles the API request to update a user's profile
+func (h *Handler) UpdateUserHandler(c echo.Context) error {
+	// Get user from JWT token
+	uid, err := GetUserIDFromToken(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Invalid token")
+	}
+
+	// Check if user exists
+	dbUser, err := h.db.GetUserByID(uid)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "User not found")
+	}
+
+	// Parse request body
+	var req contract.UpdateUserRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request format")
+	}
+
+	// Update user fields if provided in request
+	if req.Name != nil {
+		dbUser.Name = req.Name
+	}
+
+	if req.AvatarURL != nil {
+		dbUser.AvatarURL = req.AvatarURL
+	}
+
+	if req.LanguageCode != nil {
+		dbUser.LanguageCode = *req.LanguageCode
+	}
+
+	// Update settings if provided
+	if req.Settings != nil {
+		if dbUser.Settings == nil {
+			dbUser.Settings = &db.UserSettings{}
+		}
+
+		if req.Settings.MaxTasksPerDay != nil {
+			dbUser.Settings.MaxTasksPerDay = *req.Settings.MaxTasksPerDay
+		}
+
+		if req.Settings.TaskTypes != nil && len(req.Settings.TaskTypes) > 0 {
+			var taskTypes []db.TaskType
+			for _, t := range req.Settings.TaskTypes {
+				taskType := db.TaskType(t)
+				// Validate task type
+				if taskType == db.TaskTypeVocabRecall ||
+					taskType == db.TaskTypeSentenceTranslation ||
+					taskType == db.TaskTypeAudio {
+					taskTypes = append(taskTypes, taskType)
+				}
+			}
+
+			if len(taskTypes) > 0 {
+				dbUser.Settings.TaskTypes = taskTypes
+			}
+		}
+	}
+
+	// Save updated user
+	if err := h.db.UpdateUser(dbUser); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update user")
+	}
+
+	// Return updated user
+	return c.JSON(http.StatusOK, dbUser)
+}

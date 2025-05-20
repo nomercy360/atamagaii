@@ -41,6 +41,11 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestInit
 	}
 }
 
+export interface UserSettings {
+	max_tasks_per_day: number
+	task_types: string[]
+}
+
 export interface User {
 	id: string
 	telegram_id: number
@@ -52,6 +57,7 @@ export interface User {
 	created_at: string
 	updated_at: string
 	language_code: string
+	settings?: UserSettings
 }
 
 export interface Deck {
@@ -154,6 +160,16 @@ export interface Stats {
 
 export interface StudyHistory {
 	history: StudyHistoryItem[];
+}
+
+export interface UpdateUserRequest {
+	name?: string;
+	avatar_url?: string;
+	language_code?: string;
+	settings?: {
+		max_tasks_per_day?: number;
+		task_types?: string[];
+	};
 }
 
 export interface AuthTelegramRequest {
@@ -310,6 +326,16 @@ export async function getStudyHistory(days: number = 100): Promise<{
 }> {
 	return apiRequest(`/stats/history?days=${days}`, {
 		method: 'GET',
+	})
+}
+
+export async function updateUser(request: UpdateUserRequest): Promise<{
+	data: User | null
+	error: string | null
+}> {
+	return apiRequest('/user', {
+		method: 'PUT',
+		body: JSON.stringify(request),
 	})
 }
 

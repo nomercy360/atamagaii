@@ -27,11 +27,11 @@ export const routes: RouteDefinition[] = [
 				'path': '/stats',
 				'component': Statistics,
 			},
-			{
-				'path': '/profile',
-				'component': Profile,
-			},
 		],
+	},
+	{
+		'path': '/profile',
+		'component': Profile,
 	},
 	{
 		'path': '/cards/:deckId',

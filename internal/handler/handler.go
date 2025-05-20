@@ -59,6 +59,9 @@ func (h *Handler) RegisterRoutes(e *echo.Echo) {
 	v1.GET("/tasks", h.GetTasks)
 	v1.GET("/tasks/by-deck", h.GetTasksPerDeck)
 	v1.POST("/tasks/submit", h.SubmitTaskResponse)
+	
+	// User routes
+	v1.PUT("/user", h.UpdateUserHandler)
 }
 
 func GetUserIDFromToken(c echo.Context) (string, error) {

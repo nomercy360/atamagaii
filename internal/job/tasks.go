@@ -15,7 +15,7 @@ import (
 const (
 	// TaskGenInterval is how often the task generation job runs
 	TaskGenInterval                 = 2 * time.Minute
-	TaskVocabRecallTemplate         = "task_vocab_recall_reverse.json"
+	TaskVocabRecallTemplate         = "task_vocab_recall.json"
 	TaskSentenceTranslationTemplate = "task_sentence_translation.json"
 	TaskAudioTemplate               = "task_audio.json"
 )

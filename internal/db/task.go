@@ -12,7 +12,7 @@ import (
 type TaskType string
 
 const (
-	TaskTypeVocabRecall         TaskType = "vocab_recall_reverse"
+	TaskTypeVocabRecall         TaskType = "vocab_recall"
 	TaskTypeSentenceTranslation TaskType = "sentence_translation"
 	TaskTypeAudio               TaskType = "audio"
 )

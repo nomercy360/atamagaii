@@ -1,4 +1,21 @@
 export const dict = {
+	stats: {
+		title: 'Статистика',
+		summary: 'Сводка обучения',
+		loading: 'Загрузка статистики...',
+		loadingActivity: 'Загрузка данных активности...',
+		totalCards: 'Всего карточек',
+		today: 'Сегодня',
+		studyDays: 'Дней обучения',
+		totalReviews: 'Всего повторений',
+		currentStreak: 'Текущая серия',
+		days: 'дней',
+		totalStudyTime: 'Общее время',
+		activityHistory: 'История активности',
+		noActivity: 'Нет активности',
+		less: 'Меньше',
+		more: 'Больше',
+	},
 	home: {
 		deck: 'Выберите колоду',
 		add_deck: 'Добавить колоду',
@@ -40,6 +57,21 @@ export const dict = {
 		next: 'Далее',
 		previous: 'Назад',
 		submit: 'Отправить ответ',
+		nextTask: 'Следующее задание',
+		tryAgain: 'Попробовать снова',
+		selectAnswer: 'Выберите ответ',
+		enterTranslation: 'Введите перевод',
+		correct: 'Верно!',
+		incorrect: 'Неверно!',
+		translateToJapanese: 'Переведите на японский',
+		yourTranslation: 'Ваш перевод',
+		feedback: 'Обратная связь:',
+		listenToAudio: 'Прослушайте аудио',
+		loadingTasks: 'Загрузка заданий...',
+		noTasksAvailable: 'Нет доступных заданий!',
+		practiceToGenerateTasks: 'Чтобы появились задания, изучайте карточки в этой колоде. Задания появляются, когда карточки переходят в режим повторения.',
+		checkAgain: 'Проверить снова',
+		backToTasks: 'Вернуться к заданиям'
 	},
 	profile: {
 		language: 'Язык',
@@ -49,5 +81,15 @@ export const dict = {
 		displayName: 'Отображаемое имя',
 		level: 'Уровень',
 		points: 'Очки',
+		enterName: 'Введите ваше имя',
+		maxTasksPerDay: 'Максимум заданий в день',
+		maxTasksHelp: 'Максимальное количество заданий, которое вы получите в день',
+		taskTypes: 'Типы заданий',
+		taskTypesHelp: 'Выберите типы заданий, которые вы хотите практиковать',
+		taskTypeOptions: {
+			vocabRecall: 'Запоминание слов',
+			sentenceTranslation: 'Перевод предложений',
+			audio: 'Аудирование'
+		}
 	},
 } as const

@@ -1,4 +1,21 @@
 export const dict = {
+	stats: {
+		title: 'Statistics',
+		summary: 'Study Summary',
+		loading: 'Loading stats...',
+		loadingActivity: 'Loading activity data...',
+		totalCards: 'Total Cards',
+		today: 'Today',
+		studyDays: 'Study Days',
+		totalReviews: 'Total Reviews',
+		currentStreak: 'Current Streak',
+		days: 'days',
+		totalStudyTime: 'Total Study Time',
+		activityHistory: 'Activity History',
+		noActivity: 'No activity',
+		less: 'Less',
+		more: 'More',
+	},
 	home: {
 		deck: 'Select a Deck',
 		add_deck: 'Add Deck',
@@ -40,6 +57,21 @@ export const dict = {
 		next: 'Next',
 		previous: 'Previous',
 		submit: 'Submit Answer',
+		nextTask: 'Next Task',
+		tryAgain: 'Try Again',
+		selectAnswer: 'Select an Answer',
+		enterTranslation: 'Enter Translation',
+		correct: 'Correct!',
+		incorrect: 'Incorrect!',
+		translateToJapanese: 'Translate to Japanese',
+		yourTranslation: 'Your Translation',
+		feedback: 'Feedback:',
+		listenToAudio: 'Listen to the audio',
+		loadingTasks: 'Loading tasks...',
+		noTasksAvailable: 'No tasks available!',
+		practiceToGenerateTasks: 'Practice cards in this deck to generate tasks. Tasks appear when cards move to review stage.',
+		checkAgain: 'Check Again',
+		backToTasks: 'Back to tasks'
 	},
 	profile: {
 		language: 'Language',
@@ -49,5 +81,15 @@ export const dict = {
 		displayName: 'Display Name',
 		level: 'Level',
 		points: 'Points',
+		enterName: 'Enter your name',
+		maxTasksPerDay: 'Maximum Tasks Per Day',
+		maxTasksHelp: 'Maximum number of tasks you will receive each day',
+		taskTypes: 'Task Types',
+		taskTypesHelp: 'Select which types of tasks you want to practice',
+		taskTypeOptions: {
+			vocabRecall: 'Vocabulary Recall',
+			sentenceTranslation: 'Sentence Translation',
+			audio: 'Audio Practice'
+		}
 	},
 } as const

@@ -1,11 +1,10 @@
-import { createSignal, For, Show, useTransition } from 'solid-js'
+import { createEffect, createSignal, For, Show } from 'solid-js'
 import { useQuery } from '@tanstack/solid-query'
 import { getStats, getStudyHistory, StudyHistoryItem, StudyStats } from '~/lib/api'
+import { useTranslations } from '~/i18n/locale-context'
 
 export default function Statistics() {
-	const [selectedMonth, setSelectedMonth] = createSignal<number>(new Date().getMonth())
-	const [selectedYear, setSelectedYear] = createSignal<number>(new Date().getFullYear())
-	const [isPending, startTransition] = useTransition()
+	const { t } = useTranslations()
 
 	// Fetch stats data
 	const statsQuery = useQuery(() => ({
@@ -17,81 +16,89 @@ export default function Statistics() {
 		},
 	}))
 
-	// Fetch history data
+	// Fetch history data for last (100 days)
 	const historyQuery = useQuery(() => ({
-		queryKey: ['study_history', selectedYear(), selectedMonth()],
+		queryKey: ['study_history'],
 		queryFn: async () => {
 			// Get the last 100 days of study history
-			const { data, error } = await getStudyHistory(100) // Get last 100 days of data
+			const { data, error } = await getStudyHistory(100)
 			if (error) throw new Error(error)
 			return data
 		},
 	}))
 
-	// Generate calendar data
-	const calendar = () => {
-		if (!historyQuery.data?.history) return []
+	// Create and prepare calendar data
+	const [calendarData, setCalendarData] = createSignal<{
+		weeks: Record<string, { date: Date; count: number }[]>;
+		maxCount: number;
+	}>({ weeks: {}, maxCount: 0 })
 
-		const year = selectedYear()
-		const month = selectedMonth()
+	// Calculate calendar data when history is loaded
+	createEffect(() => {
+		if (!historyQuery.data?.history) return
 
-		// Create a date for the first day of the month
-		const firstDay = new Date(year, month, 1)
-		// Get the day of the week (0-6, 0 is Sunday) of the first day
-		const startingDay = firstDay.getDay()
+		// Generate dates for the last 120 days
+		const endDate = new Date()
+		const startDate = new Date()
+		startDate.setDate(endDate.getDate() - 100)
 
-		// Get the number of days in the month
-		const lastDay = new Date(year, month + 1, 0)
-		const daysInMonth = lastDay.getDate()
-
-		// Create an array for all days in the month
-		const days = Array(daysInMonth + startingDay).fill(null)
-
-		// Map history data to days
+		// Create map for history data
 		const historyMap = new Map<string, StudyHistoryItem>()
 		historyQuery.data.history.forEach(item => {
 			historyMap.set(item.date, item)
 		})
 
-		// Fill in the calendar days
-		for (let i = startingDay; i < days.length; i++) {
-			const dayOfMonth = i - startingDay + 1
-			const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayOfMonth).padStart(2, '0')}`
+		// Prepare data structure for the calendar
+		const weeks: Record<string, { date: Date; count: number }[]> = {}
+		let maxCount = 0
+
+		// Iterate through each day in the range
+		const currentDate = new Date(startDate)
+		while (currentDate <= endDate) {
+			const dateStr = currentDate.toISOString().split('T')[0]
 			const historyItem = historyMap.get(dateStr)
+			const count = historyItem?.card_count || 0
 
-			days[i] = {
-				date: dayOfMonth,
-				fullDate: dateStr,
-				cardCount: historyItem?.card_count || 0,
-				timeSpentMs: historyItem?.time_spent_ms || 0,
+			// Update max count
+			if (count > maxCount) {
+				maxCount = count
 			}
+
+			// Get week number (Sunday-based)
+			const weekNum = getWeekNumber(currentDate)
+
+			// Initialize week array if needed
+			if (!weeks[weekNum]) {
+				weeks[weekNum] = new Array(7).fill(null).map(() => ({ date: new Date(0), count: 0 }))
+			}
+
+			// Add day data to the week
+			const dayOfWeek = currentDate.getDay()
+			weeks[weekNum][dayOfWeek] = {
+				date: new Date(currentDate),
+				count
+			}
+
+			// Move to next day
+			currentDate.setDate(currentDate.getDate() + 1)
 		}
 
-		// Fill in the days before the first day of the month
-		for (let i = 0; i < startingDay; i++) {
-			days[i] = null
-		}
+		setCalendarData({ weeks, maxCount })
+	})
 
-		// Group days into weeks
-		const weeks = []
-		for (let i = 0; i < days.length; i += 7) {
-			weeks.push(days.slice(i, i + 7))
-		}
-
-		return weeks
-	}
-
-	// Calculate max cards per day for scaling intensity
-	const maxCardsPerDay = () => {
-		if (!historyQuery.data?.history || historyQuery.data.history.length === 0) return 1
-		return Math.max(...historyQuery.data.history.map(item => item.card_count), 1)
+	// Helper function to get week number (custom format "YYYY-WW")
+	function getWeekNumber(date: Date): string {
+		const startOfYear = new Date(date.getFullYear(), 0, 1)
+		const pastDaysOfYear = (date.getTime() - startOfYear.getTime()) / 86400000
+		const weekNumber = Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7)
+		return `${date.getFullYear()}-${weekNumber.toString().padStart(2, '0')}`
 	}
 
 	// Calculate intensity of color based on cards count (0-4)
-	const getIntensity = (cardCount: number) => {
-		if (cardCount === 0) return 0
-		const max = maxCardsPerDay()
-		const percentage = cardCount / max
+	const getIntensity = (count: number) => {
+		if (count === 0) return 0
+		const max = calendarData().maxCount || 1
+		const percentage = count / max
 
 		if (percentage <= 0.25) return 1
 		if (percentage <= 0.5) return 2
@@ -99,162 +106,120 @@ export default function Statistics() {
 		return 4
 	}
 
-	// Format month name
-	const monthName = (month: number) => {
-		return new Date(2000, month, 1).toLocaleString('default', { month: 'long' })
+	// Format date for tooltip
+	const formatDate = (date: Date) => {
+		return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 	}
 
-	// Navigation functions
-	const previousMonth = () => {
-		startTransition(() => {
-			const newMonth = selectedMonth() - 1
-			if (newMonth < 0) {
-				setSelectedMonth(11)
-				setSelectedYear(selectedYear() - 1)
-			} else {
-				setSelectedMonth(newMonth)
-			}
-		})
-	}
-
-	const nextMonth = () => {
-		startTransition(() => {
-			const newMonth = selectedMonth() + 1
-			if (newMonth > 11) {
-				setSelectedMonth(0)
-				setSelectedYear(selectedYear() + 1)
-			} else {
-				setSelectedMonth(newMonth)
-			}
-		})
-	}
+	// Get day names (abbreviated)
+	const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
 	return (
 		<div class="container mx-auto px-4 py-6 pb-24 overflow-y-auto h-screen">
-			<h1 class="text-2xl font-bold mb-6">Statistics</h1>
+			<h1 class="text-2xl font-bold mb-6">{t('stats.title')}</h1>
 
 			{/* Summary Stats */}
 			<div class="mb-8 bg-card rounded-xl p-4 border border-border">
-				<h2 class="text-xl font-semibold mb-2">Study Summary</h2>
-				<Show when={statsQuery.data?.study_stats} fallback={<div class="text-sm">Loading stats...</div>}>
+				<h2 class="text-lg font-semibold mb-2">{t('stats.summary')}</h2>
+				<Show when={statsQuery.data?.study_stats} fallback={<div class="text-xs">{t('stats.loading')}</div>}>
 					<div class="grid grid-cols-2 md:grid-cols-3 gap-4">
 						<div class="flex flex-col">
-							<span class="text-sm text-neutral-400">Total Cards</span>
-							<span class="text-lg font-bold">{statsQuery.data?.study_stats.total_cards}</span>
+							<span class="text-xs text-muted-foreground">{t('stats.totalCards')}</span>
+							<span class="font-bold">{statsQuery.data?.study_stats.total_cards}</span>
 						</div>
 						<div class="flex flex-col">
-							<span class="text-sm text-neutral-400">Today</span>
-							<span class="text-lg font-bold">{statsQuery.data?.study_stats.cards_studied_today}</span>
+							<span class="text-xs text-muted-foreground">{t('stats.today')}</span>
+							<span class="font-bold">{statsQuery.data?.study_stats.cards_studied_today}</span>
 						</div>
 						<div class="flex flex-col">
-							<span class="text-sm text-neutral-400">Study Days</span>
-							<span class="text-lg font-bold">{statsQuery.data?.study_stats.study_days} days</span>
+							<span class="text-xs text-muted-foreground">{t('stats.studyDays')}</span>
+							<span class="font-bold">{statsQuery.data?.study_stats.study_days} {t('stats.days')}</span>
 						</div>
 						<div class="flex flex-col">
-							<span class="text-sm text-neutral-400">Total Reviews</span>
-							<span class="text-lg font-bold">{statsQuery.data?.study_stats.total_reviews}</span>
+							<span class="text-xs text-muted-foreground">{t('stats.totalReviews')}</span>
+							<span class="font-bold">{statsQuery.data?.study_stats.total_reviews}</span>
 						</div>
 						<div class="flex flex-col">
-							<span class="text-sm text-neutral-400">Current Streak</span>
-							<span class="text-lg font-bold">{statsQuery.data?.study_stats.streak_days} days</span>
+							<span class="text-xs text-muted-foreground">{t('stats.currentStreak')}</span>
+							<span class="font-bold">{statsQuery.data?.study_stats.streak_days} {t('stats.days')}</span>
 						</div>
 						<div class="flex flex-col">
-							<span class="text-sm text-neutral-400">Total Study Time</span>
-							<span class="text-lg font-bold">{statsQuery.data?.study_stats.total_time_studied}</span>
+							<span class="text-xs text-muted-foreground">{t('stats.totalStudyTime')}</span>
+							<span class="font-bold">{statsQuery.data?.study_stats.total_time_studied}</span>
 						</div>
 					</div>
 				</Show>
 			</div>
 
-			{/* Activity Graph */}
-			<div class="h-full mb-8 bg-card rounded-xl p-4 border border-border">
-				<div class="flex justify-between items-center mb-4">
-					<button
-						class="text-neutral-400 hover:text-white"
-						onClick={previousMonth}
-						disabled={isPending()}
-					>
-						<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-							<path fill-rule="evenodd"
-										d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
-										clip-rule="evenodd" />
-						</svg>
-					</button>
+			{/* GitHub-style Activity Heatmap */}
+			<div class="mb-8 bg-card rounded-xl p-4 border border-border">
+				<h2 class="text-xl font-semibold mb-4">{t('stats.activityHistory')}</h2>
 
-					<h2 class="text-xl font-semibold">
-						{monthName(selectedMonth())} {selectedYear()}
-					</h2>
-
-					<button
-						class="text-neutral-400 hover:text-white"
-						onClick={nextMonth}
-						disabled={isPending()}
-					>
-						<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-							<path fill-rule="evenodd"
-										d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-										clip-rule="evenodd" />
-						</svg>
-					</button>
-				</div>
-
-				<div class="overflow-x-auto">
-					<div class="min-w-full">
-						<div class="grid grid-cols-7 gap-1 text-center text-xs text-neutral-400 mb-2">
-							<div>S</div>
-							<div>M</div>
-							<div>T</div>
-							<div>W</div>
-							<div>T</div>
-							<div>F</div>
-							<div>S</div>
-						</div>
-
-						<Show when={!historyQuery.isLoading}
-									fallback={<div class="text-center py-4">Loading activity data...</div>}>
-							<div class="grid grid-cols-1 gap-1">
-								<For each={calendar()}>
-									{(week) => (
-										<div class="grid grid-cols-7 gap-1">
-											<For each={week}>
-												{(day) => (
-													<Show when={day !== null} fallback={<div class="aspect-square" />}>
-														<div
-															class="aspect-square rounded-sm flex items-center justify-center text-xs relative"
-															classList={{
-																'bg-secondary': day?.cardCount === 0,
-																'bg-green-700': getIntensity(day?.cardCount) === 1 && day?.cardCount > 0,
-																'bg-green-600': getIntensity(day?.cardCount) === 2,
-																'bg-green-500': getIntensity(day?.cardCount) === 3,
-																'bg-green-400': getIntensity(day?.cardCount) === 4,
-															}}
-															title={`${day?.fullDate}: ${day?.cardCount} cards`}
-														>
-															{day?.date}
-														</div>
-													</Show>
-												)}
-											</For>
+				<Show when={!historyQuery.isLoading} fallback={<div class="text-center py-4">{t('stats.loadingActivity')}</div>}>
+					<div class="flex overflow-auto pb-2">
+						{/* Day labels (vertical) */}
+						<div class="pr-2 pt-5">
+							<div class="grid grid-rows-7 h-[126px] gap-[3px] text-center text-xs text-muted-foreground">
+								<For each={dayNames}>
+									{(day, index) => (
+										<div class="flex items-center justify-end h-[15px]">
+											{index() % 2 === 0 ? day : ''}
 										</div>
 									)}
 								</For>
 							</div>
-						</Show>
-					</div>
-				</div>
+						</div>
 
-				<div class="flex items-center mt-4 text-xs space-x-2">
-					<div class="text-secondary-foreground">Goal not met</div>
-					<div class="w-3 h-3 rounded-sm bg-secondary"></div>
-					<div class="text-secondary-foreground">Less</div>
-					<div class="flex space-x-1">
-						<div class="w-3 h-3 rounded-sm bg-green-700"></div>
-						<div class="w-3 h-3 rounded-sm bg-green-600"></div>
-						<div class="w-3 h-3 rounded-sm bg-green-500"></div>
-						<div class="w-3 h-3 rounded-sm bg-green-400"></div>
+						{/* Calendar grid */}
+						<div class="overflow-auto">
+							<div class="flex">
+								<For each={Object.keys(calendarData().weeks).sort()}>
+									{(weekKey) => (
+										<div class="flex flex-col mr-[3px]">
+											{/* Show week number at top for every 4th week */}
+											<div class="text-xs text-center mb-1 h-4 text-muted-foreground">
+												{weekKey.endsWith('-01') || weekKey.endsWith('-05') ||
+												weekKey.endsWith('-09') || weekKey.endsWith('-13') ?
+													weekKey.split('-')[1] : ''}
+											</div>
+											<div class="grid grid-rows-7 gap-[3px]">
+												<For each={calendarData().weeks[weekKey]}>
+													{(day) => (
+														<div
+															class="w-[15px] h-[15px] rounded-sm"
+															classList={{
+																'bg-secondary': day.count === 0,
+																'bg-green-900': getIntensity(day.count) === 1 && day.count > 0,
+																'bg-green-700': getIntensity(day.count) === 2,
+																'bg-green-600': getIntensity(day.count) === 3,
+																'bg-green-500': getIntensity(day.count) === 4,
+															}}
+															title={`${formatDate(day.date)}: ${day.count} cards`}
+														/>
+													)}
+												</For>
+											</div>
+										</div>
+									)}
+								</For>
+							</div>
+						</div>
 					</div>
-					<div class="text-secondary-foreground">More</div>
-				</div>
+
+					{/* Legend */}
+					<div class="flex items-center mt-4 text-xs space-x-2">
+						<div class="text-muted-foreground">{t('stats.noActivity')}</div>
+						<div class="w-3 h-3 rounded-sm bg-secondary"></div>
+						<div class="text-muted-foreground">{t('stats.less')}</div>
+						<div class="flex space-x-1">
+							<div class="w-3 h-3 rounded-sm bg-green-900"></div>
+							<div class="w-3 h-3 rounded-sm bg-green-700"></div>
+							<div class="w-3 h-3 rounded-sm bg-green-600"></div>
+							<div class="w-3 h-3 rounded-sm bg-green-500"></div>
+						</div>
+						<div class="text-muted-foreground">{t('stats.more')}</div>
+					</div>
+				</Show>
 			</div>
 		</div>
 	)

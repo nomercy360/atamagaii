@@ -8,6 +8,7 @@ import { useSecondaryButton } from '~/lib/useSecondaryButton'
 import ProgressBar from '~/components/progress-bar'
 import AudioButton from '~/components/audio-button'
 import TranscriptionText from '~/components/transcription-text'
+import { useTranslations } from '~/i18n/locale-context'
 
 // Task interfaces
 interface TaskOption {
@@ -60,6 +61,7 @@ export default function Task() {
 	const params = useParams()
 	const mainButton = useMainButton()
 	const secondaryButton = useSecondaryButton()
+	const { t } = useTranslations()
 	const [taskIndex, setTaskIndex] = createSignal(0)
 	const [selectedOption, setSelectedOption] = createSignal<string | null>(null)
 	const [translationInput, setTranslationInput] = createSignal('')
@@ -135,26 +137,21 @@ export default function Task() {
 
 		// If showing feedback for an incorrect answer in sentence translation
 		if (showingFeedback && feedbackType() === 'incorrect' && task?.type === 'sentence_translation') {
-			mainButton.setParams({
-				text: 'Next Task',
-				color: '#2196F3', // primary blue
-				textColor: '#FFFFFF',
-				isEnabled: true,
-			})
-		} else if (task && (task.type === 'vocab_recall_reverse' || task.type === 'audio') && option && !isTaskSubmitting && !showingFeedback) {
+			mainButton.enable(t('task.nextTask'))
+		} else if (task && (task.type === 'vocab_recall' || task.type === 'audio') && option && !isTaskSubmitting && !showingFeedback) {
 			// For vocab recall and audio tasks, need an option selected
-			mainButton.enable('Submit Answer')
+			mainButton.enable(t('task.submit'))
 		} else if (task && task.type === 'sentence_translation' && translation.trim() && !isTaskSubmitting && !showingFeedback) {
 			// For sentence translation tasks, need non-empty input
-			mainButton.enable('Submit Answer')
+			mainButton.enable(t('task.submit'))
 		} else if (isTaskSubmitting) {
 			mainButton.showProgress(true)
 		} else if (showingFeedback && feedbackType() === 'correct') {
 			// Feedback handling for correct answers is done in the submission handler
-		} else if (task && (task.type === 'vocab_recall_reverse' || task.type === 'audio')) {
-			mainButton.disable('Select an Answer')
+		} else if (task && (task.type === 'vocab_recall' || task.type === 'audio')) {
+			mainButton.disable(t('task.selectAnswer'))
 		} else if (task && task.type === 'sentence_translation') {
-			mainButton.disable('Enter Translation')
+			mainButton.disable(t('task.enterTranslation'))
 		} else {
 			mainButton.hide()
 		}
@@ -187,7 +184,7 @@ export default function Task() {
 
 		// Get the appropriate response based on task type
 		let response: string
-		if (task.type === 'vocab_recall_reverse' || task.type === 'audio') {
+		if (task.type === 'vocab_recall' || task.type === 'audio') {
 			const option = selectedOption()
 			if (!option) return
 			response = option
@@ -232,7 +229,7 @@ export default function Task() {
 		if (data?.is_correct) {
 			// Green for correct answers
 			mainButton.setParams({
-				text: 'Correct!',
+				text: t('task.correct'),
 				color: '#4CAF50', // success green
 				textColor: '#FFFFFF',
 				isEnabled: false,
@@ -251,7 +248,7 @@ export default function Task() {
 		} else {
 			// Red for incorrect answers
 			mainButton.setParams({
-				text: 'Incorrect!',
+				text: t('task.incorrect'),
 				color: '#F44336', // error red
 				textColor: '#FFFFFF',
 				isEnabled: false,
@@ -259,21 +256,10 @@ export default function Task() {
 
 			// For incorrect answers, show the feedback and update buttons
 			setTimeout(() => {
-				mainButton.setParams({
-					text: 'Next Task',
-					color: '#2196F3', // primary blue
-					textColor: '#FFFFFF',
-					isEnabled: true,
-				})
+				mainButton.enable(t('task.nextTask'))
 
 				// Show the secondary "Try Again" button
-				secondaryButton.setParams({
-					text: 'Try Again',
-					isVisible: true,
-					color: window.Telegram.WebApp.themeParams.secondary_bg_color || '#E6E6E6',
-					textColor: window.Telegram.WebApp.themeParams.secondary_text_color || '#000000',
-					isEnabled: true,
-				})
+				secondaryButton.enable(t('task.tryAgain'))
 			}, 500)
 		}
 	}
@@ -291,8 +277,8 @@ export default function Task() {
 
 		// Reset the main button state
 		mainButton.setParams({
-			text: 'Submit Answer',
-			color: '#2196F3', // primary blue
+			text: t('task.submit'),
+			color: '#101012', // primary blue
 			textColor: '#FFFFFF',
 			isEnabled: !!selectedOption() || (currentTask()?.type === 'sentence_translation' && !!translationInput().trim()),
 		})
@@ -357,7 +343,7 @@ export default function Task() {
 					<div class="w-full flex flex-col items-center">
 						<div class="w-full p-6 mb-6">
 							{/* Vocab Recall Task */}
-							<Show when={currentTask()?.type === 'vocab_recall_reverse'}>
+							<Show when={currentTask()?.type === 'vocab_recall'}>
 								<h2 class="text-xl font-semibold mb-8 text-center">
 									{(currentTask()?.content as VocabRecallContent)?.question}
 								</h2>
@@ -403,7 +389,7 @@ export default function Task() {
 							<Show when={currentTask()?.type === 'sentence_translation'}>
 								<div class="space-y-6">
 									<h2 class="text-start text-sm text-secondary-foreground font-semibold mb-2">
-										Translate to Japanese
+										{t('task.translateToJapanese')}
 									</h2>
 									<p class="text-lg italic">
 										{(currentTask()?.content as SentenceTranslationContent)?.sentence_ru}
@@ -411,7 +397,7 @@ export default function Task() {
 
 									<div class="space-y-1">
 										<label for="translation" class="text-xs font-medium">
-											Your Translation
+											{t('task.yourTranslation')}
 										</label>
 										<textarea
 											id="translation"
@@ -437,7 +423,7 @@ export default function Task() {
 
 									<Show when={showFeedback() && feedbackType() === 'incorrect' && feedbackMessage()}>
 										<div class="p-4 bg-error/10 border border-error rounded-md text-sm">
-											<h3 class="font-semibold mb-1">Feedback:</h3>
+											<h3 class="font-semibold mb-1">{t('task.feedback')}</h3>
 											<p>{feedbackMessage()}</p>
 										</div>
 									</Show>
@@ -449,7 +435,7 @@ export default function Task() {
 								<div class="space-y-6">
 									<div class="flex items-center justify-center space-x-2 mb-4">
 										<AudioButton audioUrl={(currentTask()?.content as AudioTaskContent)?.audio_url} size="lg" />
-										<span class="text-sm">Listen to the audio</span>
+										<span class="text-sm">{t('task.listenToAudio')}</span>
 									</div>
 
 									<h2 class="text-xl font-semibold mb-4 text-center">
@@ -505,28 +491,28 @@ export default function Task() {
 
 				<Show when={tasks.loading}>
 					<div class="w-full flex flex-col items-center justify-center h-[300px]">
-						<p class="text-muted-foreground">Loading tasks...</p>
+						<p class="text-muted-foreground">{t('task.loadingTasks')}</p>
 					</div>
 				</Show>
 
 				<Show when={!tasks.loading && !currentTask()}>
 					<div class="w-full flex flex-col items-center justify-center h-[400px] px-4">
 						<Animation width={100} height={100} class="mb-2" />
-						<p class="text-xl font-medium text-center mb-4">No tasks available!</p>
+						<p class="text-xl font-medium text-center mb-4">{t('task.noTasksAvailable')}</p>
 						<p class="text-muted-foreground mb-4 text-center">
-							Practice cards in this deck to generate tasks. Tasks appear when cards move to review stage.
+							{t('task.practiceToGenerateTasks')}
 						</p>
 						<button
 							onClick={handleCheckAgain}
 							class="mb-4 px-4 py-2 bg-primary text-primary-foreground rounded-md"
 						>
-							Check Again
+							{t('task.checkAgain')}
 						</button>
 						<button
 							onClick={() => navigate('/tasks')}
 							class="mt-2 text-primary"
 						>
-							Back to tasks
+							{t('task.backToTasks')}
 						</button>
 					</div>
 				</Show>

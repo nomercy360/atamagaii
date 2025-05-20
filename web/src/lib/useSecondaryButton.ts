@@ -3,8 +3,8 @@ export function useSecondaryButton() {
 		setVisible: (text: string) => {
 			window.Telegram.WebApp.SecondaryButton.setParams({
 				is_visible: true,
-				text_color: window.Telegram.WebApp.themeParams.secondary_text_color || '#FFFFFF',
-				color: window.Telegram.WebApp.themeParams.secondary_bg_color || '#3F8AF7',
+				text_color: '#EEEEEE',
+				color: '#333333',
 				text,
 			})
 		},
@@ -15,18 +15,16 @@ export function useSecondaryButton() {
 			return window.Telegram.WebApp.SecondaryButton.setParams({
 				is_active: true,
 				is_visible: true,
-				text_color: window.Telegram.WebApp.themeParams.button_text_color,
-				color: window.Telegram.WebApp.themeParams.secondary_bg_color,
+				text_color: '#EEEEEE',
+				color: '#333333',
 				text,
 			})
 		},
 		disable: (text?: string) => {
 			return window.Telegram.WebApp.SecondaryButton.setParams({
 				is_active: false,
-				color:
-					window.Telegram.WebApp.colorScheme === 'dark' ? '#3C3C3E' : '#F7F7F7',
-				text_color:
-					window.Telegram.WebApp.colorScheme === 'dark' ? '#FFFFFF' : '#3C3C3E',
+				color: '#555555',
+				text_color: '#AAAAAA',
 				is_visible: true,
 				text,
 			})
