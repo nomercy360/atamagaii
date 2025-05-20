@@ -5,6 +5,7 @@ import { cn, hapticFeedback } from '~/lib/utils'
 import Animation from '~/components/all-done-animation'
 import { useMainButton } from '~/lib/useMainButton'
 import ProgressBar from '~/components/progress-bar'
+import AudioButton from '~/components/audio-button'
 
 // Task interfaces
 interface TaskOption {
@@ -25,8 +26,16 @@ interface SentenceTranslationContent {
 	sentence_ru: string;
 }
 
+// Interface for audio task content
+interface AudioTaskContent {
+	story: string;
+	question: string;
+	options: TaskOption;
+	audio_url: string;
+}
+
 // Union type for all task content types
-type TaskContent = VocabRecallContent | SentenceTranslationContent;
+type TaskContent = VocabRecallContent | SentenceTranslationContent | AudioTaskContent;
 
 interface Task {
 	id: string;
@@ -125,8 +134,8 @@ export default function Task() {
 				textColor: '#FFFFFF',
 				isEnabled: true,
 			})
-		} else if (task && task.type === 'vocab_recall_reverse' && option && !isTaskSubmitting && !showingFeedback) {
-			// For vocab recall tasks, need an option selected
+		} else if (task && (task.type === 'vocab_recall_reverse' || task.type === 'audio') && option && !isTaskSubmitting && !showingFeedback) {
+			// For vocab recall and audio tasks, need an option selected
 			mainButton.enable('Submit Answer')
 		} else if (task && task.type === 'sentence_translation' && translation.trim() && !isTaskSubmitting && !showingFeedback) {
 			// For sentence translation tasks, need non-empty input
@@ -135,7 +144,7 @@ export default function Task() {
 			mainButton.showProgress(true)
 		} else if (showingFeedback && feedbackType() === 'correct') {
 			// Feedback handling for correct answers is done in the submission handler
-		} else if (task && task.type === 'vocab_recall_reverse') {
+		} else if (task && (task.type === 'vocab_recall_reverse' || task.type === 'audio')) {
 			mainButton.disable('Select an Answer')
 		} else if (task && task.type === 'sentence_translation') {
 			mainButton.disable('Enter Translation')
@@ -169,7 +178,7 @@ export default function Task() {
 
 		// Get the appropriate response based on task type
 		let response: string
-		if (task.type === 'vocab_recall_reverse') {
+		if (task.type === 'vocab_recall_reverse' || task.type === 'audio') {
 			const option = selectedOption()
 			if (!option) return
 			response = option
@@ -269,7 +278,7 @@ export default function Task() {
 	}
 
 	return (
-		<div class="container mx-auto px-4 py-10 max-w-md flex flex-col items-center min-h-screen overflow-y-auto">
+		<div class="bg-card container mx-auto px-4 py-10 max-w-md flex flex-col items-center min-h-screen overflow-y-auto">
 			{/* Feedback animation */}
 			<Show when={showFeedback()}>
 				<div
@@ -401,6 +410,55 @@ export default function Task() {
 											<p>{feedbackMessage()}</p>
 										</div>
 									</Show>
+								</div>
+							</Show>
+
+							{/* Audio Task */}
+							<Show when={currentTask()?.type === 'audio'}>
+								<div class="space-y-6">
+									<div class="flex items-center justify-center space-x-2 mb-4">
+										<AudioButton audioUrl={(currentTask()?.content as AudioTaskContent)?.audio_url} size="lg" />
+										<span class="text-sm">Listen to the audio</span>
+									</div>
+
+									<h2 class="text-xl font-semibold mb-4 text-center">
+										{(currentTask()?.content as AudioTaskContent)?.question}
+									</h2>
+
+									<div class="space-y-3">
+										{Object.entries((currentTask()?.content as AudioTaskContent)?.options || {}).map(([key, value]) => (
+											<button
+												onClick={() => handleOptionSelect(key)}
+												disabled={showFeedback()}
+												class={cn(
+													'w-full text-left p-3 rounded-md border transition-colors',
+													showFeedback() && selectedOption() === key && feedbackType() === 'correct'
+														? 'bg-success/20 border-success'
+														: showFeedback() && selectedOption() === key && feedbackType() === 'incorrect'
+															? 'bg-error/20 border-error'
+															: selectedOption() === key
+																? 'bg-secondary border-secondary'
+																: 'border-border',
+												)}
+											>
+												<div class="flex items-center">
+													<div class={cn(
+														'w-6 h-6 rounded-full flex items-center justify-center border mr-3',
+														showFeedback() && selectedOption() === key && feedbackType() === 'correct'
+															? 'bg-success border-success text-success-foreground'
+															: showFeedback() && selectedOption() === key && feedbackType() === 'incorrect'
+																? 'bg-error border-error text-error-foreground'
+																: selectedOption() === key
+																	? 'bg-primary border-primary text-primary-foreground'
+																	: 'border-muted-foreground',
+													)}>
+														<span class="text-sm font-medium uppercase">{key}</span>
+													</div>
+													<span>{value}</span>
+												</div>
+											</button>
+										))}
+									</div>
 								</div>
 							</Show>
 						</div>

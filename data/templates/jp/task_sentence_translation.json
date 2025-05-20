@@ -51,7 +51,7 @@
       "content": [
         {
           "type": "input_text",
-          "text": "Known Words: {{knownWords}}"
+          "text": "Known Words: {{targetWord}}"
         }
       ]
     }

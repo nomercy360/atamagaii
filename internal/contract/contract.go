@@ -108,8 +108,19 @@ type TaskVocabRecallContent struct {
 // TaskSentenceTranslationContent represents the content for sentence translation tasks
 type TaskSentenceTranslationContent struct {
 	SentenceRu string `json:"sentence_ru"`
-	// Note: SentenceNative is not included here anymore since it's the correct answer
-	// and is stored separately in the database
+}
+
+// TaskAudioContent represents the content for audio listening tasks
+type TaskAudioContent struct {
+	Story    string `json:"story"`
+	Question string `json:"question"`
+	Options  struct {
+		A string `json:"a"`
+		B string `json:"b"`
+		C string `json:"c"`
+		D string `json:"d"`
+	} `json:"options"`
+	AudioURL string `json:"audio_url,omitempty"`
 }
 
 // SubmitTaskRequest represents the request to submit a task answer

@@ -84,10 +84,16 @@ func (s *S3Provider) UploadFile(ctx context.Context, data io.Reader, filename st
 }
 
 func (s *S3Provider) GetFileURL(filename string) (string, error) {
-	if s.config.PublicURL != "" {
+	// Normalize path segments while preserving folder structure
+	segments := strings.Split(filename, "/")
+	for i, segment := range segments {
+		segments[i] = url.PathEscape(segment)
+	}
+	escapedPath := strings.Join(segments, "/")
 
+	if s.config.PublicURL != "" {
 		baseURL := strings.TrimSuffix(s.config.PublicURL, "/")
-		return fmt.Sprintf("%s/%s", baseURL, url.PathEscape(filename)), nil
+		return fmt.Sprintf("%s/%s", baseURL, escapedPath), nil
 	}
 
 	endpoint := s.config.Endpoint
@@ -99,7 +105,7 @@ func (s *S3Provider) GetFileURL(filename string) (string, error) {
 	endpoint = strings.TrimPrefix(endpoint, "https://")
 
 	return fmt.Sprintf("https://%s/%s/%s",
-		endpoint, s.config.BucketName, url.PathEscape(filename)), nil
+		endpoint, s.config.BucketName, escapedPath), nil
 }
 
 type FileInfo struct {

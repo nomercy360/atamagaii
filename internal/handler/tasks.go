@@ -3,7 +3,6 @@ package handler
 import (
 	"atamagaii/internal/contract"
 	"atamagaii/internal/db"
-	"encoding/json"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"net/http"
@@ -32,23 +31,24 @@ func (h *Handler) GetTasks(c echo.Context) error {
 	for _, task := range tasks {
 		var content contract.TaskContent
 
-		if task.Type == db.TaskTypeVocabRecall {
-			var vocabContent contract.TaskVocabRecallContent
-			if err := json.Unmarshal([]byte(task.Content), &vocabContent); err != nil {
-				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing vocab task content: %v", err))
+		switch task.Type {
+		case db.TaskTypeVocabRecall:
+			content, err = db.UnmarshalTaskContent[db.TaskVocabRecallContent](&task)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing vocab recall task content: %v", err))
 			}
-			content = &vocabContent
-		} else if task.Type == db.TaskTypeSentenceTranslation {
-			var translationContent contract.TaskSentenceTranslationContent
-			if err := json.Unmarshal([]byte(task.Content), &translationContent); err != nil {
-				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing translation task content: %v", err))
+		case db.TaskTypeSentenceTranslation:
+			content, err = db.UnmarshalTaskContent[db.TaskSentenceTranslationContent](&task)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing sentence translation task content: %v", err))
 			}
-			content = &translationContent
-		} else {
-			// Fallback for unknown types
-			if err := json.Unmarshal([]byte(task.Content), &content); err != nil {
-				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing task content: %v", err))
+		case db.TaskTypeAudio:
+			content, err = db.UnmarshalTaskContent[db.TaskAudioContent](&task)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing audio task content: %v", err))
 			}
+		default:
+			return echo.NewHTTPError(http.StatusNotImplemented, "Task type not implemented")
 		}
 
 		taskResponse := contract.TaskResponse{
@@ -108,15 +108,10 @@ func (h *Handler) SubmitTaskResponse(c echo.Context) error {
 	var feedback *string
 
 	if task.Type == db.TaskTypeVocabRecall {
-		var vocabContent contract.TaskVocabRecallContent
-		if err := json.Unmarshal([]byte(task.Content), &vocabContent); err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing vocab task content: %v", err))
-		}
-
-		isCorrect = req.Response == vocabContent.CorrectAnswer
+		isCorrect = req.Response == task.Answer
 	} else if task.Type == db.TaskTypeSentenceTranslation {
-		var translationContent contract.TaskSentenceTranslationContent
-		if err := json.Unmarshal([]byte(task.Content), &translationContent); err != nil {
+		translationContent, err := db.UnmarshalTaskContent[db.TaskSentenceTranslationContent](task)
+		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing translation task content: %v", err))
 		}
 
@@ -138,6 +133,9 @@ func (h *Handler) SubmitTaskResponse(c echo.Context) error {
 		if checkResult.Feedback != nil && !isCorrect {
 			feedback = checkResult.Feedback
 		}
+	} else if task.Type == db.TaskTypeAudio {
+		// For audio tasks, just check if the user selected the correct option
+		isCorrect = req.Response == task.Answer
 	} else {
 		return echo.NewHTTPError(http.StatusNotImplemented, "Task type not implemented")
 	}

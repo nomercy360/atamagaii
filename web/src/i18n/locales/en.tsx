@@ -1,4 +1,11 @@
 export const dict = {
+	home: {
+		deck: 'Select a Deck',
+		add_deck: 'Add Deck',
+		add_your_first_deck: 'Add your first deck',
+		no_decks: 'No decks available',
+		new_cards_per_day: 'New Cards per Day',
+	},
 	common: {
 		loading: 'Loading...',
 		error: 'An error occurred',

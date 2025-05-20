@@ -1,0 +1,88 @@
+{
+  "model": "gpt-4.1-mini",
+  "input": [
+    {
+      "role": "system",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Create a Japanese listening comprehension task for a language learning app. The task should:\n\n• Use a target word.\n• Create a short, natural 2–3 sentence monologue or story using the word. Use simple grammar (JLPT N5–N3 level).\n• The story should be written in Japanese (hiragana, katakana, or basic kanji) and suitable to be read aloud as audio.\n• Ask a question in Japanese based on the story.\n• Provide four answer choices labeled a–d, all in Japanese.\n• Include one correct answer and three distractors that are plausible but incorrect.\n• Indicate which letter (a, b, c, or d) is the correct answer.\n • Avoid romaji. Use natural Japanese expressions and learner-friendly vocabulary."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Target Word:集まる（あつまる）"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"story\": \"きのう、がっこうのあとで、ともだちとこうえんであそびました。いぬもつれてきて、たのしかったです。\",\n  \"question\": \"どこであそびましたか？\",\n  \"options\": {\n    \"a\": \"がっこう\",\n    \"b\": \"こうえん\",\n    \"c\": \"いえ\",\n    \"d\": \"みせ\"\n  },\n  \"correct_answer\": \"b\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Target Word:のる"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"story\": \"けさ、でんしゃがこんでいたので、ともだちといっしょにバスにのりました。がっこうにはまにあいました。\",\n  \"question\": \"けさ、なににのりましたか？\",\n  \"options\": {\n    \"a\": \"じてんしゃ\",\n    \"b\": \"でんしゃ\",\n    \"c\": \"バス\",\n    \"d\": \"くるま\"\n  },\n  \"correct_answer\": \"c\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Target Word:あそぶ"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"story\": \"日よう日、ともだちとこうえんであそびました。サッカーをして、ねこともはしりました。\",\n  \"question\": \"どこであそびましたか？\",\n  \"options\": {\n    \"a\": \"がっこう\",\n    \"b\": \"いえ\",\n    \"c\": \"こうえん\",\n    \"d\": \"えき\"\n  },\n  \"correct_answer\": \"c\"\n}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Target Word: {{targetWord}}"
+        }
+      ]
+    }
+  ],
+  "text": {
+    "format": {
+      "type": "text"
+    }
+  },
+  "reasoning": {},
+  "tools": [],
+  "temperature": 0.8,
+  "max_output_tokens": 2048,
+  "top_p": 0.8,
+  "store": true
+}

@@ -4,6 +4,7 @@ import { useNavigate } from '@solidjs/router'
 import { useQuery } from '@tanstack/solid-query'
 import DeckSettings from '~/components/deck-settings'
 import { FlagIcon } from '~/pages/import-deck'
+import { useTranslations } from '~/i18n/locale-context'
 
 const DeckSkeleton = () => (
 	<div class="space-y-3">
@@ -25,6 +26,8 @@ const DeckSkeleton = () => (
 export default function Index() {
 	const navigate = useNavigate()
 	const [selectedDeck, setSelectedDeck] = createSignal<Deck | null>(null)
+
+	const { t } = useTranslations()
 
 	const decksQuery = useQuery(() => ({
 		queryKey: ['decks'],
@@ -64,7 +67,9 @@ export default function Index() {
 		<div class="container mx-auto px-4 py-6 max-w-md flex flex-col items-center overflow-y-auto h-screen pb-28">
 			<div class="w-full">
 				<div class="flex justify-between items-center mb-4">
-					<h3 class="text-lg font-medium">Select a Deck</h3>
+					<h3 class="text-lg font-medium">
+						{t('home.deck')}
+					</h3>
 					<button
 						onClick={handleImportDeck}
 						class="text-sm font-medium text-primary flex items-center"
@@ -79,7 +84,7 @@ export default function Index() {
 							<path
 								d="M440-440H240q-17 0-28.5-11.5T200-480q0-17 11.5-28.5T240-520h200v-200q0-17 11.5-28.5T480-760q17 0 28.5 11.5T520-720v200h200q17 0 28.5 11.5T760-480q0 17-11.5 28.5T720-440H520v200q0 17-11.5 28.5T480-200q-17 0-28.5-11.5T440-240v-200Z" />
 						</svg>
-						New Deck
+						{t('home.add_deck')}
 					</button>
 				</div>
 				<div class="space-y-2">
@@ -100,7 +105,7 @@ export default function Index() {
 												<h4 class="font-medium">{deck.name}</h4>
 											</div>
 											<p class="text-xs text-muted-foreground mt-1">
-												{deck.new_cards_per_day} new cards per day
+												{deck.new_cards_per_day} {t('home.new_cards_per_day')}
 											</p>
 											<div class="flex gap-1 text-xs text-muted-foreground mt-2">
 												<svg xmlns="http://www.w3.org/2000/svg"
@@ -146,12 +151,14 @@ export default function Index() {
 
 						{decksQuery.data && decksQuery.data.length === 0 && (
 							<div class="text-center py-8">
-								<p class="text-muted-foreground mb-4">No decks found</p>
+								<p class="text-muted-foreground mb-4">
+									{t('home.no_decks')}
+								</p>
 								<button
 									onClick={handleImportDeck}
 									class="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium"
 								>
-									Add Your First Deck
+									{t('home.add_your_first_deck')}
 								</button>
 							</div>
 						)}

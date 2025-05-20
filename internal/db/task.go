@@ -14,6 +14,7 @@ type TaskType string
 const (
 	TaskTypeVocabRecall         TaskType = "vocab_recall_reverse"
 	TaskTypeSentenceTranslation TaskType = "sentence_translation"
+	TaskTypeAudio               TaskType = "audio"
 )
 
 // Task represents a task in the database
@@ -30,13 +31,6 @@ type Task struct {
 	CreatedAt    time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt    time.Time  `db:"updated_at" json:"updated_at"`
 	DeletedAt    *time.Time `db:"deleted_at" json:"deleted_at,omitempty"`
-}
-
-// TaskContent represents the content of a task
-type TaskContent struct {
-	Question      string            `json:"question"`
-	Options       map[string]string `json:"options"`
-	CorrectAnswer string            `json:"correct_answer"`
 }
 
 // AddTask adds a new task to the database
@@ -325,33 +319,39 @@ func (s *Storage) GetTaskStatsByDeck(userID string) ([]TasksPerDeck, error) {
 	return stats, nil
 }
 
-// UnmarshalTaskContent unmarshals the task content string into a TaskContent struct
-func (t *Task) UnmarshalTaskContent() (interface{}, error) {
-	if t.Type == "vocab_recall_reverse" {
-		var content TaskContent
-		err := json.Unmarshal([]byte(t.Content), &content)
-		if err != nil {
-			return nil, fmt.Errorf("error unmarshaling vocab recall task content: %w", err)
-		}
-		return &content, nil
-	} else if t.Type == "sentence_translation" {
-		// For sentence translation tasks
-		var content struct {
-			SentenceRu     string `json:"sentence_ru"`
-			SentenceNative string `json:"sentence_native"`
-		}
-		err := json.Unmarshal([]byte(t.Content), &content)
-		if err != nil {
-			return nil, fmt.Errorf("error unmarshaling sentence translation task content: %w", err)
-		}
-		return &content, nil
-	}
+type TaskAudioContent struct {
+	Story    string `json:"story"`
+	Question string `json:"question"`
+	Options  struct {
+		A string `json:"a"`
+		B string `json:"b"`
+		C string `json:"c"`
+		D string `json:"d"`
+	} `json:"options"`
+	AudioURL      string `json:"audio_url,omitempty"`
+	CorrectAnswer string `json:"correct_answer,omitempty"`
+}
 
-	// Default fallback
-	var content map[string]interface{}
-	err := json.Unmarshal([]byte(t.Content), &content)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshaling task content: %w", err)
+type TaskSentenceTranslationContent struct {
+	SentenceRu     string `json:"sentence_ru"`
+	SentenceNative string `json:"sentence_native,omitempty"`
+}
+
+type TaskVocabRecallContent struct {
+	Question string `json:"question"`
+	Options  struct {
+		A string `json:"a"`
+		B string `json:"b"`
+		C string `json:"c"`
+		D string `json:"d"`
+	} `json:"options"`
+	CorrectAnswer string `json:"correct_answer,omitempty"`
+}
+
+func UnmarshalTaskContent[T any](task *Task) (T, error) {
+	var content T
+	if err := json.Unmarshal([]byte(task.Content), &content); err != nil {
+		return content, fmt.Errorf("error unmarshaling task content: %w", err)
 	}
 	return content, nil
 }

@@ -1,4 +1,11 @@
 export const dict = {
+	home: {
+		deck: 'Выберите колоду',
+		add_deck: 'Добавить колоду',
+		add_your_first_deck: 'Добавьте свою первую колоду',
+		no_decks: 'Тут пустовато',
+		new_cards_per_day: 'Новых карточек в день',
+	},
 	common: {
 		loading: 'Загрузка...',
 		error: 'Произошла ошибка',

@@ -128,7 +128,7 @@ func main() {
 	}
 
 	// Start task generation job
-	taskGenerator := job.NewTaskGenerator(dbStorage, openaiClient)
+	taskGenerator := job.NewTaskGenerator(dbStorage, openaiClient, storageProvider)
 	go taskGenerator.Start()
 	log.Println("Task generation job started")
 
