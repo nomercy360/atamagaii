@@ -149,16 +149,15 @@ func (c *OpenAIClient) GenerateCardContent(ctx context.Context, term string, lan
 	return vocabularyCard, nil
 }
 
-func (c *OpenAIClient) GenerateTask(ctx context.Context, language, templateName string, targetWord *string) (interface{}, error) {
+func (c *OpenAIClient) GenerateTask(ctx context.Context, language, templateName string, targetWord string) (interface{}, error) {
 	fileData, err := loadTemplateFile(language, templateName)
 	if err != nil {
 		return nil, err
 	}
 
 	text := string(fileData)
-	if targetWord != nil {
-		text = strings.ReplaceAll(text, "{{targetWord}}", *targetWord)
-	}
+	fmt.Printf("Target word: %s\n", targetWord)
+	text = strings.ReplaceAll(text, "{{targetWord}}", targetWord)
 
 	response, err := c.sendOpenAIRequest([]byte(text))
 	if err != nil {

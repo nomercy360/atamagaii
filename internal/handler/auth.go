@@ -73,6 +73,15 @@ func (h *Handler) TelegramAuth(c echo.Context) error {
 			Name:         name,
 			AvatarURL:    &imgUrl,
 			LanguageCode: languageCode,
+			// Set default settings for new users
+			Settings: &db.UserSettings{
+				MaxTasksPerDay: 10, // Default to 10 tasks per day
+				TaskTypes: []db.TaskType{
+					db.TaskTypeVocabRecall,
+					db.TaskTypeSentenceTranslation,
+					db.TaskTypeAudio,
+				},
+			},
 		}
 
 		if err = h.db.SaveUser(&create); err != nil {

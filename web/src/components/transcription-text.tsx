@@ -5,7 +5,7 @@ export interface TranscriptionTextProps {
 	class?: string;
 	textSize?: 'xs' | 'sm' | 'base' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl';
 	rtClass?: string;
-	language?: string;           // ISO 639-1 language code (e.g., "ja", "zh", "en")
+	language?: string;           // ISO 639-1 language code (e.g., "jp", "zh", "en")
 	transcriptionType?: string;  // Type of transcription (furigana, pinyin, etc.)
 }
 
@@ -22,8 +22,8 @@ const getTranscriptionRegex = (language: string, transcriptionType: string): Reg
 	let pattern = /(\S+)\[([^\]]+)]/g
 
 	switch (language) {
-		case 'ja':
-			// Japanese kanji with furigana
+		case 'jp':
+			// japanese kanji with furigana
 			pattern = /([一-龯]+)\[([^\]]+)]/g
 			break
 		case 'zh':
@@ -44,7 +44,7 @@ const getTranscriptionRegex = (language: string, transcriptionType: string): Reg
 }
 
 // Helper function to parse the text into segments
-const parseTextToSegments = (text: string, language = 'ja', transcriptionType = 'furigana'): TranscriptionSegment[] => {
+const parseTextToSegments = (text: string, language = 'jp', transcriptionType = 'furigana'): TranscriptionSegment[] => {
 	const segments: TranscriptionSegment[] = []
 	if (!text) {
 		return segments
@@ -102,7 +102,7 @@ const processPlainTextWithTags = (
 	text: string,
 	segments: TranscriptionSegment[],
 	htmlTags: Map<string, { type: string, content: string }>,
-	language = 'ja',
+	language = 'jp',
 	transcriptionType = 'furigana',
 ) => {
 	const tagRegex = /__HTML_TAG_(\d+)__/g
@@ -175,8 +175,8 @@ const RT_SIZE_MAP = {
 // Get the appropriate font class based on language
 const getFontClass = (language: string): string => {
 	switch (language) {
-		case 'ja':
-			return 'font-jp' // Japanese font
+		case 'jp':
+			return 'font-jp' // jppanese font
 		case 'zh':
 			return 'font-zh' // Chinese font
 		case 'th':
@@ -191,10 +191,10 @@ const getFontClass = (language: string): string => {
 /**
  * TranscriptionText component for displaying text with reading aids for multiple languages
  * Supports:
- * - Transcription format: text[reading] (e.g., Japanese: "会[あ]う", Chinese: "你[nǐ]好[hǎo]")
+ * - Transcription format: text[reading] (e.g., jppanese: "会[あ]う", Chinese: "你[nǐ]好[hǎo]")
  * - HTML tags: Currently supports <b> for bold text and <br/> for line breaks
  * - Can handle nested tags and transcriptions
- * - Supports multiple languages (Japanese, Chinese, Thai, Georgian, etc.)
+ * - Supports multiple languages (jppanese, Chinese, Thai, Georgian, etc.)
  */
 export default function TranscriptionText(props: TranscriptionTextProps): JSX.Element {
 	const [local, others] = splitProps(props, ['text', 'class', 'textSize', 'rtClass', 'language', 'transcriptionType'])
@@ -212,7 +212,7 @@ export default function TranscriptionText(props: TranscriptionTextProps): JSX.El
 	})
 
 	const language = createMemo(() => {
-		return local.language || 'ja'
+		return local.language || 'jp'
 	})
 
 	const transcriptionType = createMemo(() => {

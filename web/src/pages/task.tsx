@@ -4,8 +4,10 @@ import { useNavigate, useParams } from '@solidjs/router'
 import { cn, hapticFeedback } from '~/lib/utils'
 import Animation from '~/components/all-done-animation'
 import { useMainButton } from '~/lib/useMainButton'
+import { useSecondaryButton } from '~/lib/useSecondaryButton'
 import ProgressBar from '~/components/progress-bar'
 import AudioButton from '~/components/audio-button'
+import TranscriptionText from '~/components/transcription-text'
 
 // Task interfaces
 interface TaskOption {
@@ -57,6 +59,7 @@ export default function Task() {
 	const navigate = useNavigate()
 	const params = useParams()
 	const mainButton = useMainButton()
+	const secondaryButton = useSecondaryButton()
 	const [taskIndex, setTaskIndex] = createSignal(0)
 	const [selectedOption, setSelectedOption] = createSignal<string | null>(null)
 	const [translationInput, setTranslationInput] = createSignal('')
@@ -107,15 +110,19 @@ export default function Task() {
 		return buffer[idx]
 	}
 
-	// Initialize and clean up mainButton
+	// Initialize and clean up buttons
 	onMount(() => {
 		mainButton.hide()
 		mainButton.onClick(handleSubmitTask)
+		secondaryButton.hide()
+		secondaryButton.onClick(handleTryAgain)
 	})
 
 	onCleanup(() => {
 		mainButton.hide()
 		mainButton.offClick(handleSubmitTask)
+		secondaryButton.hide()
+		secondaryButton.offClick(handleTryAgain)
 	})
 
 	// Update mainButton state based on current selection or input
@@ -163,13 +170,15 @@ export default function Task() {
 		const task = currentTask()
 		if (!task || isSubmitting()) return
 
-		// If we're showing feedback for an incorrect answer on sentence translation,
-		// and the user clicks "Next Task", move to the next task
-		if (showFeedback() && feedbackType() === 'incorrect' && task.type === 'sentence_translation') {
+		// If we're showing feedback for an incorrect answer and the user clicks "Next Task",
+		// move to the next task
+		if (showFeedback() && feedbackType() === 'incorrect') {
 			setShowFeedback(false)
 			setFeedbackMessage(null)
+			setSelectedOption(null)
 			setTranslationInput('')
 			setTaskIndex(prev => prev + 1)
+			secondaryButton.hide()
 			return
 		}
 
@@ -248,27 +257,48 @@ export default function Task() {
 				isEnabled: false,
 			})
 
-			// For incorrect answers in sentence translation tasks, we'll show the feedback
-			// and allow the user to try again or move to the next task
-			if (task.type === 'sentence_translation') {
-				// After a short delay, change the button to allow moving to next task
-				setTimeout(() => {
-					mainButton.setParams({
-						text: 'Next Task',
-						color: '#2196F3', // primary blue
-						textColor: '#FFFFFF',
-						isEnabled: true,
-					})
-				}, 500)
-			} else {
-				// For incorrect answers in vocab recall, follow the original behavior
-				setTimeout(() => {
-					setShowFeedback(false)
-					setSelectedOption(null)
-					setTaskIndex(prev => prev + 1)
-				}, 500)
-			}
+			// For incorrect answers, show the feedback and update buttons
+			setTimeout(() => {
+				mainButton.setParams({
+					text: 'Next Task',
+					color: '#2196F3', // primary blue
+					textColor: '#FFFFFF',
+					isEnabled: true,
+				})
+
+				// Show the secondary "Try Again" button
+				secondaryButton.setParams({
+					text: 'Try Again',
+					isVisible: true,
+					color: window.Telegram.WebApp.themeParams.secondary_bg_color || '#E6E6E6',
+					textColor: window.Telegram.WebApp.themeParams.secondary_text_color || '#000000',
+					isEnabled: true,
+				})
+			}, 500)
 		}
+	}
+
+	// Handle trying the task again
+	const handleTryAgain = () => {
+		setShowFeedback(false)
+		setFeedbackMessage(null)
+		if (currentTask()?.type === 'sentence_translation') {
+			// Keep the translation input text for editing
+		} else {
+			// Reset selection for multiple choice tasks
+			setSelectedOption(null)
+		}
+
+		// Reset the main button state
+		mainButton.setParams({
+			text: 'Submit Answer',
+			color: '#2196F3', // primary blue
+			textColor: '#FFFFFF',
+			isEnabled: !!selectedOption() || (currentTask()?.type === 'sentence_translation' && !!translationInput().trim()),
+		})
+
+		// Hide the secondary button
+		secondaryButton.hide()
 	}
 
 	// Check again for tasks
@@ -278,7 +308,7 @@ export default function Task() {
 	}
 
 	return (
-		<div class="bg-card container mx-auto px-4 py-10 max-w-md flex flex-col items-center min-h-screen overflow-y-auto">
+		<div class="bg-card container mx-auto px-4 py-10 max-w-md flex flex-col items-center h-screen overflow-y-auto">
 			{/* Feedback animation */}
 			<Show when={showFeedback()}>
 				<div
@@ -366,6 +396,7 @@ export default function Task() {
 										</button>
 									))}
 								</div>
+
 							</Show>
 
 							{/* Sentence Translation Task */}
@@ -422,7 +453,9 @@ export default function Task() {
 									</div>
 
 									<h2 class="text-xl font-semibold mb-4 text-center">
-										{(currentTask()?.content as AudioTaskContent)?.question}
+										<TranscriptionText
+											class="text-base font-normal"
+											text={(currentTask()?.content as AudioTaskContent)?.question} />
 									</h2>
 
 									<div class="space-y-3">
@@ -454,11 +487,16 @@ export default function Task() {
 													)}>
 														<span class="text-sm font-medium uppercase">{key}</span>
 													</div>
-													<span>{value}</span>
+													<span>
+														<TranscriptionText
+															class="text-base font-normal"
+															text={value} />
+													</span>
 												</div>
 											</button>
 										))}
 									</div>
+
 								</div>
 							</Show>
 						</div>

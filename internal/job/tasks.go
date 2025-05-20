@@ -114,13 +114,9 @@ func (tg *TaskGenerator) generateTasks() {
 			continue
 		}
 
-		var targetWord *string
-		if taskType == db.TaskTypeVocabRecall {
-			targetWord = &vocabItem.Term
-			if vocabItem.MeaningEn != "" {
-				res := fmt.Sprintf("%s (%s) %s", vocabItem.MeaningEn, vocabItem.TermWithTranscription, vocabItem.Term)
-				targetWord = &res
-			}
+		targetWord := vocabItem.Term
+		if vocabItem.MeaningEn != "" {
+			targetWord = fmt.Sprintf("%s (%s)", vocabItem.Term, vocabItem.MeaningEn)
 		}
 
 		// Generate task for this card

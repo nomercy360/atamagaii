@@ -6,7 +6,7 @@
       "content": [
         {
           "type": "input_text",
-          "text": "Create a Japanese listening comprehension task for a language learning app. The task should:\n\n• Use a target word.\n• Create a short, natural 2–3 sentence monologue or story using the word. Use simple grammar (JLPT N5–N3 level).\n• The story should be written in Japanese (hiragana, katakana, or basic kanji) and suitable to be read aloud as audio.\n• Ask a question in Japanese based on the story.\n• Provide four answer choices labeled a–d, all in Japanese.\n• Include one correct answer and three distractors that are plausible but incorrect.\n• Indicate which letter (a, b, c, or d) is the correct answer.\n • Avoid romaji. Use natural Japanese expressions and learner-friendly vocabulary."
+          "text": "Create a Japanese listening comprehension task for a language learning app. The task should:\n\n- Use a target word.\n- Create a short, natural 2 sentence monologue or story using the word. Use grammar (JLPT N5–N3 level).\n- The story should be written in Japanese and suitable to be read aloud as audio.\n- Ask a question in Japanese based on the story.\n- Provide four answer choices labeled a–d, all in Japanese.\n- Include one correct answer and three distractors that are plausible but incorrect.\n- Indicate which letter (a, b, c, or d) is the correct answer.\n- Make sure the story contains the target word clearly, but avoid repetition or unnatural phrasing.\n- Vary the sentence structures, topics, and vocabulary to create diverse and engaging tasks."
         }
       ]
     },
@@ -15,7 +15,7 @@
       "content": [
         {
           "type": "input_text",
-          "text": "Target Word:集まる（あつまる）"
+          "text": "Target Word: 買う（かう）"
         }
       ]
     },
@@ -24,7 +24,7 @@
       "content": [
         {
           "type": "output_text",
-          "text": "{\n  \"story\": \"きのう、がっこうのあとで、ともだちとこうえんであそびました。いぬもつれてきて、たのしかったです。\",\n  \"question\": \"どこであそびましたか？\",\n  \"options\": {\n    \"a\": \"がっこう\",\n    \"b\": \"こうえん\",\n    \"c\": \"いえ\",\n    \"d\": \"みせ\"\n  },\n  \"correct_answer\": \"b\"\n}"
+          "text": "{\n  \"story\": \"駅で新しい靴を買いました。すぐに雨が降ってきました。\",\n  \"question\": \"どこで新[あたら]しい靴[くつ]を買[か]いましたか？\",\n  \"options\": {\n    \"a\": \"家[いえ]\",\n    \"b\": \"学校[がっこう]\",\n    \"c\": \"駅[えき]\",\n    \"d\": \"公園[こうえん]\"\n  },\n  \"correct_answer\": \"c\"\n}"
         }
       ]
     },
@@ -33,7 +33,7 @@
       "content": [
         {
           "type": "input_text",
-          "text": "Target Word:のる"
+          "text": "Target Word: 作る（つくる）"
         }
       ]
     },
@@ -42,7 +42,7 @@
       "content": [
         {
           "type": "output_text",
-          "text": "{\n  \"story\": \"けさ、でんしゃがこんでいたので、ともだちといっしょにバスにのりました。がっこうにはまにあいました。\",\n  \"question\": \"けさ、なににのりましたか？\",\n  \"options\": {\n    \"a\": \"じてんしゃ\",\n    \"b\": \"でんしゃ\",\n    \"c\": \"バス\",\n    \"d\": \"くるま\"\n  },\n  \"correct_answer\": \"c\"\n}"
+          "text": "{\n\"story\": \"母は朝ご飯を作ってくれました。私はおいしいパンを食べました。\",\n\"question\": \"朝[あさ]ご飯[はん]を作[つく]ってくれたのは誰[だれ]ですか？\",\n\"options\": {\n\"a\": \"父[ちち]\",\n\"b\": \"姉[あね]\",\n\"c\": \"母[はは]\",\n\"d\": \"先生[せんせい]\"\n},\n\"correct_answer\": \"c\"\n}"
         }
       ]
     },
@@ -51,32 +51,69 @@
       "content": [
         {
           "type": "input_text",
-          "text": "Target Word:あそぶ"
-        }
-      ]
-    },
-    {
-      "role": "assistant",
-      "content": [
-        {
-          "type": "output_text",
-          "text": "{\n  \"story\": \"日よう日、ともだちとこうえんであそびました。サッカーをして、ねこともはしりました。\",\n  \"question\": \"どこであそびましたか？\",\n  \"options\": {\n    \"a\": \"がっこう\",\n    \"b\": \"いえ\",\n    \"c\": \"こうえん\",\n    \"d\": \"えき\"\n  },\n  \"correct_answer\": \"c\"\n}"
-        }
-      ]
-    },
-    {
-      "role": "user",
-      "content": [
-        {
-          "type": "input_text",
-          "text": "Target Word: {{targetWord}}"
+          "text": "target word: {{targetWord}}"
         }
       ]
     }
   ],
   "text": {
     "format": {
-      "type": "text"
+      "type": "json_schema",
+      "name": "story_question",
+      "strict": true,
+      "schema": {
+        "type": "object",
+        "properties": {
+          "story": {
+            "type": "string",
+            "description": "The story that contains the context for the question. NOTE: Use ONLY kanji WITHOUT any furigana in brackets!"
+          },
+          "question": {
+            "type": "string",
+            "description": "The question related to the story. Use kanji with furigana in brackets all kanji, e.g. 誰[だれ]と遊[あそ]びましたか？"
+          },
+          "options": {
+            "type": "object",
+            "description": "Possible answers to the question. Use kanji with furigana in brackets for all kanji, same as in the question.",
+            "properties": {
+              "a": {
+                "type": "string",
+                "description": "Option A for the answer, kanji with furigana if needed."
+              },
+              "b": {
+                "type": "string",
+                "description": "Option B for the answer, kanji with furigana if needed."
+              },
+              "c": {
+                "type": "string",
+                "description": "Option C for the answer, kanji with furigana if needed."
+              },
+              "d": {
+                "type": "string",
+                "description": "Option D for the answer, kanji with furigana if needed."
+              }
+            },
+            "required": [
+              "a",
+              "b",
+              "c",
+              "d"
+            ],
+            "additionalProperties": false
+          },
+          "correct_answer": {
+            "type": "string",
+            "description": "The correct answer option for the question. One of 'a', 'b', 'c', or 'd'."
+          }
+        },
+        "required": [
+          "story",
+          "question",
+          "options",
+          "correct_answer"
+        ],
+        "additionalProperties": false
+      }
     }
   },
   "reasoning": {},

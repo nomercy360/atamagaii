@@ -13,7 +13,8 @@ func (s *Storage) UpdateSchema() error {
 	   avatar_url TEXT,
 	   language_code TEXT,
 	   name TEXT,
-	   points REAL DEFAULT 0
+	   points REAL DEFAULT 0,
+	   settings TEXT
     );
 	-- Decks table
 	CREATE TABLE IF NOT EXISTS decks (
