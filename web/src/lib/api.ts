@@ -343,6 +343,7 @@ export interface TasksPerDeck {
 	deck_id: string;
 	deck_name: string;
 	total_tasks: number;
+	language_code: string;
 }
 
 export async function getTasksPerDeck(): Promise<{

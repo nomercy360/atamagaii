@@ -27,7 +27,7 @@ func (h *Handler) GetTasks(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error retrieving tasks: %v", err))
 	}
 
-	var taskResponses []contract.TaskResponse
+	taskResponses := make([]contract.TaskResponse, 0, len(tasks))
 	for _, task := range tasks {
 		var content contract.TaskContent
 

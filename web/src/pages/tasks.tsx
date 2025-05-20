@@ -3,6 +3,7 @@ import { useNavigate } from '@solidjs/router'
 import { getTasksPerDeck, TasksPerDeck } from '~/lib/api'
 import Animation from '~/components/all-done-animation'
 import { useQuery } from '@tanstack/solid-query'
+import { FlagIcon } from '~/pages/import-deck'
 
 const TaskSkeleton = () => (
 	<div class="w-full space-y-3">
@@ -45,18 +46,32 @@ export default function Tasks() {
 		<div class="container mx-auto px-4 py-10 max-w-md flex flex-col items-center min-h-screen">
 			<Show when={!tasksQuery.isPending} fallback={<TaskSkeleton />}>
 				<Show when={tasksQuery.data?.length}>
-					<div class="w-full space-y-3">
+					<div class="w-full grid grid-cols-2 gap-2">
 						<For each={tasksQuery.data}>
 							{(item) => (
 								<button
 									onClick={() => handleSelectDeck(item.deck_id)}
-									class="w-full flex items-center justify-between p-4 bg-card rounded-lg border border-border hover:bg-secondary/50 transition-colors"
+									class="flex-row w-full flex items-center justify-between p-3 bg-card rounded-lg border border-border hover:bg-secondary/50 transition-colors"
 								>
-									<div class="flex-1">
-										<h3 class="font-medium text-left">{item.deck_name}</h3>
-										<p class="text-sm text-muted-foreground text-left">
-											{item.total_tasks} {item.total_tasks === 1 ? 'task' : 'tasks'} available
-										</p>
+									<div class="flex flex-col items-start justify-start">
+										<div class="flex-shrink-0 mb-2">
+											<FlagIcon code={item.language_code} clsName="size-5 rounded-full" />
+										</div>
+										<div class="flex-1">
+											<h3 class="text-sm font-medium text-left">{item.deck_name}</h3>
+											<div class="flex gap-1 text-xs text-info-foreground/80 mt-2">
+												<svg xmlns="http://www.w3.org/2000/svg"
+														 height="24px"
+														 class="size-4"
+														 viewBox="0 -960 960 960"
+														 width="24px"
+														 fill="currentColor">
+													<path
+														d="M240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h480q33 0 56.5 23.5T800-800v640q0 33-23.5 56.5T720-80H240Zm0-80h480v-640h-80v245q0 12-10 17.5t-20-.5l-49-30q-10-6-20.5-6t-20.5 6l-49 30q-10 6-20.5.5T440-555v-245H240v640Zm0 0v-640 640Zm200-395q0 12 10.5 17.5t20.5-.5l49-30q10-6 20.5-6t20.5 6l49 30q10 6 20 .5t10-17.5q0 12-10 17.5t-20-.5l-49-30q-10-6-20.5-6t-20.5 6l-49 30q-10 6-20.5.5T440-555Z" />
+												</svg>
+												{item.total_tasks}
+											</div>
+										</div>
 									</div>
 									<div class="flex-shrink-0">
 										<svg

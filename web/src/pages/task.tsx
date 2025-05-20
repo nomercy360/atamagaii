@@ -333,10 +333,12 @@ export default function Task() {
 					</div>
 				</div>
 			</Show>
-			<ProgressBar
-				total={taskBuffer().length}
-				completed={taskIndex() + 1}
-			/>
+			<Show when={taskBuffer().length > 0}>
+				<ProgressBar
+					total={taskBuffer().length}
+					completed={taskIndex()}
+				/>
+			</Show>
 
 			<div class="w-full flex-grow flex flex-col items-center justify-start">
 				<Show when={currentTask()}>

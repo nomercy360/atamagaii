@@ -67,7 +67,7 @@ export default function Profile() {
 
 	// Setup main button when component mounts
 	onMount(() => {
-		mainButton.setVisible(t('common.save'))
+		mainButton.enable(t('common.save'))
 		mainButton.onClick(saveProfile)
 	})
 
@@ -148,8 +148,8 @@ export default function Profile() {
 										<button
 											type="button"
 											onClick={() => !isDisabled() && toggleTaskType(option.id)}
-											class={`flex items-center justify-between p-3 rounded-md border 
-												${isSelected() ? 'bg-primary/10 border-primary' : 'bg-card border-border'} 
+											class={`flex items-center justify-between p-3 rounded-md 
+												${isSelected() ? 'bg-primary/10' : 'bg-card'} 
 												${isDisabled() ? 'opacity-60' : ''}`}
 											disabled={isDisabled()}
 										>

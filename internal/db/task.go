@@ -275,15 +275,16 @@ func (s *Storage) GetTasksDueForUser(userID string, limit int, deckID string) ([
 
 // TasksPerDeck represents a summary of tasks for a specific deck
 type TasksPerDeck struct {
-	DeckID     string `json:"deck_id"`
-	DeckName   string `json:"deck_name"`
-	TotalTasks int    `json:"total_tasks"`
+	DeckID       string `json:"deck_id"`
+	DeckName     string `json:"deck_name"`
+	TotalTasks   int    `json:"total_tasks"`
+	LanguageCode string `json:"language_code"`
 }
 
 // GetTaskStatsByDeck returns a summary of available tasks per deck for a user
 func (s *Storage) GetTaskStatsByDeck(userID string) ([]TasksPerDeck, error) {
 	query := `
-		SELECT d.id, d.name, COUNT(t.id) as task_count
+		SELECT d.id, d.name, COUNT(t.id) as task_count, d.language_code
 		FROM decks d
 		LEFT JOIN cards c ON d.id = c.deck_id
 		LEFT JOIN tasks t ON c.id = t.card_id
@@ -306,7 +307,7 @@ func (s *Storage) GetTaskStatsByDeck(userID string) ([]TasksPerDeck, error) {
 	var stats []TasksPerDeck
 	for rows.Next() {
 		var stat TasksPerDeck
-		if err := rows.Scan(&stat.DeckID, &stat.DeckName, &stat.TotalTasks); err != nil {
+		if err := rows.Scan(&stat.DeckID, &stat.DeckName, &stat.TotalTasks, &stat.LanguageCode); err != nil {
 			return nil, fmt.Errorf("error scanning task stats: %w", err)
 		}
 		stats = append(stats, stat)
