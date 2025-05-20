@@ -4,6 +4,7 @@ import (
 	"atamagaii/internal/ai"
 	"atamagaii/internal/db"
 	"atamagaii/internal/storage"
+	"atamagaii/internal/utils"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -208,8 +209,9 @@ func (tg *TaskGenerator) generateTasks() {
 			// Store just the answer letter (a, b, c, d)
 			correctAnswer = content.CorrectAnswer
 
-			// Generate audio for the story text
-			tempFilePath, err := tg.openAIClient.GenerateAudio(ctx, content.Story, vocabItem.LanguageCode)
+			// Strip furigana brackets from the story and generate audio
+			cleanStory := utils.RemoveFurigana(content.Story)
+			tempFilePath, err := tg.openAIClient.GenerateAudio(ctx, cleanStory, vocabItem.LanguageCode)
 			if err != nil {
 				log.Printf("Error generating audio for task card %s: %v", card.ID, err)
 				// Continue without audio, we'll just have text
@@ -251,7 +253,7 @@ func (tg *TaskGenerator) generateTasks() {
 			}{
 				Options:  content.Options,
 				Question: content.Question,
-				Story:    content.Story,
+				Story:    cleanStory, // Use the clean story without furigana
 				AudioURL: content.AudioURL,
 			}
 

@@ -443,6 +443,9 @@ export default function Task() {
 									<h2 class="text-xl font-semibold mb-4 text-center">
 										<TranscriptionText
 											class="text-base font-normal"
+											transcriptionType="furigana"
+											language="jp"
+											rtClass="opacity-70 font-normal"
 											text={(currentTask()?.content as AudioTaskContent)?.question} />
 									</h2>
 
@@ -477,7 +480,10 @@ export default function Task() {
 													</div>
 													<span>
 														<TranscriptionText
+															transcriptionType="furigana"
+															language="jp"
 															class="text-base font-normal"
+															rtClass="opacity-70 font-normal"
 															text={value} />
 													</span>
 												</div>

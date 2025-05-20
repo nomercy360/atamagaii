@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 )
 
 func FindDirUp(dirName string, maxDepth int) (string, error) {
@@ -61,4 +62,21 @@ func GetDefaultTranscriptionType(languageCode string) string {
 	default:
 		return "none"
 	}
+}
+
+// RemoveFurigana removes furigana notation (text inside square brackets) from a string
+// For example: "今日[きょう]は良い[いい]天気[てんき]です" -> "今日は良い天気です"
+// Also handles nested brackets: "複雑[ふく[ざつ]]な例" -> "複雑な例"
+func RemoveFurigana(text string) string {
+	// Handle nested brackets - keep replacing until no more changes
+	oldText := ""
+	newText := text
+
+	for oldText != newText {
+		oldText = newText
+		re := regexp.MustCompile(`\[[^\[\]]*\]`)
+		newText = re.ReplaceAllString(oldText, "")
+	}
+
+	return newText
 }
