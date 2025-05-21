@@ -403,7 +403,7 @@ export default function Cards() {
 							<div class={getFrontFaceClasses(flipped(), isTransitioning())}>
 								<TranscriptionText
 									text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
-									class="text-5xl font-extrabold"
+									class="text-5xl font-bold"
 									language={currentCard()?.fields.language_code || 'jp'}
 								/>
 								<Show
@@ -420,21 +420,21 @@ export default function Cards() {
 								<div class="flex flex-col items-center justify-center">
 									<Show
 										when={!currentCard()?.fields.term_with_transcription}>
-										 <span class="text-xl text-foreground font-extrabold">
+										 <span class="text-xl text-foreground font-bold">
 												{currentCard()?.fields.transcription}
 										 </span>
 									</Show>
 									{currentCard()?.fields.term_with_transcription ? (
 										<TranscriptionText
 											text={currentCard()?.fields.term_with_transcription || ''}
-											class="font-extrabold text-5xl"
+											class="font-bold text-5xl"
 											rtClass="text-xl font-semibold"
 											language={currentCard()?.fields.language_code || 'jp'}
 										/>
 									) : (
 										<TranscriptionText
 											text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
-											class="text-5xl font-extrabold"
+											class="text-5xl font-bold"
 											language={currentCard()?.fields.language_code || 'jp'}
 										/>
 									)}
@@ -518,12 +518,12 @@ export default function Cards() {
 				}}>
 				</div>
 
-				<div class="h-40 fixed bottom-0 left-0 right-0 bg-transparent z-10">
+				<div class="h-32 fixed bottom-0 left-0 right-0 bg-transparent z-10">
 					<div class="mx-auto px-4 py-4">
-						<div class="flex flex-row items-center justify-center gap-6">
+						<div class="flex flex-row items-center justify-center gap-8">
 							<button
 								onClick={() => handleReview(currentCard()!.id, 1)}
-								class="rounded-[120px] justify-center flex flex-col items-center h-14 px-6 bg-error text-foreground transition-opacity font-extrabold text-sm"
+								class="rounded-[120px] justify-center flex flex-col items-center h-14 px-6 bg-error text-foreground transition-opacity font-bold text-sm"
 							>
 								<span>
 									Again
@@ -555,7 +555,7 @@ export default function Cards() {
 							</div>
 							<button
 								onClick={() => handleReview(currentCard()!.id, 2)}
-								class="rounded-[120px] justify-center flex flex-col items-center h-14 px-6 bg-success text-foreground  transition-opacity font-extrabold text-sm"
+								class="rounded-[120px] justify-center flex flex-col items-center h-14 px-6 bg-success text-foreground  transition-opacity font-bold text-sm"
 							>
 								<span>
 									Good
@@ -571,7 +571,7 @@ export default function Cards() {
 
 			{/* Deck metrics - show only when card is not flipped */}
 			<Show when={!flipped() && currentCard() && !isTransitioning() && deckQuery.data && !deckQuery.isPending}>
-				<div class="h-40 fixed bottom-0 left-0 right-0 bg-background border-t border-border">
+				<div class="h-32 fixed bottom-0 left-0 right-0 bg-background border-t border-border">
 					<div class="mx-auto px-4 py-4">
 						<div class="flex justify-center gap-3">
 							<Show when={deckMetrics().new_cards > 0}>

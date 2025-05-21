@@ -435,17 +435,21 @@ export default function Task() {
 							{/* Audio Task */}
 							<Show when={currentTask()?.type === 'audio'}>
 								<div class="space-y-6">
-									<div class="flex items-center justify-center space-x-2 mb-4">
-										<AudioButton audioUrl={(currentTask()?.content as AudioTaskContent)?.audio_url} size="lg" />
-										<span class="text-sm">{t('task.listenToAudio')}</span>
+									<div class="flex items-center justify-center gap-2 mb-4">
+										<span class="text-xs text-center">
+											{t('task.listenToAudio')}
+										</span>
+										<AudioButton
+											audioUrl={(currentTask()?.content as AudioTaskContent)?.audio_url}
+											size="md"
+										/>
 									</div>
 
 									<h2 class="text-xl font-semibold mb-4 text-center">
 										<TranscriptionText
-											class="text-base font-normal"
-											transcriptionType="furigana"
+											class="font-semibold text-xl text-foreground"
 											language="jp"
-											rtClass="opacity-70 font-normal"
+											rtClass="text-secondary-foreground font-semibold"
 											text={(currentTask()?.content as AudioTaskContent)?.question} />
 									</h2>
 
@@ -480,10 +484,9 @@ export default function Task() {
 													</div>
 													<span>
 														<TranscriptionText
-															transcriptionType="furigana"
 															language="jp"
-															class="text-base font-normal"
-															rtClass="opacity-70 font-normal"
+															class="text-lg font-normal text-foreground"
+															rtClass="text-secondary-foreground font-semibold"
 															text={value} />
 													</span>
 												</div>

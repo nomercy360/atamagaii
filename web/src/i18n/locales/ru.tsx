@@ -66,12 +66,12 @@ export const dict = {
 		translateToJapanese: 'Переведите на японский',
 		yourTranslation: 'Ваш перевод',
 		feedback: 'Обратная связь:',
-		listenToAudio: 'Прослушайте аудио',
+		listenToAudio: 'Прослушайте аудио и ответьте на вопрос',
 		loadingTasks: 'Загрузка заданий...',
 		noTasksAvailable: 'Нет доступных заданий!',
 		practiceToGenerateTasks: 'Чтобы появились задания, изучайте карточки в этой колоде. Задания появляются, когда карточки переходят в режим повторения.',
 		checkAgain: 'Проверить снова',
-		backToTasks: 'Вернуться к заданиям'
+		backToTasks: 'Вернуться к заданиям',
 	},
 	profile: {
 		language: 'Язык',
@@ -89,7 +89,7 @@ export const dict = {
 		taskTypeOptions: {
 			vocabRecall: 'Запоминание слов',
 			sentenceTranslation: 'Перевод предложений',
-			audio: 'Аудирование'
-		}
+			audio: 'Аудирование',
+		},
 	},
 } as const

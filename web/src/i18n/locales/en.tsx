@@ -66,7 +66,7 @@ export const dict = {
 		translateToJapanese: 'Translate to Japanese',
 		yourTranslation: 'Your Translation',
 		feedback: 'Feedback:',
-		listenToAudio: 'Listen to the audio',
+		listenToAudio: 'Listen to the audio and answer the question',
 		loadingTasks: 'Loading tasks...',
 		noTasksAvailable: 'No tasks available!',
 		practiceToGenerateTasks: 'Practice cards in this deck to generate tasks. Tasks appear when cards move to review stage.',
