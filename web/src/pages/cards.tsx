@@ -633,7 +633,7 @@ export default function Cards() {
 									{currentCard()?.next_intervals.again}
 								</span>
 							</button>
-							<div class="flex flex-row items-center justify-center gap-4">
+							<div class="flex flex-row items-center justify-center gap-3">
 								<Show when={currentCard()?.fields.audio_word}>
 									<button class='rounded-full p-3.5 size-12 flex items-center justify-center bg-primary text-primary-foreground'>
 										<svg
