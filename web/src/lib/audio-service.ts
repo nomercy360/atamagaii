@@ -78,9 +78,13 @@ export const audioService = {
 		const playingUrls = activeAudios().map(item => item.url)
 
 		activeAudios().forEach(item => {
-			item.audio.pause()
-			item.audio.currentTime = 0
-			console.log('Stopping audio:', item.url)
+			try {
+				item.audio.pause()
+				item.audio.currentTime = 0
+				console.log('Stopping audio:', item.url)
+			} catch (error) {
+				console.error('Error stopping audio:', error, item.url)
+			}
 		})
 
 		// Clear active audios and set global playing state to false

@@ -231,10 +231,17 @@ export default function Cards() {
 	const playCardAudio = () => {
 		const card = currentCard()
 		if (card?.fields.audio_word) {
-			if (card?.fields.audio_example) {
-				audioService.playSequence(card.fields.audio_word, card.fields.audio_example)
-			} else {
-				audioService.playAudio(card.fields.audio_word, 'word')
+			try {
+				// First make sure any existing audio is properly stopped
+				audioService.stopAll()
+
+				if (card?.fields.audio_example) {
+					audioService.playSequence(card.fields.audio_word, card.fields.audio_example)
+				} else {
+					audioService.playAudio(card.fields.audio_word, 'word')
+				}
+			} catch (error) {
+				console.error('Error playing card audio:', error)
 			}
 		}
 	}
