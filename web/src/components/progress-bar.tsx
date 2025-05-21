@@ -13,25 +13,10 @@ export default function ProgressBar(props: ProgressBarProps) {
 	}
 
 	return (
-		<div class="w-full mb-2">
-			<div class="flex items-center justify-between mb-1">
-				<div class="text-xs text-muted-foreground">
-					<Show when={props.completed > 0}>
-						<span class="font-medium text-foreground">
-							{props.completed} / {props.total} tasks
-						</span>
-					</Show>
-					<Show when={props.completed === 0}>
-						{props.total} tasks
-					</Show>
-					<Show when={props.showPercentage}>
-						<span class="ml-1">({percentage()}%)</span>
-					</Show>
-				</div>
-			</div>
-			<div class="w-full bg-muted rounded-full h-2.5">
+		<div class="w-full mb-2 flex items-center justify-center">
+			<div class="w-[140px] bg-muted rounded-full h-1.5">
 				<div
-					class="bg-primary h-2.5 rounded-full transition-all duration-200"
+					class="bg-primary h-1.5 rounded-full transition-all duration-200"
 					style={{ width: `${percentage()}%` }}
 				/>
 			</div>

@@ -7,6 +7,7 @@ import { cn, hapticFeedback } from '~/lib/utils'
 import TranscriptionText from '~/components/transcription-text'
 import { audioService } from '~/lib/audio-service'
 import AllDoneAnimation from '~/components/all-done-animation'
+import ProgressBar from '~/components/progress-bar'
 
 const getFrontFaceClasses = (isFlipped: boolean, isTrans: boolean) => {
 	let opacityClass = ''
@@ -42,7 +43,6 @@ export default function Cards() {
 	const [cardIndex, setCardIndex] = createSignal(0)
 	const [flipped, setFlipped] = createSignal(false)
 	const [isTransitioning, setIsTransitioning] = createSignal(false)
-	const [settingsOpen, setSettingsOpen] = createSignal(false)
 	const [feedbackType, setFeedbackType] = createSignal<'again' | 'good' | null>(null)
 	const [showFeedback, setShowFeedback] = createSignal(false)
 	const [timerStart, setTimerStart] = createSignal<number>(0)
@@ -239,53 +239,7 @@ export default function Cards() {
 		}
 	}
 
-	const toggleSettings = (e: MouseEvent) => {
-		e.stopPropagation()
-		e.preventDefault()
-		setSettingsOpen(!settingsOpen())
-	}
-
-	const handleHideCard = (e: MouseEvent) => {
-		e.stopPropagation()
-		setSettingsOpen(false)
-		console.log('Hide card clicked', currentCard()?.id)
-	}
-
-	const handleEditCard = (e: MouseEvent) => {
-		e.stopPropagation()
-		setSettingsOpen(false)
-
-		const card = currentCard()
-		if (card) {
-			console.log('Navigating to edit card page', card.id)
-			navigate(`/edit-card/${params.deckId}/${card.id}`, { state: { back: true } })
-		}
-	}
-
-	const handleClickOutside = (e: MouseEvent) => {
-		if (e.target instanceof Element) {
-			const isMenuButton = (e.target as Element).closest('button[aria-label="Card settings"]')
-			const isMenuContent = (e.target as Element).closest('.settings-dropdown') ||
-				(e.target as Element).closest('button[onClick="handleHideCard"]') ||
-				(e.target as Element).closest('button[onClick="handleEditCard"]')
-
-			if (isMenuButton || isMenuContent) {
-				return
-			}
-
-			if (settingsOpen()) {
-				e.stopPropagation()
-				setSettingsOpen(false)
-			}
-		}
-	}
-
 	const handleCardFlip = (e: MouseEvent) => {
-		// Don't flip if the settings dropdown is open
-		if (settingsOpen()) {
-			return
-		}
-
 		if (isTransitioning()) return
 
 		// Only flip if card is not already flipped
@@ -422,55 +376,11 @@ export default function Cards() {
 					</div>
 				</div>
 			</Show>
-
-			<Show when={deckQuery.data && !deckQuery.isPending}>
-				<div class="absolute top-5 right-5 z-20">
-					<div class="relative">
-						<button
-							onClick={toggleSettings}
-							class="size-8 rounded-full bg-muted hover:bg-muted/90 flex items-center justify-center text-foreground"
-							aria-label="Card settings"
-						>
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-								<path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" />
-								<path d="M4 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" />
-								<path d="M20 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" />
-							</svg>
-						</button>
-
-						<Show when={settingsOpen()}>
-							<div
-								class="absolute right-0 top-8 mt-1 bg-card shadow-md rounded-md overflow-hidden border border-border w-36 z-30 settings-dropdown">
-								<div class="flex flex-col">
-									<button
-										class="px-3 py-2 hover:bg-muted text-start text-sm w-full flex items-center"
-										onClick={handleHideCard}
-									>
-										<svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-											<path d="M2 12C2 12 5.5 5 12 5C18.5 5 22 12 22 12C22 12 18.5 19 12 19C5.5 19 2 12 2 12Z"
-														stroke="currentColor" stroke-width="2" />
-											<path
-												d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
-												stroke="currentColor" stroke-width="2" />
-											<path d="M4 4L20 20" stroke="currentColor" stroke-width="2" />
-										</svg>
-										Hide Card
-									</button>
-									<button
-										class="px-3 py-2 hover:bg-muted text-start text-sm w-full flex items-center"
-										onClick={handleEditCard}
-									>
-										<svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-											<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" stroke="currentColor"
-														stroke-width="2" />
-										</svg>
-										Edit Card
-									</button>
-								</div>
-							</div>
-						</Show>
-					</div>
-				</div>
+			<Show when={cardBuffer().length > 0}>
+				<ProgressBar
+					completed={progressInfo().completed}
+					total={progressInfo().total}
+				/>
 			</Show>
 
 			<div class="w-full flex-grow flex flex-col items-center justify-start">
@@ -485,7 +395,6 @@ export default function Cards() {
 									text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
 									class="text-5xl font-extrabold"
 									language={currentCard()?.fields.language_code || 'jp'}
-									transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 								/>
 								<Show
 									when={currentCard()?.fields.example_native || currentCard()?.fields.example_native}>
@@ -493,66 +402,56 @@ export default function Cards() {
 										text={currentCard()?.fields.example_native || currentCard()?.fields.example_native || ''}
 										class="font-semibold text-xl text-secondary-foreground"
 										language={currentCard()?.fields.language_code || 'jp'}
-										transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 									/>
 								</Show>
 							</div>
 
 							<div class={getBackFaceClasses(flipped(), isTransitioning())}>
-								<div class="flex flex-col items-center">
-									<div class="flex items-center gap-2">
-										{currentCard()?.fields.term_with_transcription || currentCard()?.fields.term_with_transcription ? (
-											<TranscriptionText
-												text={currentCard()?.fields.term_with_transcription || currentCard()?.fields.term_with_transcription!}
-												class="font-extrabold text-5xl"
-												rtClass="text-xl font-semibold"
-												language={currentCard()?.fields.language_code || 'jp'}
-												transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
-											/>
-										) : (
-											<TranscriptionText
-												text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
-												class="text-5xl font-extrabold"
-												language={currentCard()?.fields.language_code || 'jp'}
-												transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
-											/>
-										)}
-									</div>
+								<div class="flex flex-col items-center justify-center">
 									<Show
-										when={(currentCard()?.fields.transcription || currentCard()?.fields.transcription) && !(currentCard()?.fields.term_with_transcription || currentCard()?.fields.term_with_transcription)}>
-										 <span class="text-xl text-secondary-foreground">
-												{currentCard()?.fields.transcription || currentCard()?.fields.transcription}
+										when={!currentCard()?.fields.term_with_transcription}>
+										 <span class="text-xl text-foreground font-extrabold">
+												{currentCard()?.fields.transcription}
 										 </span>
 									</Show>
+									{currentCard()?.fields.term_with_transcription ? (
+										<TranscriptionText
+											text={currentCard()?.fields.term_with_transcription || ''}
+											class="font-extrabold text-5xl"
+											rtClass="text-xl font-semibold"
+											language={currentCard()?.fields.language_code || 'jp'}
+										/>
+									) : (
+										<TranscriptionText
+											text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
+											class="text-5xl font-extrabold"
+											language={currentCard()?.fields.language_code || 'jp'}
+										/>
+									)}
 								</div>
 								<div
-									class="text-center text-xl font-normal mb-12 mt-3">{currentCard()?.fields.meaning_ru || currentCard()?.fields.meaning_en}</div>
+									class="text-center text-secondary-foreground text-xl font-normal mb-12 mt-3">
+									{currentCard()?.fields.meaning_ru || currentCard()?.fields.meaning_en}
+								</div>
 								<Show when={currentCard()?.fields.example_native}>
 									<div class="flex items-center justify-between mb-1">
 										<p class="flex-grow">
-											{currentCard()?.fields.example_with_transcription && currentCard()?.fields?.language_code !== 'ge' ? (
+											{currentCard()?.fields.example_with_transcription ? (
 												<TranscriptionText
 													text={currentCard()?.fields.example_with_transcription || ''}
 													class="tracking-wider text-xl font-semibold"
 													language={currentCard()?.fields.language_code || 'jp'}
 													rtClass="font-semibold text-xs"
-													transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 												/>
 											) : (
 												<TranscriptionText
 													text={currentCard()?.fields.example_native || ''}
 													class="text-xl font-semibold"
 													language={currentCard()?.fields.language_code || 'jp'}
-													transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 												/>
 											)}
 										</p>
 									</div>
-									<Show when={currentCard()?.fields.language_code === 'ge'}>
-										<p class="text-xl text-secondary-foreground">
-											{currentCard()?.fields.example_with_transcription}
-										</p>
-									</Show>
 									<p class="text-center text-xl text-secondary-foreground">
 										{currentCard()?.fields.example_ru || currentCard()?.fields.example_en}
 									</p>
@@ -582,7 +481,7 @@ export default function Cards() {
 						</button>
 						<button
 							onClick={() => navigate('/')}
-							class="mt-2 text-primary"
+							class="mt-2 text-primary-foreground"
 						>
 							Back to decks
 						</button>
@@ -594,16 +493,6 @@ export default function Cards() {
 			<Show when={flipped() && currentCard() && !isTransitioning()}>
 				{/* Click areas for rating cards by screen side click */}
 				<div class="fixed inset-0 bottom-28 w-full pointer-events-auto" onClick={(e) => {
-					// Don't handle clicks if the settings dropdown is open
-					if (settingsOpen()) return
-
-					// Ignore clicks on settings button or dropdown or audio buttons
-					if (e.target instanceof Element) {
-						const isMenuButton = (e.target as Element).closest('button[aria-label="Card settings"]')
-						const isMenuContent = (e.target as Element).closest('.settings-dropdown')
-						if (isMenuButton || isMenuContent) return
-					}
-
 					// Get click position relative to window width
 					const x = e.clientX
 					const windowWidth = window.innerWidth
@@ -635,7 +524,8 @@ export default function Cards() {
 							</button>
 							<div class="flex flex-row items-center justify-center gap-2">
 								<Show when={currentCard()?.fields.audio_word}>
-									<button class='rounded-full p-3.5 size-12 flex items-center justify-center bg-primary text-primary-foreground'>
+									<button
+										class="rounded-full p-3.5 size-12 flex items-center justify-center bg-primary text-primary-foreground">
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											height="24px"

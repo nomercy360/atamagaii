@@ -11,7 +11,7 @@ export default function NavigationTabs(props: any) {
 					<div class="flex justify-around py-3">
 						<Link
 							href="/"
-							class={cn('w-full flex flex-col items-center space-y-1 text-secondary-foreground p-2 rounded-xl', location.pathname === '/' && 'text-secondary-foreground bg-secondary')}
+							class={cn('w-full flex flex-col items-center space-y-1 text-secondary-foreground p-2 rounded-xl', location.pathname === '/' && 'text-foreground bg-secondary')}
 						>
 							<svg xmlns="http://www.w3.org/2000/svg"
 									 height="24px"
@@ -26,7 +26,7 @@ export default function NavigationTabs(props: any) {
 						</Link>
 						<Link
 							href="/tasks"
-							class={cn('w-full flex flex-col items-center space-y-1 text-secondary-foreground p-2 rounded-xl', location.pathname === '/tasks' && 'text-secondary-foreground bg-secondary')}
+							class={cn('w-full flex flex-col items-center space-y-1 text-secondary-foreground p-2 rounded-xl', location.pathname === '/tasks' && 'text-foreground bg-secondary')}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -43,7 +43,7 @@ export default function NavigationTabs(props: any) {
 						</Link>
 						<Link
 							href="/stats"
-							class={cn('w-full flex flex-col items-center space-y-1 text-secondary-foreground p-2 rounded-xl', location.pathname === '/stats' && 'text-secondary-foreground bg-secondary')}
+							class={cn('w-full flex flex-col items-center space-y-1 text-secondary-foreground p-2 rounded-xl', location.pathname === '/stats' && 'text-foreground bg-secondary')}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"

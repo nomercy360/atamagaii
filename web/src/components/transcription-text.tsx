@@ -7,7 +7,6 @@ export interface TranscriptionTextProps {
 	textSize?: 'xs' | 'sm' | 'base' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl';
 	rtClass?: string;
 	language?: string;           // ISO 639-1 language code (e.g., "jp", "zh", "en")
-	transcriptionType?: string;  // Type of transcription (furigana, pinyin, etc.)
 }
 
 // Type for parsed segments
@@ -27,17 +26,9 @@ const getTranscriptionRegex = (language: string): RegExp => {
 			// japanese kanji with furigana
 			pattern = /([一-龯]+)\[([^\]]+)]/g
 			break
-		case 'zh':
-			// Chinese characters with pinyin
-			pattern = /([一-龯\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]+)\[([^\]]+)]/g
-			break
 		case 'th':
 			// Thai script with romanization (any Thai character)
 			pattern = /([\u0E00-\u0E7F]+)\[([^\]]+)]/g
-			break
-		case 'ge':
-			// Georgian with transliteration (Mkhedruli script)
-			pattern = /([\u10A0-\u10FF]+)\[([^\]]+)]/g
 			break
 	}
 
@@ -104,7 +95,6 @@ const processPlainTextWithTags = (
 	segments: TranscriptionSegment[],
 	htmlTags: Map<string, { type: string, content: string }>,
 	language = 'jp',
-	transcriptionType = 'furigana',
 ) => {
 	const tagRegex = /__HTML_TAG_(\d+)__/g
 	let lastIndex = 0
@@ -182,7 +172,7 @@ const getFontClass = (language: string): string => {
  * - Transcription format: text[reading] (e.g., jppanese: "会[あ]う", Chinese: "你[nǐ]好[hǎo]")
  * - HTML tags: Currently supports <b> for bold text and <br/> for line breaks
  * - Can handle nested tags and transcriptions
- * - Supports multiple languages (jppanese, Chinese, Thai, Georgian, etc.)
+ * - Supports multiple languages (japanese, Chinese, Thai, Georgian, etc.)
  */
 export default function TranscriptionText(props: TranscriptionTextProps): JSX.Element {
 	const [local, others] = splitProps(props, ['text', 'class', 'rtClass', 'language'])
@@ -210,19 +200,19 @@ export default function TranscriptionText(props: TranscriptionTextProps): JSX.El
 					<rt class={local.rtClass}>{segment.text}</rt>
 				</ruby>
 			)
-		} else if (segment.type === 'bold') {
-			if (segment.segments) {
-				// If it has nested segments, render those within the bold context
-				return (
-					<span class="font-semibold">
-						<For each={segment.segments}>
-							{(nestedSegment) => renderSegment(nestedSegment)}
-						</For>
-					</span>
-				)
-			}
-			// Simple bold text
-			return <span class="font-medium">{segment.content}</span>
+			// } else if (segment.type === 'bold') {
+			// 	if (segment.segments) {
+			// 		// If it has nested segments, render those within the bold context
+			// 		return (
+			// 			<span class="font-semibold">
+			// 				<For each={segment.segments}>
+			// 					{(nestedSegment) => renderSegment(nestedSegment)}
+			// 				</For>
+			// 			</span>
+			// 		)
+			// 	}
+			// 	// Simple bold text
+			//	return <span class="font-medium">{segment.content}</span>
 		} else if (segment.type === 'linebreak') {
 			// Render a line break
 			return <br />
