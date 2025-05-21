@@ -518,12 +518,12 @@ export default function Cards() {
 				}}>
 				</div>
 
-				<div class="h-28 fixed bottom-0 left-0 right-0 bg-transparent z-10">
+				<div class="h-40 fixed bottom-0 left-0 right-0 bg-transparent z-10">
 					<div class="mx-auto px-4 py-4">
-						<div class="flex flex-row items-center justify-center gap-5">
+						<div class="flex flex-row items-center justify-center gap-6">
 							<button
 								onClick={() => handleReview(currentCard()!.id, 1)}
-								class="rounded-[120px] justify-center flex flex-col items-center h-12 px-4 bg-error text-foreground transition-opacity font-extrabold text-sm"
+								class="rounded-[120px] justify-center flex flex-col items-center h-14 px-6 bg-error text-foreground transition-opacity font-extrabold text-sm"
 							>
 								<span>
 									Again
@@ -532,10 +532,10 @@ export default function Cards() {
 									{currentCard()?.next_intervals.again}
 								</span>
 							</button>
-							<div class="flex flex-row items-center justify-center gap-2">
+							<div class="flex flex-row items-center justify-center gap-3">
 								<Show when={currentCard()?.fields.audio_word}>
 									<button
-										class="rounded-full p-3.5 size-12 flex items-center justify-center bg-primary text-primary-foreground">
+										class="rounded-full p-3.5 size-14 flex items-center justify-center bg-primary text-primary-foreground">
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											height="24px"
@@ -555,7 +555,7 @@ export default function Cards() {
 							</div>
 							<button
 								onClick={() => handleReview(currentCard()!.id, 2)}
-								class="rounded-[120px] justify-center flex flex-col items-center h-12 px-4 bg-success text-foreground  transition-opacity font-extrabold text-sm"
+								class="rounded-[120px] justify-center flex flex-col items-center h-14 px-6 bg-success text-foreground  transition-opacity font-extrabold text-sm"
 							>
 								<span>
 									Good
@@ -571,7 +571,7 @@ export default function Cards() {
 
 			{/* Deck metrics - show only when card is not flipped */}
 			<Show when={!flipped() && currentCard() && !isTransitioning() && deckQuery.data && !deckQuery.isPending}>
-				<div class="h-28 fixed bottom-0 left-0 right-0 bg-background border-t border-border">
+				<div class="h-40 fixed bottom-0 left-0 right-0 bg-background border-t border-border">
 					<div class="mx-auto px-4 py-4">
 						<div class="flex justify-center gap-3">
 							<Show when={deckMetrics().new_cards > 0}>

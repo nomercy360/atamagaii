@@ -107,7 +107,7 @@ export default function AudioButton(props: AudioButtonProps) {
 	const sizeClasses = {
 		sm: 'w-5 h-5 text-xs',
 		md: 'w-6 h-6 text-sm',
-		lg: 'size-12 p-3.5 text-base',
+		lg: 'size-14 p-3.5 text-base',
 	}
 
 	const size = props.size || 'md'
