@@ -195,7 +195,7 @@ export default function TranscriptionText(props: TranscriptionTextProps): JSX.El
 	const renderSegment = (segment: TranscriptionSegment): JSX.Element => {
 		if (segment.type === 'ruby') {
 			return (
-				<ruby class={`${language() == 'th' ? 'ruby-under' : ''}`}>
+				<ruby class={cn(fontClass(), language() == 'th' ? 'ruby-under' : '')}>
 					{segment.base}
 					<rt class={local.rtClass}>{segment.text}</rt>
 				</ruby>
