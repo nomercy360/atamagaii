@@ -1,4 +1,5 @@
 import { JSX, splitProps, For, createMemo } from 'solid-js'
+import { cn } from '~/lib/utils'
 
 export interface TranscriptionTextProps {
 	text: string;
@@ -17,7 +18,7 @@ type TranscriptionSegment =
 	| { type: 'linebreak' };
 
 // Helper function to get the appropriate regex for transcription based on language
-const getTranscriptionRegex = (language: string, transcriptionType: string): RegExp => {
+const getTranscriptionRegex = (language: string): RegExp => {
 	// Default pattern for most languages with [pronunciation] format
 	let pattern = /(\S+)\[([^\]]+)]/g
 
@@ -34,7 +35,7 @@ const getTranscriptionRegex = (language: string, transcriptionType: string): Reg
 			// Thai script with romanization (any Thai character)
 			pattern = /([\u0E00-\u0E7F]+)\[([^\]]+)]/g
 			break
-		case 'ka':
+		case 'ge':
 			// Georgian with transliteration (Mkhedruli script)
 			pattern = /([\u10A0-\u10FF]+)\[([^\]]+)]/g
 			break
@@ -44,7 +45,7 @@ const getTranscriptionRegex = (language: string, transcriptionType: string): Reg
 }
 
 // Helper function to parse the text into segments
-const parseTextToSegments = (text: string, language = 'jp', transcriptionType = 'furigana'): TranscriptionSegment[] => {
+const parseTextToSegments = (text: string, language = 'jp'): TranscriptionSegment[] => {
 	const segments: TranscriptionSegment[] = []
 	if (!text) {
 		return segments
@@ -73,14 +74,14 @@ const parseTextToSegments = (text: string, language = 'jp', transcriptionType = 
 	// Step 2: Process transcription notation in the text
 	let lastIndex = 0
 	// Get the appropriate regex for this language and transcription type
-	const transcriptionRegex = getTranscriptionRegex(language, transcriptionType)
+	const transcriptionRegex = getTranscriptionRegex(language)
 	let match
 
 	while ((match = transcriptionRegex.exec(processedText)) !== null) {
 		// Add text before the current transcription match
 		if (match.index > lastIndex) {
 			const precedingText = processedText.substring(lastIndex, match.index)
-			processPlainTextWithTags(precedingText, segments, htmlTags, language, transcriptionType)
+			processPlainTextWithTags(precedingText, segments, htmlTags, language)
 		}
 
 		// Add the transcription segment
@@ -91,7 +92,7 @@ const parseTextToSegments = (text: string, language = 'jp', transcriptionType = 
 	// Add any remaining text after the last transcription match
 	if (lastIndex < processedText.length) {
 		const remainingText = processedText.substring(lastIndex)
-		processPlainTextWithTags(remainingText, segments, htmlTags, language, transcriptionType)
+		processPlainTextWithTags(remainingText, segments, htmlTags, language)
 	}
 
 	return segments
@@ -128,10 +129,10 @@ const processPlainTextWithTags = (
 				segments.push({ type: 'linebreak' })
 			} else if (tagInfo.type === 'bold') {
 				// For bold tags, check if there's transcription inside
-				const transcriptionRegex = getTranscriptionRegex(language, transcriptionType)
+				const transcriptionRegex = getTranscriptionRegex(language)
 				if (tagInfo.content.includes('[') && tagInfo.content.match(transcriptionRegex)) {
 					// Parse the bold content separately to handle nested transcription
-					const boldSegments = parseTextToSegments(tagInfo.content, language, transcriptionType)
+					const boldSegments = parseTextToSegments(tagInfo.content, language)
 					segments.push({
 						type: 'bold',
 						content: '', // Empty as we'll use the segments instead
@@ -181,8 +182,8 @@ const getFontClass = (language: string): string => {
 			return 'font-zh' // Chinese font
 		case 'th':
 			return 'font-th' // Thai font
-		case 'ka':
-			return 'font-ka' // Georgian font
+		case 'ge':
+			return 'font-ge' // Georgian font
 		default:
 			return '' // Default font
 	}
@@ -197,27 +198,12 @@ const getFontClass = (language: string): string => {
  * - Supports multiple languages (jppanese, Chinese, Thai, Georgian, etc.)
  */
 export default function TranscriptionText(props: TranscriptionTextProps): JSX.Element {
-	const [local, others] = splitProps(props, ['text', 'class', 'textSize', 'rtClass', 'language', 'transcriptionType'])
-
-	const currentTextSize = createMemo(() => {
-		return local.textSize || 'base'
-	})
-
-	const defaultRtClass = createMemo(() => {
-		return RT_SIZE_MAP[currentTextSize()] || 'text-xs'
-	})
-
-	const finalRtClasses = createMemo(() => {
-		return `font-normal ${defaultRtClass()} ${local.rtClass || ''}`
-	})
+	const [local, others] = splitProps(props, ['text', 'class', 'rtClass', 'language'])
 
 	const language = createMemo(() => {
 		return local.language || 'jp'
 	})
 
-	const transcriptionType = createMemo(() => {
-		return local.transcriptionType || 'furigana'
-	})
 
 	const fontClass = createMemo(() => {
 		return getFontClass(language())
@@ -225,16 +211,16 @@ export default function TranscriptionText(props: TranscriptionTextProps): JSX.El
 
 	// Parse the input text into segments
 	const segments = createMemo(() =>
-		parseTextToSegments(local.text, language(), transcriptionType()),
+		parseTextToSegments(local.text, language()),
 	)
 
 	// Recursive renderer for segments (to handle nested structures)
 	const renderSegment = (segment: TranscriptionSegment): JSX.Element => {
 		if (segment.type === 'ruby') {
 			return (
-				<ruby class={`font-normal ${language() == 'th' ? 'ruby-under' : ''}`}>
+				<ruby class={`${language() == 'th' ? 'ruby-under' : ''}`}>
 					{segment.base}
-					<rt class={finalRtClasses()}>{segment.text}</rt>
+					<rt class={local.rtClass}>{segment.text}</rt>
 				</ruby>
 			)
 		} else if (segment.type === 'bold') {
@@ -262,7 +248,7 @@ export default function TranscriptionText(props: TranscriptionTextProps): JSX.El
 	// Default rendering for other languages
 	return (
 		<p
-			class={`text-${currentTextSize()} leading-relaxed ${fontClass()} ${local.class || ''}`}
+			class={cn('leading-relaxed', fontClass(), local.class)}
 			{...others}
 		>
 			<For each={segments()}>

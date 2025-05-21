@@ -19,7 +19,7 @@ const getFrontFaceClasses = (isFlipped: boolean, isTrans: boolean) => {
 	const rotationClass = isFlipped ? 'rotate-y-180' : 'rotate-y-0'
 	const pointerEventsClass = (isTrans || isFlipped) ? 'pointer-events-none' : ''
 
-	return `absolute inset-0 w-full flex flex-col items-center justify-center p-4 ${rotationClass} ${opacityClass} ${pointerEventsClass} transition-all duration-200 transform-gpu backface-hidden`
+	return `space-y-2 absolute inset-0 w-full flex flex-col items-center justify-center p-4 ${rotationClass} ${opacityClass} ${pointerEventsClass} transition-all duration-200 transform-gpu backface-hidden`
 }
 
 const getBackFaceClasses = (isFlipped: boolean, isTrans: boolean) => {
@@ -232,7 +232,7 @@ export default function Cards() {
 		const card = currentCard()
 		if (card?.fields.audio_word) {
 			if (card?.fields.audio_example) {
-				audioService.playSequence(card.fields.audio_word, card.fields.audio_example, 0)
+				audioService.playSequence(card.fields.audio_word, card.fields.audio_example)
 			} else {
 				audioService.playAudio(card.fields.audio_word, 'word')
 			}
@@ -483,7 +483,7 @@ export default function Cards() {
 							<div class={getFrontFaceClasses(flipped(), isTransitioning())}>
 								<TranscriptionText
 									text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
-									textSize="3xl"
+									class="text-5xl font-extrabold"
 									language={currentCard()?.fields.language_code || 'jp'}
 									transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 								/>
@@ -491,7 +491,7 @@ export default function Cards() {
 									when={currentCard()?.fields.example_native || currentCard()?.fields.example_native}>
 									<TranscriptionText
 										text={currentCard()?.fields.example_native || currentCard()?.fields.example_native || ''}
-										textSize="lg"
+										class="font-semibold text-xl text-secondary-foreground"
 										language={currentCard()?.fields.language_code || 'jp'}
 										transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 									/>
@@ -500,81 +500,62 @@ export default function Cards() {
 
 							<div class={getBackFaceClasses(flipped(), isTransitioning())}>
 								<div class="flex flex-col items-center">
-									<div class="flex items-center gap-2 pl-8">
+									<div class="flex items-center gap-2">
 										{currentCard()?.fields.term_with_transcription || currentCard()?.fields.term_with_transcription ? (
 											<TranscriptionText
 												text={currentCard()?.fields.term_with_transcription || currentCard()?.fields.term_with_transcription!}
-												textSize="3xl"
+												class="font-extrabold text-5xl"
+												rtClass="text-xl font-semibold"
 												language={currentCard()?.fields.language_code || 'jp'}
 												transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 											/>
 										) : (
 											<TranscriptionText
 												text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
-												textSize="3xl"
+												class="text-5xl font-extrabold"
 												language={currentCard()?.fields.language_code || 'jp'}
 												transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
 											/>
 										)}
-										<Show when={currentCard()?.fields.audio_word}>
-											<AudioButton
-												audioUrl={currentCard()?.fields.audio_word || ''}
-												size="md"
-												label="Play word pronunciation"
-												type="word"
-											/>
-										</Show>
 									</div>
 									<Show
 										when={(currentCard()?.fields.transcription || currentCard()?.fields.transcription) && !(currentCard()?.fields.term_with_transcription || currentCard()?.fields.term_with_transcription)}>
-										 <span class="text-lg text-muted-foreground">
+										 <span class="text-xl text-secondary-foreground">
 												{currentCard()?.fields.transcription || currentCard()?.fields.transcription}
 										 </span>
 									</Show>
 								</div>
 								<div
-									class="text-center text-xl font-normal mb-8 mt-3">{currentCard()?.fields.meaning_ru || currentCard()?.fields.meaning_en}</div>
+									class="text-center text-xl font-normal mb-12 mt-3">{currentCard()?.fields.meaning_ru || currentCard()?.fields.meaning_en}</div>
 								<Show when={currentCard()?.fields.example_native}>
-									<div class="text-sm space-y-2 w-full">
-										<div class="bg-muted rounded-md p-2">
-											<div class="flex items-start justify-between mb-1">
-												<p class="flex-grow">
-													{currentCard()?.fields.example_with_transcription && currentCard()?.fields?.language_code !== 'ge' ? (
-														<TranscriptionText
-															text={currentCard()?.fields.example_with_transcription || ''}
-															textSize="xl"
-															language={currentCard()?.fields.language_code || 'jp'}
-															rtClass={cn('opacity-70 font-normal')}
-															transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
-														/>
-													) : (
-														<TranscriptionText
-															text={currentCard()?.fields.example_native || ''}
-															textSize="2xl"
-															language={currentCard()?.fields.language_code || 'jp'}
-															transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
-														/>
-													)}
-												</p>
-												<Show when={currentCard()?.fields.audio_example}>
-													<AudioButton
-														audioUrl={currentCard()?.fields.audio_example || ''}
-														size="md"
-														label="Play example audio"
-														type="example"
-													/>
-												</Show>
-											</div>
-											<Show when={currentCard()?.fields.language_code === 'ge'}>
-												<p class="text-sm text-muted-foreground">
-													{currentCard()?.fields.example_with_transcription}
-												</p>
-											</Show>
-											<p class="text-xs text-muted-foreground">
-												{currentCard()?.fields.example_ru || currentCard()?.fields.example_en}
-											</p>
-										</div>
+									<div class="flex items-center justify-between mb-1">
+										<p class="flex-grow">
+											{currentCard()?.fields.example_with_transcription && currentCard()?.fields?.language_code !== 'ge' ? (
+												<TranscriptionText
+													text={currentCard()?.fields.example_with_transcription || ''}
+													class="tracking-wider text-xl font-semibold"
+													language={currentCard()?.fields.language_code || 'jp'}
+													rtClass="font-semibold text-xs"
+													transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+												/>
+											) : (
+												<TranscriptionText
+													text={currentCard()?.fields.example_native || ''}
+													class="text-xl font-semibold"
+													language={currentCard()?.fields.language_code || 'jp'}
+													transcriptionType={currentCard()?.fields.transcription_type || 'furigana'}
+												/>
+											)}
+										</p>
 									</div>
+									<Show when={currentCard()?.fields.language_code === 'ge'}>
+										<p class="text-xl text-secondary-foreground">
+											{currentCard()?.fields.example_with_transcription}
+										</p>
+									</Show>
+									<p class="text-xl text-secondary-foreground">
+										{currentCard()?.fields.example_ru || currentCard()?.fields.example_en}
+									</p>
 								</Show>
 							</div>
 						</div>
@@ -638,28 +619,48 @@ export default function Cards() {
 				}}>
 				</div>
 
-				<div class="h-28 fixed bottom-0 left-0 right-0 bg-background border-t border-border z-10">
+				<div class="h-28 fixed bottom-0 left-0 right-0 bg-transparent z-10">
 					<div class="mx-auto px-4 py-4">
-						<div class="grid grid-cols-2 gap-4">
+						<div class="flex flex-row items-center justify-center gap-7">
 							<button
 								onClick={() => handleReview(currentCard()!.id, 1)}
-								class="justify-center flex flex-col items-center h-14 px-4 bg-error text-error-foreground rounded-md transition-opacity font-medium text-lg"
+								class="rounded-[120px] justify-center flex flex-col items-center h-12 px-4 w-24 bg-error text-error-foreground transition-opacity font-extrabold text-sm"
 							>
 								<span>
 									Again
 								</span>
-								<span class="text-xs opacity-70">
+								<span class="text-[11px] leading-none font-semibold opacity-70">
 									{currentCard()?.next_intervals.again}
 								</span>
 							</button>
+							<div class="flex flex-row items-center justify-center gap-4">
+								<Show when={currentCard()?.fields.audio_word}>
+									<button class='rounded-full p-3.5 size-12 flex items-center justify-center bg-primary text-primary-foreground'>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											height="24px"
+											viewBox="0 -960 960 960"
+											width="24px"
+											fill="currentColor">
+											<path
+												d="m603-202-34 97q-4 11-14 18t-22 7q-20 0-32.5-16.5T496-133l152-402q5-11 15-18t22-7h30q12 0 22 7t15 18l152 403q8 19-4 35.5T868-80q-13 0-22.5-7T831-106l-34-96H603ZM362-401 188-228q-11 11-27.5 11.5T132-228q-11-11-11-28t11-28l174-174q-35-35-63.5-80T190-640h84q20 39 40 68t48 58q33-33 68.5-92.5T484-720H80q-17 0-28.5-11.5T40-760q0-17 11.5-28.5T80-800h240v-40q0-17 11.5-28.5T360-880q17 0 28.5 11.5T400-840v40h240q17 0 28.5 11.5T680-760q0 17-11.5 28.5T640-720h-76q-21 72-63 148t-83 116l96 98-30 82-122-125Zm266 129h144l-72-204-72 204Z" />
+										</svg>
+									</button>
+									<AudioButton
+										size="lg"
+										audioUrl={currentCard()?.fields.audio_word!}
+										secondaryAudioUrl={currentCard()?.fields.audio_example}
+									/>
+								</Show>
+							</div>
 							<button
 								onClick={() => handleReview(currentCard()!.id, 2)}
-								class="justify-center flex flex-col items-center h-14 px-4 bg-info text-info-foreground rounded-md transition-opacity font-medium text-lg"
+								class="rounded-[120px] justify-center flex flex-col items-center h-12 px-4 w-24 bg-success text-success-foreground transition-opacity font-extrabold text-sm"
 							>
 								<span>
 									Good
 								</span>
-								<span class="text-xs opacity-70">
+								<span class="text-[11px] leading-none font-semibold opacity-70">
 									{currentCard()?.next_intervals.good}
 								</span>
 							</button>

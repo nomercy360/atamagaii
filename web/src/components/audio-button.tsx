@@ -3,14 +3,23 @@ import { audioService } from '~/lib/audio-service'
 
 interface AudioButtonProps {
 	audioUrl: string
+	secondaryAudioUrl?: string
 	size?: 'sm' | 'md' | 'lg'
 	label?: string
 	type?: 'word' | 'example'
+	delayBetweenAudios?: number
 }
 
 export default function AudioButton(props: AudioButtonProps) {
 	const [isPlaying, setIsPlaying] = createSignal(false)
+	const [primaryPlaying, setPrimaryPlaying] = createSignal(false)
+	const [secondaryPlaying, setSecondaryPlaying] = createSignal(false)
 	const type = props.type || 'word'
+
+	// Update the overall playing state based on either audio playing
+	createEffect(() => {
+		setIsPlaying(primaryPlaying() || secondaryPlaying())
+	})
 
 	const handlePlay = (e: MouseEvent) => {
 		e.stopPropagation()
@@ -18,10 +27,16 @@ export default function AudioButton(props: AudioButtonProps) {
 
 		if (!props.audioUrl) return
 
-		audioService.toggleAudio(props.audioUrl, type)
+		if (props.secondaryAudioUrl) {
+			audioService.stopAll()
+			audioService.playSequence(props.audioUrl, props.secondaryAudioUrl, props.delayBetweenAudios || 0)
+		} else {
+			audioService.toggleAudio(props.audioUrl, type)
+		}
 	}
 
 	const [currentAudioUrl, setCurrentAudioUrl] = createSignal(props.audioUrl)
+	const [currentSecondaryUrl, setCurrentSecondaryUrl] = createSignal(props.secondaryAudioUrl)
 	let unregisterCallback: (() => void) | null = null
 
 	const registerCallback = () => {
@@ -33,18 +48,43 @@ export default function AudioButton(props: AudioButtonProps) {
 		if (!url) return
 
 		setCurrentAudioUrl(url)
+		setCurrentSecondaryUrl(props.secondaryAudioUrl)
 
+		// Create array to hold all unregister functions
+		const unregisterFunctions: Array<() => void> = []
+
+		// Primary audio callback
 		const componentId = `audio-button-${Math.random().toString(36).substring(2, 9)}`
-
-		unregisterCallback = audioService.registerStateCallback(
+		const primaryUnregister = audioService.registerStateCallback(
 			componentId,
 			url,
 			(playing, callbackUrl) => {
 				if (callbackUrl === url) {
-					setIsPlaying(playing)
+					setPrimaryPlaying(playing)
 				}
 			}
 		)
+		unregisterFunctions.push(primaryUnregister)
+
+		// Secondary audio callback (if available)
+		if (props.secondaryAudioUrl) {
+			const secondaryComponentId = `audio-button-secondary-${Math.random().toString(36).substring(2, 9)}`
+			const secondaryUnregister = audioService.registerStateCallback(
+				secondaryComponentId,
+				props.secondaryAudioUrl,
+				(playing, callbackUrl) => {
+					if (callbackUrl === props.secondaryAudioUrl) {
+						setSecondaryPlaying(playing)
+					}
+				}
+			)
+			unregisterFunctions.push(secondaryUnregister)
+		}
+
+		// Create a combined unregister function
+		unregisterCallback = () => {
+			unregisterFunctions.forEach(fn => fn())
+		}
 	}
 
 	onMount(() => {
@@ -58,7 +98,8 @@ export default function AudioButton(props: AudioButtonProps) {
 	})
 
 	createEffect(() => {
-		if (props.audioUrl !== currentAudioUrl()) {
+		// Re-register callbacks when either primary or secondary audio URL changes
+		if (props.audioUrl !== currentAudioUrl() || props.secondaryAudioUrl !== currentSecondaryUrl()) {
 			registerCallback()
 		}
 	})
@@ -66,7 +107,7 @@ export default function AudioButton(props: AudioButtonProps) {
 	const sizeClasses = {
 		sm: 'w-5 h-5 text-xs',
 		md: 'w-6 h-6 text-sm',
-		lg: 'w-8 h-8 text-base',
+		lg: 'size-12 p-3.5 text-base',
 	}
 
 	const size = props.size || 'md'
