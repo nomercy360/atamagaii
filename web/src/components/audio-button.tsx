@@ -26,12 +26,21 @@ export default function AudioButton(props: AudioButtonProps) {
 		e.preventDefault()
 
 		if (!props.audioUrl) return
-
-		if (props.secondaryAudioUrl) {
-			audioService.stopAll()
-			audioService.playSequence(props.audioUrl, props.secondaryAudioUrl, props.delayBetweenAudios || 0)
-		} else {
-			audioService.toggleAudio(props.audioUrl, type)
+		
+		try {
+			if (props.secondaryAudioUrl) {
+				audioService.stopAll()
+				audioService.playSequence(props.audioUrl, props.secondaryAudioUrl, props.delayBetweenAudios || 0)
+			} else {
+				audioService.toggleAudio(props.audioUrl, type)
+			}
+		} catch (error) {
+			console.error('Error in audio button click handler:', error);
+			// Reset state in case of errors
+			audioService.stopAll();
+			setIsPlaying(false);
+			setPrimaryPlaying(false);
+			setSecondaryPlaying(false);
 		}
 	}
 

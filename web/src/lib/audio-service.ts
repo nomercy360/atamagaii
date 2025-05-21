@@ -78,9 +78,13 @@ export const audioService = {
 		const playingUrls = activeAudios().map(item => item.url)
 
 		activeAudios().forEach(item => {
-			item.audio.pause()
-			item.audio.currentTime = 0
-			console.log('Stopping audio:', item.url)
+			try {
+				item.audio.pause()
+				item.audio.currentTime = 0
+				console.log('Stopping audio:', item.url)
+			} catch (error) {
+				console.error('Error stopping audio:', error, item.url)
+			}
 		})
 
 		// Clear active audios and set global playing state to false
@@ -110,10 +114,22 @@ export const audioService = {
 		// Stop any currently playing audio
 		this.stopAll()
 
-		// Use cached audio if available, otherwise create new
-		const audio = audioCache.get(url) || new Audio(url)
-		const audioItem: AudioWithMetadata = { audio, type, url }
+		// Create a fresh audio instance to avoid potential issues with cached instances
+		let audio: HTMLAudioElement;
+		if (audioCache.has(url)) {
+			// If in cache, create a clone to avoid state issues
+			const cachedAudio = audioCache.get(url)!;
+			audio = new Audio(url);
+			// Use the cached audio to handle preloading but avoid state issues
+			if (cachedAudio.readyState >= 2) {
+				console.log('Using preloaded audio from cache:', url);
+			}
+		} else {
+			audio = new Audio(url);
+			audioCache.set(url, audio);
+		}
 
+		const audioItem: AudioWithMetadata = { audio, type, url }
 		setActiveAudios([audioItem])
 
 		// Update playing state and notify callbacks
@@ -171,10 +187,22 @@ export const audioService = {
 		// Stop any currently playing audio
 		this.stopAll()
 
-		// Use cached audio if available, otherwise create new
-		const wordAudio = audioCache.get(wordUrl) || new Audio(wordUrl)
-		const wordItem: AudioWithMetadata = { audio: wordAudio, type: 'word', url: wordUrl }
+		// Create fresh audio instances to avoid potential issues with cached instances
+		let wordAudio: HTMLAudioElement;
+		if (audioCache.has(wordUrl)) {
+			// If in cache, create a clone to avoid state issues
+			const cachedAudio = audioCache.get(wordUrl)!;
+			wordAudio = new Audio(wordUrl);
+			// Use the cached audio to handle preloading but avoid state issues
+			if (cachedAudio.readyState >= 2) {
+				console.log('Using preloaded word audio from cache:', wordUrl);
+			}
+		} else {
+			wordAudio = new Audio(wordUrl);
+			audioCache.set(wordUrl, wordAudio);
+		}
 
+		const wordItem: AudioWithMetadata = { audio: wordAudio, type: 'word', url: wordUrl }
 		setActiveAudios([wordItem])
 		setIsPlaying(true)
 
@@ -202,11 +230,21 @@ export const audioService = {
 				})
 
 				setTimeout(() => {
-					const exampleAudio = audioCache.get(exampleUrl) || new Audio(exampleUrl)
+					// Create a fresh audio instance for example audio
+					let exampleAudio: HTMLAudioElement;
+					if (audioCache.has(exampleUrl)) {
+						const cachedAudio = audioCache.get(exampleUrl)!;
+						exampleAudio = new Audio(exampleUrl);
+						if (cachedAudio.readyState >= 2) {
+							console.log('Using preloaded example audio from cache:', exampleUrl);
+						}
+					} else {
+						exampleAudio = new Audio(exampleUrl);
+						audioCache.set(exampleUrl, exampleAudio);
+					}
+
 					const exampleItem: AudioWithMetadata = { audio: exampleAudio, type: 'example', url: exampleUrl }
-
 					setActiveAudios([exampleItem])
-
 					exampleAudio.currentTime = 0
 
 					audioStateCallbacks.forEach((callback, key) => {
@@ -234,6 +272,7 @@ export const audioService = {
 					exampleAudio.play().catch(error => {
 						console.error('Error playing example audio:', error)
 						setActiveAudios(audios => audios.filter(a => a.audio !== exampleAudio))
+						setIsPlaying(false)
 
 						// Notify callbacks of failure
 						audioStateCallbacks.forEach((callback, key) => {
