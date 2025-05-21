@@ -231,20 +231,10 @@ export default function Cards() {
 	const playCardAudio = () => {
 		const card = currentCard()
 		if (card?.fields.audio_word) {
-			try {
-				// First make sure any existing audio is properly stopped
-				audioService.stopAll()
-				
-				// Short delay to ensure clean audio state
-				setTimeout(() => {
-					if (card?.fields.audio_example) {
-						audioService.playSequence(card.fields.audio_word, card.fields.audio_example)
-					} else {
-						audioService.playAudio(card.fields.audio_word, 'word')
-					}
-				}, 10)
-			} catch (error) {
-				console.error('Error playing card audio:', error)
+			if (card?.fields.audio_example) {
+				audioService.playSequence(card.fields.audio_word, card.fields.audio_example)
+			} else {
+				audioService.playAudio(card.fields.audio_word, 'word')
 			}
 		}
 	}
@@ -259,12 +249,8 @@ export default function Cards() {
 			hapticFeedback('impact', 'light')
 
 			setFlipped(true)
-			
-			// Add a small delay before playing audio to avoid timing issues during flip animation
-			setTimeout(() => {
-				// Play audio after a slight delay to avoid conflict with transition
-				playCardAudio()
-			}, 50)
+			// Play audio immediately
+			playCardAudio()
 		}
 	}
 
