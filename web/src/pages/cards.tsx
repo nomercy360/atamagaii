@@ -255,7 +255,10 @@ export default function Cards() {
 	}
 
 	const handleNextCard = () => {
-		stopAllAudio()
+		// Stop audio after a small delay to prevent AbortError
+		setTimeout(() => {
+			stopAllAudio()
+		}, 50)
 
 		setIsTransitioning(true)
 		setTimeout(() => {
