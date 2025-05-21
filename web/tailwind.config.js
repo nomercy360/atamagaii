@@ -16,6 +16,7 @@ module.exports = {
 				zh: ['"Noto Sans SC"', 'sans-serif'],          // Chinese (Simplified)
 				th: ['"Noto Sans Thai"', 'sans-serif'],        // Thai
 				ka: ['"Noto Sans Georgian"', 'sans-serif'],    // Georgian
+				sans: ['Noto Sans', 'sans-serif'],            // Default sans-serif
 			},
 			colors: {
 				border: 'hsl(var(--border))',

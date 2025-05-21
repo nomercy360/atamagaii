@@ -477,7 +477,7 @@ export default function Cards() {
 				<Show when={currentCard()}>
 					<div class="w-full flex flex-col items-center">
 						<div
-							class={`w-full cursor-pointer relative perspective transition-all min-h-[500px] ${isTransitioning() ? 'pointer-events-none' : ''}`}
+							class={`text-center w-full cursor-pointer relative perspective transition-all min-h-[500px] ${isTransitioning() ? 'pointer-events-none' : ''}`}
 							onClick={handleCardFlip}
 						>
 							<div class={getFrontFaceClasses(flipped(), isTransitioning())}>
@@ -553,7 +553,7 @@ export default function Cards() {
 											{currentCard()?.fields.example_with_transcription}
 										</p>
 									</Show>
-									<p class="text-xl text-secondary-foreground">
+									<p class="text-center text-xl text-secondary-foreground">
 										{currentCard()?.fields.example_ru || currentCard()?.fields.example_en}
 									</p>
 								</Show>
@@ -621,10 +621,10 @@ export default function Cards() {
 
 				<div class="h-28 fixed bottom-0 left-0 right-0 bg-transparent z-10">
 					<div class="mx-auto px-4 py-4">
-						<div class="flex flex-row items-center justify-center gap-7">
+						<div class="flex flex-row items-center justify-center gap-5">
 							<button
 								onClick={() => handleReview(currentCard()!.id, 1)}
-								class="rounded-[120px] justify-center flex flex-col items-center h-12 px-4 w-24 bg-error text-error-foreground transition-opacity font-extrabold text-sm"
+								class="rounded-[120px] justify-center flex flex-col items-center h-12 px-4 bg-error text-foreground transition-opacity font-extrabold text-sm"
 							>
 								<span>
 									Again
@@ -633,7 +633,7 @@ export default function Cards() {
 									{currentCard()?.next_intervals.again}
 								</span>
 							</button>
-							<div class="flex flex-row items-center justify-center gap-3">
+							<div class="flex flex-row items-center justify-center gap-2">
 								<Show when={currentCard()?.fields.audio_word}>
 									<button class='rounded-full p-3.5 size-12 flex items-center justify-center bg-primary text-primary-foreground'>
 										<svg
@@ -655,7 +655,7 @@ export default function Cards() {
 							</div>
 							<button
 								onClick={() => handleReview(currentCard()!.id, 2)}
-								class="rounded-[120px] justify-center flex flex-col items-center h-12 px-4 w-24 bg-success text-success-foreground transition-opacity font-extrabold text-sm"
+								class="rounded-[120px] justify-center flex flex-col items-center h-12 px-4 bg-success text-foreground  transition-opacity font-extrabold text-sm"
 							>
 								<span>
 									Good

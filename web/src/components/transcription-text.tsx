@@ -160,24 +160,11 @@ const processPlainTextWithTags = (
 	}
 }
 
-// Size map for furigana rt elements
-const RT_SIZE_MAP = {
-	'xs': 'text-[0.5rem]',
-	'sm': 'text-[0.55rem]',
-	'base': 'text-[0.6rem]',
-	'lg': 'text-xs',
-	'xl': 'text-xs',
-	'2xl': 'text-xs',
-	'3xl': 'text-sm',
-	'4xl': 'text-sm',
-	'5xl': 'text-base',
-}
-
 // Get the appropriate font class based on language
 const getFontClass = (language: string): string => {
 	switch (language) {
 		case 'jp':
-			return 'font-jp' // jppanese font
+			return 'font-jp' // japanese font
 		case 'zh':
 			return 'font-zh' // Chinese font
 		case 'th':
