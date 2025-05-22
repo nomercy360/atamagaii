@@ -225,12 +225,12 @@ func (tg *TaskGenerator) generateTasks() {
 					defer os.Remove(tempFilePath)
 
 					// Upload to S3
-					audioFileName := fmt.Sprintf("tasks/%s_audio.m4a", card.ID)
+					audioFileName := fmt.Sprintf("tasks/%s_audio.wav", card.ID)
 					audioURL, err := tg.storageProvider.UploadFile(
 						ctx,
 						tempFile,
 						audioFileName,
-						"audio/aac",
+						"audio/wav",
 					)
 					if err != nil {
 						log.Printf("Error uploading audio for task card %s: %v", card.ID, err)

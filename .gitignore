@@ -4,4 +4,5 @@ config.production.yml
 *.sqlite-shm
 *.sqlite-wal
 .idea
+google-credentials.json
 **/.claude/settings.local.json

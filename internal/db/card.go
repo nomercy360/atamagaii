@@ -541,6 +541,48 @@ func (s *Storage) GetCard(cardID string, userID string) (*Card, error) {
 	return &card, nil
 }
 
+func (s *Storage) GetCardByID(cardID string) (*Card, error) {
+	query := `
+		SELECT id, deck_id, fields, user_id, next_review, interval, ease,
+		       review_count, laps_count, last_reviewed_at, first_reviewed_at, state,
+		       learning_step, created_at, updated_at, deleted_at
+		FROM cards
+		WHERE id = ? AND deleted_at IS NULL
+	`
+
+	var card Card
+	var intervalNs int64
+
+	err := s.db.QueryRow(query, cardID).Scan(
+		&card.ID,
+		&card.DeckID,
+		&card.Fields,
+		&card.UserID,
+		&card.NextReview,
+		&intervalNs,
+		&card.Ease,
+		&card.ReviewCount,
+		&card.LapsCount,
+		&card.LastReviewedAt,
+		&card.FirstReviewedAt,
+		&card.State,
+		&card.LearningStep,
+		&card.CreatedAt,
+		&card.UpdatedAt,
+		&card.DeletedAt,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("error getting card by ID: %w", err)
+	}
+
+	card.Interval = time.Duration(intervalNs)
+	return &card, nil
+}
+
 func (s *Storage) UpdateCardFields(cardID string, fields string) error {
 	now := time.Now()
 	query := `

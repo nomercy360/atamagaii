@@ -4,6 +4,8 @@ import (
 	"atamagaii/internal/contract"
 	"atamagaii/internal/utils"
 	"bytes"
+	texttospeech "cloud.google.com/go/texttospeech/apiv1"
+	"cloud.google.com/go/texttospeech/apiv1/texttospeechpb"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -17,8 +19,9 @@ import (
 )
 
 type OpenAIClient struct {
-	apiKey string
-	client *openai.Client
+	apiKey    string
+	client    *openai.Client
+	ttsClient *texttospeech.Client
 }
 
 type OpenAIResponse struct {
@@ -49,9 +52,15 @@ func NewOpenAIClient(apiKey string) (*OpenAIClient, error) {
 		option.WithAPIKey(apiKey),
 	)
 
+	ttsClient, err := texttospeech.NewClient(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Google TTS client: %w", err)
+	}
+
 	return &OpenAIClient{
-		apiKey: apiKey,
-		client: &client,
+		apiKey:    apiKey,
+		client:    &client,
+		ttsClient: ttsClient,
 	}, nil
 }
 
@@ -146,6 +155,8 @@ func (c *OpenAIClient) GenerateCardContent(ctx context.Context, term string, lan
 		return nil, fmt.Errorf("error parsing card fields: %w", err)
 	}
 
+	vocabularyCard.LanguageCode = language
+
 	return vocabularyCard, nil
 }
 
@@ -173,38 +184,36 @@ func (c *OpenAIClient) GenerateTask(ctx context.Context, language, templateName 
 }
 
 func (c *OpenAIClient) GenerateAudio(ctx context.Context, text string, language string) (string, error) {
-	params := openai.AudioSpeechNewParams{
-		Model:          openai.SpeechModelGPT4oMiniTTS,
-		Input:          text,
-		Voice:          openai.AudioSpeechNewParamsVoiceOnyx,
-		ResponseFormat: openai.AudioSpeechNewParamsResponseFormatAAC,
-		Speed:          openai.Float(1.5),
-		Instructions:   openai.String(getAudioInstructions(language)),
+	voice := getGoogleTTSVoice(language)
+
+	req := &texttospeechpb.SynthesizeSpeechRequest{
+		Input: &texttospeechpb.SynthesisInput{
+			InputSource: &texttospeechpb.SynthesisInput_Text{Text: text},
+		},
+		Voice: &texttospeechpb.VoiceSelectionParams{
+			LanguageCode: voice.LanguageCode,
+			//Name:         voice.Name,
+		},
+		AudioConfig: &texttospeechpb.AudioConfig{
+			EffectsProfileId: []string{"handset-class-device"},
+			AudioEncoding:    texttospeechpb.AudioEncoding_LINEAR16,
+			SpeakingRate:     1.0,
+			Pitch:            0.0,
+		},
 	}
 
-	response, err := c.client.Audio.Speech.New(ctx, params)
+	response, err := c.ttsClient.SynthesizeSpeech(ctx, req)
 	if err != nil {
-		// Try to extract detailed error information from the SDK error
-		errorMsg := err.Error()
-		if strings.Contains(errorMsg, "status code:") {
-			return "", fmt.Errorf("error generating audio (API error): %s", errorMsg)
-		}
-		return "", fmt.Errorf("error generating audio: %w", err)
+		return "", fmt.Errorf("error generating audio with Google TTS: %w", err)
 	}
 
-	tempFile, err := os.CreateTemp("", "audio-*.mp3")
+	tempFile, err := os.CreateTemp("", "audio-*.wav")
 	if err != nil {
 		return "", fmt.Errorf("error creating temp file: %w", err)
 	}
 	defer tempFile.Close()
 
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return "", fmt.Errorf("error reading response body: %w", err)
-	}
-	defer response.Body.Close()
-
-	if _, err := tempFile.Write(body); err != nil {
+	if _, err := tempFile.Write(response.AudioContent); err != nil {
 		return "", fmt.Errorf("error writing to temp file: %w", err)
 	}
 
@@ -241,15 +250,32 @@ func (c *OpenAIClient) CheckSentenceTranslation(ctx context.Context, sentenceRu,
 	return result, nil
 }
 
-func getAudioInstructions(language string) string {
+type GoogleTTSVoice struct {
+	LanguageCode string
+	Name         string
+}
+
+func getGoogleTTSVoice(language string) GoogleTTSVoice {
 	switch language {
-	case "japanese":
-		return "Speak in natural Japanese with clear pronunciation."
-	case "georgian":
-		return "Speak in natural Georgian with clear pronunciation."
-	case "thai":
-		return "Speak in natural Thai with clear pronunciation."
+	case "jp":
+		return GoogleTTSVoice{
+			LanguageCode: "ja-JP",
+			Name:         "ja-JP-Chirp3-HD-Puck",
+		}
+	case "ge":
+		return GoogleTTSVoice{
+			LanguageCode: "ka-GE",
+			Name:         "ka-GE-Standard-A",
+		}
+	case "th":
+		return GoogleTTSVoice{
+			LanguageCode: "th-TH",
+			Name:         "th-TH-Standard-A",
+		}
 	default:
-		return "Speak with clear pronunciation."
+		return GoogleTTSVoice{
+			LanguageCode: "en-US",
+			Name:         "en-US-Standard-A",
+		}
 	}
 }

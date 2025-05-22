@@ -148,23 +148,25 @@ func (h *Handler) handleUpdate(update tgbotapi.Update) (msg *telegram.SendMessag
 		}
 
 		languageName := utils.GetLanguageNameFromCode(lang)
-		msg.Text = fmt.Sprintf("Создана новая карточка для изучения \\(%s\\):\n\n*%s*",
+		msg.Text = fmt.Sprintf("Создана новая карточка для изучения \\(%s\\):\n\n*%s*\n\n⏳ Генерирую дополнительный контент\\.\\.\\.",
 			languageName,
 			telegram.EscapeMarkdown(cardResp.Fields.Term))
 		msg.ParseMode = models.ParseModeMarkdown
 
-		button := models.InlineKeyboardButton{
-			Text:   "Посмотреть карточку",
-			WebApp: &models.WebAppInfo{URL: fmt.Sprintf("%s/edit-card/%s/%s", h.webAppURL, cardResp.DeckID, cardResp.ID)},
+		// Send initial message and get message ID for later deletion
+		sentMsg, err := h.bot.SendMessage(context.Background(), msg)
+		if err != nil {
+			log.Printf("Failed to send initial message: %v", err)
+		} else {
+			// Trigger automatic card generation in background with message ID
+			go h.generateCardContentAsync(cardResp.ID, cardResp.DeckID, user.TelegramID, sentMsg.ID)
 		}
 
-		msg.ReplyMarkup = models.InlineKeyboardMarkup{
-			InlineKeyboard: [][]models.InlineKeyboardButton{
-				{button},
-			},
+		// Return empty response since we already sent the message
+		return &telegram.SendMessageParams{
+			ChatID: chatID,
+			Text:   "",
 		}
-
-		return msg
 	}
 
 	if msg.Text == "" {
@@ -206,7 +208,8 @@ func (h *Handler) createCardFromMessage(userID string, messageText string) (*con
 	}
 
 	cardFields := contract.CardFields{
-		Term: messageText,
+		Term:         messageText,
+		LanguageCode: languageCode,
 	}
 
 	fieldsJSON, err := json.Marshal(cardFields)
@@ -225,4 +228,88 @@ func (h *Handler) createCardFromMessage(userID string, messageText string) (*con
 	}
 
 	return &cardResponse, languageCode, nil
+}
+
+// generateCardContentAsync generates card content in the background and sends notification when done
+func (h *Handler) generateCardContentAsync(cardID, deckID string, telegramChatID int64, originalMessageID int) {
+	ctx := context.Background()
+
+	card, err := h.db.GetCardByID(cardID)
+	if err != nil {
+		log.Printf("Failed to get card %s for async generation: %v", cardID, err)
+		return
+	}
+
+	var fields contract.CardFields
+	if err := json.Unmarshal([]byte(card.Fields), &fields); err != nil {
+		log.Printf("Failed to parse card fields for async generation: %v", err)
+		return
+	}
+
+	updatedFields, err := h.generateCardContent(ctx, card)
+	if err != nil {
+		log.Printf("Failed to generate content for card %s: %v", cardID, err)
+		h.sendGenerationFailedNotification(telegramChatID, fields.Term, originalMessageID)
+		return
+	}
+
+	h.sendGenerationSuccessNotification(telegramChatID, updatedFields.Term, deckID, cardID, originalMessageID)
+}
+
+// sendGenerationSuccessNotification sends a notification when card generation is successful
+func (h *Handler) sendGenerationSuccessNotification(chatID int64, term, deckID, cardID string, originalMessageID int) {
+	// First, delete the original "generating..." message
+	deleteMsg := &telegram.DeleteMessageParams{
+		ChatID:    chatID,
+		MessageID: originalMessageID,
+	}
+
+	if _, err := h.bot.DeleteMessage(context.Background(), deleteMsg); err != nil {
+		log.Printf("Failed to delete original message: %v", err)
+	}
+
+	// Send success notification
+	msg := &telegram.SendMessageParams{
+		ChatID:    chatID,
+		Text:      fmt.Sprintf("✅ Карточка готова\\!\n\n*%s*\n\nДобавлены: перевод, пример, транскрипция и аудио\\.", telegram.EscapeMarkdown(term)),
+		ParseMode: models.ParseModeMarkdown,
+		ReplyMarkup: models.InlineKeyboardMarkup{
+			InlineKeyboard: [][]models.InlineKeyboardButton{
+				{
+					{
+						Text:   "Посмотреть карточку",
+						WebApp: &models.WebAppInfo{URL: fmt.Sprintf("%s/edit-card/%s/%s", h.webAppURL, deckID, cardID)},
+					},
+				},
+			},
+		},
+	}
+
+	if _, err := h.bot.SendMessage(context.Background(), msg); err != nil {
+		log.Printf("Failed to send generation success notification: %v", err)
+	}
+}
+
+// sendGenerationFailedNotification sends a notification when card generation fails
+func (h *Handler) sendGenerationFailedNotification(chatID int64, term string, originalMessageID int) {
+	// First, delete the original "generating..." message
+	deleteMsg := &telegram.DeleteMessageParams{
+		ChatID:    chatID,
+		MessageID: originalMessageID,
+	}
+
+	if _, err := h.bot.DeleteMessage(context.Background(), deleteMsg); err != nil {
+		log.Printf("Failed to delete original message: %v", err)
+	}
+
+	// Send failure notification
+	msg := &telegram.SendMessageParams{
+		ChatID:    chatID,
+		Text:      fmt.Sprintf("❌ Не удалось сгенерировать контент для карточки *%s*\\. Попробуй позже\\.", telegram.EscapeMarkdown(term)),
+		ParseMode: models.ParseModeMarkdown,
+	}
+
+	if _, err := h.bot.SendMessage(context.Background(), msg); err != nil {
+		log.Printf("Failed to send generation failed notification: %v", err)
+	}
 }

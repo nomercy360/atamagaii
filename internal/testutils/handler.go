@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"atamagaii/internal/ai"
 	"atamagaii/internal/contract"
 	"atamagaii/internal/db"
 	"atamagaii/internal/handler"

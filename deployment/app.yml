@@ -42,9 +42,14 @@ spec:
             - mountPath: /app/config.yml
               name: atamagaii-api-config
               subPath: config.yml
+            - mountPath: /app/google-credentials.json
+              name: atamagaii-api-config
+              subPath: google-credentials.json
           env:
             - name: CONFIG_FILE_PATH
               value: /app/config.yml
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /app/google-credentials.json
           readinessProbe:
             exec:
               command: [ "sqlite3", "/app/storage/db.sqlite", ".tables" ]

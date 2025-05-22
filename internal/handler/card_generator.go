@@ -3,8 +3,8 @@ package handler
 import (
 	"atamagaii/internal/contract"
 	"atamagaii/internal/db"
+	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -32,105 +32,18 @@ func (h *Handler) GenerateCard(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	card, err := h.db.GetCard(req.CardID, userID)
+	card, err := h.db.GetCardByID(req.CardID)
 	if err != nil {
-		if errors.Is(err, db.ErrNotFound) {
-			return echo.NewHTTPError(http.StatusNotFound, "Card not found")
-		}
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch card").WithInternal(err)
 	}
 
-	deck, err := h.db.GetDeck(req.DeckID)
-	if err != nil {
-		if errors.Is(err, db.ErrNotFound) {
-			return echo.NewHTTPError(http.StatusNotFound, "Deck not found")
-		}
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch deck").WithInternal(err)
-	}
-
 	if card.UserID != userID || card.DeckID != req.DeckID {
-		return echo.NewHTTPError(http.StatusForbidden, "Access denied")
+		return echo.NewHTTPError(http.StatusForbidden, "You do not have permission to access this card")
 	}
 
-	var fields contract.CardFields
-	if err := json.Unmarshal([]byte(card.Fields), &fields); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to parse card fields").WithInternal(err)
-	}
-
-	if fields.Term == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "Card must have a term field")
-	}
-
-	updatedFields, err := h.openaiClient.GenerateCardContent(c.Request().Context(), fields.Term, deck.LanguageCode)
+	_, err = h.generateCardContent(c.Request().Context(), card)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate card content").WithInternal(err)
-	}
-
-	if updatedFields.AudioWord == "" {
-		termAudioFileName := fmt.Sprintf("%s_term.m4a", req.CardID)
-		tempFilePath, err := h.openaiClient.GenerateAudio(c.Request().Context(), updatedFields.Term, deck.LanguageCode)
-		if err != nil {
-
-			fmt.Printf("Error generating term audio: %v\n", err)
-		} else {
-
-			tempFile, err := os.Open(tempFilePath)
-			if err != nil {
-				fmt.Printf("Error opening temp file: %v\n", err)
-			} else {
-				defer tempFile.Close()
-				defer os.Remove(tempFilePath)
-
-				audioURL, err := h.storageProvider.UploadFile(
-					c.Request().Context(),
-					tempFile,
-					termAudioFileName,
-					"audio/aac",
-				)
-				if err != nil {
-					fmt.Printf("Error uploading term audio: %v\n", err)
-				} else {
-					updatedFields.AudioWord = audioURL
-				}
-			}
-		}
-	}
-
-	if updatedFields.AudioExample == "" && updatedFields.ExampleNative != "" {
-		exampleAudioFileName := fmt.Sprintf("%s_example.m4a", req.CardID)
-		tempFilePath, err := h.openaiClient.GenerateAudio(c.Request().Context(), updatedFields.ExampleNative, deck.LanguageCode)
-		if err != nil {
-			fmt.Printf("Error generating example audio: %v\n", err)
-		} else {
-			tempFile, err := os.Open(tempFilePath)
-			if err != nil {
-				fmt.Printf("Error opening temp file: %v\n", err)
-			} else {
-				defer tempFile.Close()
-				defer os.Remove(tempFilePath)
-
-				audioURL, err := h.storageProvider.UploadFile(
-					c.Request().Context(),
-					tempFile,
-					exampleAudioFileName,
-					"audio/aac",
-				)
-				if err != nil {
-					fmt.Printf("Error uploading example audio: %v\n", err)
-				} else {
-					updatedFields.AudioExample = audioURL
-				}
-			}
-		}
-	}
-
-	updatedFieldsJSON, err := json.Marshal(updatedFields)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to serialize card fields").WithInternal(err)
-	}
-
-	if err := h.db.UpdateCardFields(req.CardID, string(updatedFieldsJSON)); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update card").WithInternal(err)
 	}
 
 	updatedCard, err := h.db.GetCard(req.CardID, userID)
@@ -144,4 +57,98 @@ func (h *Handler) GenerateCard(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, response)
+}
+
+// generateCardContent handles the core logic for generating card content (AI + audio)
+func (h *Handler) generateCardContent(ctx context.Context, card *db.Card) (*contract.CardFields, error) {
+	deck, err := h.db.GetDeck(card.DeckID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get deck: %w", err)
+	}
+
+	// Parse card fields
+	var fields contract.CardFields
+	if err := json.Unmarshal([]byte(card.Fields), &fields); err != nil {
+		return nil, fmt.Errorf("failed to parse card fields: %w", err)
+	}
+
+	if fields.Term == "" {
+		return nil, fmt.Errorf("card has no term field")
+	}
+
+	// Generate content using OpenAI
+	updatedFields, err := h.openaiClient.GenerateCardContent(ctx, fields.Term, deck.LanguageCode)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate content: %w", err)
+	}
+
+	// Generate audio for term if not present
+	if updatedFields.AudioWord == "" {
+		termAudioFileName := fmt.Sprintf("%s_term.wav", card.ID)
+		tempFilePath, err := h.openaiClient.GenerateAudio(ctx, updatedFields.Term, deck.LanguageCode)
+		if err != nil {
+			fmt.Printf("Error generating term audio: %v\n", err)
+		} else {
+			tempFile, err := os.Open(tempFilePath)
+			if err != nil {
+				fmt.Printf("Error opening temp file: %v\n", err)
+			} else {
+				defer tempFile.Close()
+				defer os.Remove(tempFilePath)
+
+				audioURL, err := h.storageProvider.UploadFile(
+					ctx,
+					tempFile,
+					termAudioFileName,
+					"audio/wav",
+				)
+				if err != nil {
+					fmt.Printf("Error uploading term audio: %v\n", err)
+				} else {
+					updatedFields.AudioWord = audioURL
+				}
+			}
+		}
+	}
+
+	// Generate audio for example if not present
+	if updatedFields.AudioExample == "" && updatedFields.ExampleNative != "" {
+		exampleAudioFileName := fmt.Sprintf("%s_example.wav", card.ID)
+		tempFilePath, err := h.openaiClient.GenerateAudio(ctx, updatedFields.ExampleNative, deck.LanguageCode)
+		if err != nil {
+			fmt.Printf("Error generating example audio: %v\n", err)
+		} else {
+			tempFile, err := os.Open(tempFilePath)
+			if err != nil {
+				fmt.Printf("Error opening temp file: %v\n", err)
+			} else {
+				defer tempFile.Close()
+				defer os.Remove(tempFilePath)
+
+				audioURL, err := h.storageProvider.UploadFile(
+					ctx,
+					tempFile,
+					exampleAudioFileName,
+					"audio/wav",
+				)
+				if err != nil {
+					fmt.Printf("Error uploading example audio: %v\n", err)
+				} else {
+					updatedFields.AudioExample = audioURL
+				}
+			}
+		}
+	}
+
+	// Update card with generated content
+	updatedFieldsJSON, err := json.Marshal(updatedFields)
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize updated fields: %w", err)
+	}
+
+	if err := h.db.UpdateCardFields(card.ID, string(updatedFieldsJSON)); err != nil {
+		return nil, fmt.Errorf("failed to update card: %w", err)
+	}
+
+	return updatedFields, nil
 }
