@@ -24,7 +24,7 @@ const getTranscriptionRegex = (language: string): RegExp => {
 	switch (language) {
 		case 'jp':
 			// japanese kanji with furigana
-			pattern = /([一-龯]+)\[([^\]]+)]/g
+			pattern = /([一-龯々]+)\[([^\]]+)]/g
 			break
 		case 'th':
 			// Thai script with romanization (any Thai character)

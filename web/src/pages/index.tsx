@@ -72,7 +72,7 @@ export default function Index() {
 					</h3>
 					<button
 						onClick={handleImportDeck}
-						class="text-sm font-medium text-primary-foreground flex items-center"
+						class="text-sm font-medium text-secondary-foreground flex items-center"
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"

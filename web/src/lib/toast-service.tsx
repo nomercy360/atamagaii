@@ -38,5 +38,3 @@ showToast.success = (message: string, duration?: number) =>
 showToast.error = (message: string, duration?: number) =>
 	showToast(message, 'error', duration)
 
-showToast.info = (message: string, duration?: number) =>
-	showToast(message, 'info', duration)

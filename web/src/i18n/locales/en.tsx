@@ -71,7 +71,11 @@ export const dict = {
 		noTasksAvailable: 'No tasks available!',
 		practiceToGenerateTasks: 'Practice cards in this deck to generate tasks. Tasks appear when cards move to review stage.',
 		checkAgain: 'Check Again',
-		backToTasks: 'Back to tasks'
+		backToTasks: 'Back to tasks',
+		noTasksAvailableDecks: 'No tasks available!',
+		practiceToGenerateTasksDecks: 'Practice cards in your decks to generate tasks. Tasks appear when cards move to review stage.',
+		checkAgainDecks: 'Check Again',
+		backToDecks: 'Back to decks'
 	},
 	profile: {
 		language: 'Language',
