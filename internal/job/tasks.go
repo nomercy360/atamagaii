@@ -24,17 +24,17 @@ const (
 // TaskGenerator is responsible for generating tasks for cards in review state
 type TaskGenerator struct {
 	storage         *db.Storage
-	openAIClient    *ai.OpenAIClient
+	aiClient        ai.AIClient
 	storageProvider storage.Provider
 	stopCh          chan struct{}
 	runningLock     chan struct{} // Used to ensure only one task generation job runs at a time
 }
 
 // NewTaskGenerator creates a new TaskGenerator
-func NewTaskGenerator(storage *db.Storage, openAIClient *ai.OpenAIClient, storageProvider storage.Provider) *TaskGenerator {
+func NewTaskGenerator(storage *db.Storage, aiClient ai.AIClient, storageProvider storage.Provider) *TaskGenerator {
 	return &TaskGenerator{
 		storage:         storage,
-		openAIClient:    openAIClient,
+		aiClient:        aiClient,
 		storageProvider: storageProvider,
 		stopCh:          make(chan struct{}),
 		runningLock:     make(chan struct{}, 1), // Buffer of 1 allows us to use it as a semaphore
@@ -97,16 +97,13 @@ func (tg *TaskGenerator) generateTasks() {
 		// For now, we'll use a random distribution between task types
 		// This can be adjusted later based on user preferences or card type
 		taskType := db.TaskTypeVocabRecall
-		templateName := TaskVocabRecallTemplate
 
 		// Simple random selection - can be made more sophisticated later
 		rand := time.Now().Unix() % 3
 		if rand == 0 {
 			taskType = db.TaskTypeSentenceTranslation
-			templateName = TaskSentenceTranslationTemplate
 		} else if rand == 1 {
 			taskType = db.TaskTypeAudio
-			templateName = TaskAudioTemplate
 		}
 
 		var vocabItem db.VocabularyItem
@@ -121,20 +118,22 @@ func (tg *TaskGenerator) generateTasks() {
 		}
 
 		// Generate task for this card
-		taskContent, err := tg.openAIClient.GenerateTask(ctx, vocabItem.LanguageCode, templateName, targetWord)
+		taskContent, err := tg.aiClient.GenerateTask(
+			ctx,
+			vocabItem.LanguageCode,
+			targetWord,
+			taskType,
+		)
 		if err != nil {
 			log.Printf("Error generating task for card %s: %v", card.ID, err)
 			continue
 		}
 
-		// First convert to JSON to work with it
-		rawContentJSON, err := json.Marshal(taskContent)
-		if err != nil {
-			log.Printf("Error marshaling raw task content for card %s: %v", card.ID, err)
-			continue
+		var rawContentJSON []byte
+		if taskContent != nil {
+			rawContentJSON = []byte(*taskContent)
 		}
 
-		// Store task in database
 		correctAnswer := ""
 		var contentJSON []byte
 
@@ -153,16 +152,16 @@ func (tg *TaskGenerator) generateTasks() {
 
 			// Create a content version without the correct answer field
 			sanitizedContent := struct {
-				Options struct {
+				Question string `json:"question"`
+				Options  struct {
 					A string `json:"a"`
 					B string `json:"b"`
 					C string `json:"c"`
 					D string `json:"d"`
 				} `json:"options"`
-				Question string `json:"question"`
 			}{
+				Question: targetWord,
 				Options:  vocabContent.Options,
-				Question: vocabContent.Question,
 			}
 
 			// Marshal again without the correct answer
@@ -211,7 +210,7 @@ func (tg *TaskGenerator) generateTasks() {
 
 			// Strip furigana brackets from the story and generate audio
 			cleanStory := utils.RemoveFurigana(content.Story)
-			tempFilePath, err := tg.openAIClient.GenerateAudio(ctx, cleanStory, vocabItem.LanguageCode)
+			tempFilePath, err := tg.aiClient.GenerateAudio(ctx, cleanStory, vocabItem.LanguageCode)
 			if err != nil {
 				log.Printf("Error generating audio for task card %s: %v", card.ID, err)
 				// Continue without audio, we'll just have text

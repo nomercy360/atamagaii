@@ -116,7 +116,7 @@ func (h *Handler) SubmitTaskResponse(c echo.Context) error {
 		}
 
 		ctx := c.Request().Context()
-		checkResult, err := h.openaiClient.CheckSentenceTranslation(
+		checkResult, err := h.aiClient.CheckSentenceTranslation(
 			ctx,
 			translationContent.SentenceRu,
 			task.Answer,  // Correct answer from the DB

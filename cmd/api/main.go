@@ -27,7 +27,7 @@ type Config struct {
 	Port             int              `yaml:"port"`
 	DBPath           string           `yaml:"db_path"`
 	TelegramBotToken string           `yaml:"telegram_bot_token"`
-	OpenAIAPIKey     string           `yaml:"openai_api_key"`
+	GeminiAPIKey     string           `yaml:"gemini_api_key"`
 	GrokAPIKey       string           `yaml:"grok_api_key"`
 	ExternalURL      string           `yaml:"external_url"`
 	JWTSecretKey     string           `yaml:"jwt_secret_key"`
@@ -100,12 +100,20 @@ func main() {
 		storageProvider = nil
 	}
 
-	openaiClient, err := ai.NewOpenAIClient(cfg.OpenAIAPIKey)
+	aiClient, err := ai.NewGeminiClient(cfg.GeminiAPIKey)
 	if err != nil {
 		log.Fatalf("Failed to create OpenAI client: %v", err)
 	}
 
-	h := handler.New(bot, dbStorage, cfg.JWTSecretKey, cfg.TelegramBotToken, cfg.TelegramWebApp, storageProvider, openaiClient)
+	h := handler.New(
+		bot,
+		dbStorage,
+		cfg.JWTSecretKey,
+		cfg.TelegramBotToken,
+		cfg.TelegramWebApp,
+		storageProvider,
+		aiClient,
+	)
 
 	log.Printf("Authorized on account %d", bot.ID())
 
@@ -128,7 +136,7 @@ func main() {
 	}
 
 	// Start task generation job
-	taskGenerator := job.NewTaskGenerator(dbStorage, openaiClient, storageProvider)
+	taskGenerator := job.NewTaskGenerator(dbStorage, aiClient, storageProvider)
 	go taskGenerator.Start()
 	log.Println("Task generation job started")
 

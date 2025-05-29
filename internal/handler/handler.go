@@ -20,7 +20,7 @@ type Handler struct {
 	botToken        string
 	webAppURL       string
 	storageProvider storage.Provider
-	openaiClient    *ai.OpenAIClient
+	aiClient        ai.AIClient
 }
 
 func New(
@@ -30,7 +30,7 @@ func New(
 	botToken string,
 	webAppURL string,
 	storageProvider storage.Provider,
-	openaiClient *ai.OpenAIClient,
+	aiClient ai.AIClient,
 ) *Handler {
 	return &Handler{
 		bot:             bot,
@@ -39,7 +39,7 @@ func New(
 		botToken:        botToken,
 		webAppURL:       webAppURL,
 		storageProvider: storageProvider,
-		openaiClient:    openaiClient,
+		aiClient:        aiClient,
 	}
 }
 
@@ -53,13 +53,12 @@ func (h *Handler) RegisterRoutes(e *echo.Echo) {
 	v1.Use(echojwt.WithConfig(middleware.GetUserAuthConfig(h.jwtSecret)))
 
 	h.AddFlashcardRoutes(v1)
-	h.AddAnkiImportRoutes(v1)
 
 	// Task routes
 	v1.GET("/tasks", h.GetTasks)
 	v1.GET("/tasks/by-deck", h.GetTasksPerDeck)
 	v1.POST("/tasks/submit", h.SubmitTaskResponse)
-	
+
 	// User routes
 	v1.PUT("/user", h.UpdateUserHandler)
 }

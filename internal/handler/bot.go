@@ -30,9 +30,11 @@ func (h *Handler) HandleWebhook(c echo.Context) error {
 		return c.NoContent(200)
 	}
 
-	resp := h.handleUpdate(update)
-	if _, err := h.bot.SendMessage(context.Background(), resp); err != nil {
-		log.Printf("Failed to send message: %v", err)
+	if resp := h.handleUpdate(update); resp.Text != "" {
+		_, err := h.bot.SendMessage(context.Background(), resp)
+		if err != nil {
+			log.Printf("Failed to send message: %v", err)
+		}
 	}
 
 	return c.NoContent(200)
@@ -253,11 +255,27 @@ func (h *Handler) generateCardContentAsync(cardID, deckID string, telegramChatID
 		return
 	}
 
-	h.sendGenerationSuccessNotification(telegramChatID, updatedFields.Term, deckID, cardID, originalMessageID)
+	h.sendGenerationSuccessNotification(
+		telegramChatID,
+		updatedFields.Term,
+		updatedFields.MeaningRu,
+		updatedFields.ExampleNative,
+		originalMessageID,
+		deckID,
+		cardID,
+	)
 }
 
 // sendGenerationSuccessNotification sends a notification when card generation is successful
-func (h *Handler) sendGenerationSuccessNotification(chatID int64, term, deckID, cardID string, originalMessageID int) {
+func (h *Handler) sendGenerationSuccessNotification(
+	chatID int64,
+	term,
+	translation,
+	example string,
+	originalMessageID int,
+	deckID string,
+	cardID string,
+) {
 	// First, delete the original "generating..." message
 	deleteMsg := &telegram.DeleteMessageParams{
 		ChatID:    chatID,
@@ -270,8 +288,11 @@ func (h *Handler) sendGenerationSuccessNotification(chatID int64, term, deckID, 
 
 	// Send success notification
 	msg := &telegram.SendMessageParams{
-		ChatID:    chatID,
-		Text:      fmt.Sprintf("✅ Карточка готова\\!\n\n*%s*\n\nДобавлены: перевод, пример, транскрипция и аудио\\.", telegram.EscapeMarkdown(term)),
+		ChatID: chatID,
+		Text: fmt.Sprintf("✅ Карточка готова\\!\n\n*%s* \\(%s\\)\n\n%s\\.",
+			telegram.EscapeMarkdown(term),
+			telegram.EscapeMarkdown(translation),
+			telegram.EscapeMarkdown(example)),
 		ParseMode: models.ParseModeMarkdown,
 		ReplyMarkup: models.InlineKeyboardMarkup{
 			InlineKeyboard: [][]models.InlineKeyboardButton{

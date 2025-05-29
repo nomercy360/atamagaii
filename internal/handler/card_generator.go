@@ -76,16 +76,18 @@ func (h *Handler) generateCardContent(ctx context.Context, card *db.Card) (*cont
 		return nil, fmt.Errorf("card has no term field")
 	}
 
-	// Generate content using OpenAI
-	updatedFields, err := h.openaiClient.GenerateCardContent(ctx, fields.Term, deck.LanguageCode)
+	// Generate content using AI
+	updatedFields, err := h.aiClient.GenerateCardContent(ctx, fields.Term, deck.LanguageCode)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate content: %w", err)
 	}
 
+	updatedFields.LanguageCode = deck.LanguageCode
+
 	// Generate audio for term if not present
 	if updatedFields.AudioWord == "" {
 		termAudioFileName := fmt.Sprintf("%s_term.wav", card.ID)
-		tempFilePath, err := h.openaiClient.GenerateAudio(ctx, updatedFields.Term, deck.LanguageCode)
+		tempFilePath, err := h.aiClient.GenerateAudio(ctx, updatedFields.Term, deck.LanguageCode)
 		if err != nil {
 			fmt.Printf("Error generating term audio: %v\n", err)
 		} else {
@@ -114,7 +116,7 @@ func (h *Handler) generateCardContent(ctx context.Context, card *db.Card) (*cont
 	// Generate audio for example if not present
 	if updatedFields.AudioExample == "" && updatedFields.ExampleNative != "" {
 		exampleAudioFileName := fmt.Sprintf("%s_example.wav", card.ID)
-		tempFilePath, err := h.openaiClient.GenerateAudio(ctx, updatedFields.ExampleNative, deck.LanguageCode)
+		tempFilePath, err := h.aiClient.GenerateAudio(ctx, updatedFields.ExampleNative, deck.LanguageCode)
 		if err != nil {
 			fmt.Printf("Error generating example audio: %v\n", err)
 		} else {

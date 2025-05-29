@@ -347,7 +347,7 @@ export default function Task() {
               {/* Vocab Recall Task */}
               <Show when={currentTask()?.type === 'vocab_recall'}>
                 <h2 class="text-xl font-semibold mb-8 text-center">
-                  {(currentTask()?.content as VocabRecallContent)?.question}
+                  Выберите правильный перевод слова: {(currentTask()?.content as VocabRecallContent)?.question}
                 </h2>
 
                 <div class="space-y-3">
@@ -362,7 +362,7 @@ export default function Task() {
                           : showFeedback() && selectedOption() === key && feedbackType() === 'incorrect'
                             ? 'bg-error/20 border-error'
                             : selectedOption() === key
-                              ? 'bg-secondary border-secondary'
+                              ? 'bg-secondary border-primary'
                               : 'border-border',
                       )}
                     >
@@ -379,7 +379,11 @@ export default function Task() {
                         )}>
                           <span class="text-sm font-medium uppercase">{key}</span>
                         </div>
-                        <span>{value}</span>
+                        <TranscriptionText
+                          language="jp"
+                          class="text-lg font-normal text-foreground"
+                          rtClass="text-secondary-foreground font-semibold"
+                          text={value} />
                       </div>
                     </button>
                   ))}
