@@ -11,4 +11,5 @@ type AIClient interface {
 	GenerateTask(ctx context.Context, language, templateName string, taskType db.TaskType) (*string, error)
 	GenerateAudio(ctx context.Context, text string, language string) (string, error)
 	CheckSentenceTranslation(ctx context.Context, sentenceRu, correctAnswer, userAnswer string, languageCode string) (*TranslationCheckResult, error)
+	ParseCSVFields(ctx context.Context, line string) (CSVToJSONFields, error)
 }

@@ -126,12 +126,33 @@ func (h *Handler) handleUpdate(update tgbotapi.Update) (msg *telegram.SendMessag
 			msg.Text = "Привет\\! Этот бот для изучения японского языка\\. Он поможет тебе практиковать слов и грамматику\\!\n\n"
 			msg.ParseMode = models.ParseModeMarkdown
 		case "help":
-			msg.Text = "Просто отправь мне слово или фразу на любом языке, и я создам для тебя карточку для изучения\\!"
+			msg.Text = "Доступные функции:\n\n📝 *Создание карточек*: Отправь мне слово или фразу на любом языке\n\n📄 *Импорт из файла*: Отправь CSV или TXT файл с твоими словами\\. Поддерживаются экспорты из Anki\\!"
 			msg.ParseMode = models.ParseModeMarkdown
 		default:
 			msg.Text = "Неизвестная команда. Используй /help для получения справки."
 		}
 		return msg
+	}
+
+	// Handle document uploads
+	if update.Message.Document != nil {
+		msg.Text = "📄 Получен файл\\. Начинаю обработку\\.\\.\\."
+		msg.ParseMode = models.ParseModeMarkdown
+
+		// Send initial message
+		sentMsg, err := h.bot.SendMessage(context.Background(), msg)
+		if err != nil {
+			log.Printf("Failed to send initial message for document: %v", err)
+		} else {
+			// Process file in background
+			go h.processFileImport(user.ID, user.TelegramID, update.Message.Document, sentMsg.ID)
+		}
+
+		// Return empty response since we already sent the message
+		return &telegram.SendMessageParams{
+			ChatID: chatID,
+			Text:   "",
+		}
 	}
 
 	if update.Message.Text != "" {

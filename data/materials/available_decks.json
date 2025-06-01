@@ -5,9 +5,9 @@
       "name": "Japanese",
       "decks": [
         {
-          "id": "japanese_cards_with_audio.json",
-          "name": "N5 Vocabulary",
-          "description": "Basic Japanese vocabulary for JLPT N5 level",
+          "id": "japanese_n5.json",
+          "name": "N5 Слова",
+          "description": "Набор из более 700 слов для подготовки к экзамену JLPT N5 с аудио",
           "level": "beginner"
         },
         {
@@ -20,12 +20,6 @@
           "id": "japanese_kaishi_ru.json",
           "name": "Kaishi 1.5k",
           "description": "Всем знакомая колода кайши, с русскими переводами.",
-          "level": "beginner"
-        },
-        {
-          "id": "minna_with_audio_8.json",
-          "name": "Minna no Nihongo 8 Lesson",
-          "description": "Vocabulary from Minna no Nihongo 8 lesson with audio",
           "level": "beginner"
         }
       ]

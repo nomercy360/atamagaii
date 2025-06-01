@@ -15,7 +15,7 @@ import (
 
 const (
 	// Default model for Gemini
-	model = "gemini-2.5-flash-preview-04-17"
+	model = "gemini-2.5-flash-preview-05-20"
 )
 
 type GeminiClient struct {
@@ -53,14 +53,19 @@ func parseResponse[T any](text string) (T, error) {
 	return result, nil
 }
 
-func (c *GeminiClient) generateContent(ctx context.Context, prompt string, schema *genai.Schema) (string, error) {
+func (c *GeminiClient) generateContent(
+	ctx context.Context,
+	prompt string,
+	temperature float32,
+	schema *genai.Schema,
+) (string, error) {
 	config := &genai.GenerateContentConfig{
-		Temperature:     genai.Ptr[float32](1.4),
-		MaxOutputTokens: 4096,
-		TopP:            genai.Ptr[float32](0.95),
-		ResponseSchema:  schema,
+		Temperature: genai.Ptr[float32](temperature),
+		//MaxOutputTokens: 4096,
+		TopP:           genai.Ptr[float32](0.95),
+		ResponseSchema: schema,
 		ThinkingConfig: &genai.ThinkingConfig{
-			ThinkingBudget: genai.Ptr[int32](3000),
+			ThinkingBudget: genai.Ptr[int32](10000),
 		},
 		ResponseMIMEType: "application/json",
 	}
@@ -125,7 +130,7 @@ func (c *GeminiClient) GenerateCardContent(ctx context.Context, term string, lan
 ---
 Слово: %s
 `, term)
-	responseText, err := c.generateContent(ctx, prompt, responseSchema)
+	responseText, err := c.generateContent(ctx, prompt, 1.4, responseSchema)
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +268,7 @@ The word to use is %s
 		}
 	}
 
-	responseText, err := c.generateContent(ctx, prompt, schema)
+	responseText, err := c.generateContent(ctx, prompt, 1.4, schema)
 	if err != nil {
 		return nil, fmt.Errorf("error generating task content: %w", err)
 	}
@@ -346,7 +351,7 @@ func (c *GeminiClient) CheckSentenceTranslation(ctx context.Context, sentenceRu,
 		Required: []string{"score"},
 	}
 
-	responseText, err := c.generateContent(ctx, prompt, responseSchema)
+	responseText, err := c.generateContent(ctx, prompt, 1.4, responseSchema)
 	if err != nil {
 		return nil, fmt.Errorf("error generating translation check: %w", err)
 	}
@@ -388,4 +393,199 @@ func getGoogleTTSVoice(language string) GoogleTTSVoice {
 			Name:         "en-US-Standard-A",
 		}
 	}
+}
+
+type CSVToJSONFields struct {
+	Term struct {
+		Value       string `json:"value"`
+		ColumnIndex int    `json:"column_index"`
+	} `json:"term"`
+	Transcription struct {
+		Value       string `json:"value"`
+		ColumnIndex int    `json:"column_index"`
+	} `json:"transcription"`
+	TermWithTranscription struct {
+		Value       string `json:"value"`
+		ColumnIndex int    `json:"column_index"`
+	} `json:"term_with_transcription"`
+	MeaningEn struct {
+		Value       string `json:"value"`
+		ColumnIndex int    `json:"column_index"`
+	} `json:"meaning_en"`
+	MeaningRu struct {
+		Value       string `json:"value"`
+		ColumnIndex int    `json:"column_index"`
+	} `json:"meaning_ru"`
+	ExampleNative struct {
+		Value       string `json:"value"`
+		ColumnIndex int    `json:"column_index"`
+	} `json:"example_native"`
+	ExampleEn struct {
+		Value       string `json:"value"`
+		ColumnIndex int    `json:"column_index"`
+	} `json:"example_en"`
+	ExampleRu struct {
+		Value       string `json:"value"`
+		ColumnIndex int    `json:"column_index"`
+	} `json:"example_ru"`
+	ExampleWithTranscription struct {
+		Value       string `json:"value"`
+		ColumnIndex int    `json:"column_index"`
+	} `json:"example_with_transcription"`
+	Frequency struct {
+		Value       int `json:"value"`
+		ColumnIndex int `json:"column_index"`
+	} `json:"frequency"`
+	LanguageCode string `json:"language_code"`
+}
+
+func (c *GeminiClient) ParseCSVFields(ctx context.Context, text string) (CSVToJSONFields, error) {
+	prompt := fmt.Sprintf(`
+Сonvert to json
+%s
+`, text)
+	responseSchema := &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			"term": {
+				Type:     genai.TypeObject,
+				Required: []string{"value", "column_index"},
+				Properties: map[string]*genai.Schema{
+					"value": {
+						Type: genai.TypeString,
+					},
+					"column_index": {
+						Type: genai.TypeInteger,
+					},
+				},
+			},
+			"transcription": {
+				Type:     genai.TypeObject,
+				Required: []string{"value", "column_index"},
+				Properties: map[string]*genai.Schema{
+					"value": {
+						Type: genai.TypeString,
+					},
+					"column_index": {
+						Type: genai.TypeInteger,
+					},
+				},
+			},
+			"term_with_transcription": {
+				Type:     genai.TypeObject,
+				Required: []string{"value", "column_index"},
+				Properties: map[string]*genai.Schema{
+					"value": {
+						Type: genai.TypeString,
+					},
+					"column_index": {
+						Type: genai.TypeInteger,
+					},
+				},
+			},
+			"meaning_en": {
+				Type:     genai.TypeObject,
+				Required: []string{"value", "column_index"},
+				Properties: map[string]*genai.Schema{
+					"value": {
+						Type: genai.TypeString,
+					},
+					"column_index": {
+						Type: genai.TypeInteger,
+					},
+				},
+			},
+			"meaning_ru": {
+				Type:     genai.TypeObject,
+				Required: []string{"value", "column_index"},
+				Properties: map[string]*genai.Schema{
+					"value": {
+						Type: genai.TypeString,
+					},
+					"column_index": {
+						Type: genai.TypeInteger,
+					},
+				},
+			},
+			"example_native": {
+				Type:     genai.TypeObject,
+				Required: []string{"value", "column_index"},
+				Properties: map[string]*genai.Schema{
+					"value": {
+						Type: genai.TypeString,
+					},
+					"column_index": {
+						Type: genai.TypeInteger,
+					},
+				},
+			},
+			"example_en": {
+				Type:     genai.TypeObject,
+				Required: []string{"value", "column_index"},
+				Properties: map[string]*genai.Schema{
+					"value": {
+						Type: genai.TypeString,
+					},
+					"column_index": {
+						Type: genai.TypeInteger,
+					},
+				},
+			},
+			"example_ru": {
+				Type:     genai.TypeObject,
+				Required: []string{"value", "column_index"},
+				Properties: map[string]*genai.Schema{
+					"value": {
+						Type: genai.TypeString,
+					},
+					"column_index": {
+						Type: genai.TypeInteger,
+					},
+				},
+			},
+			"example_with_transcription": {
+				Type:     genai.TypeObject,
+				Required: []string{"value", "column_index"},
+				Properties: map[string]*genai.Schema{
+					"value": {
+						Type: genai.TypeString,
+					},
+					"column_index": {
+						Type: genai.TypeInteger,
+					},
+				},
+			},
+			"frequency": {
+				Type:     genai.TypeObject,
+				Required: []string{"value", "column_index"},
+				Properties: map[string]*genai.Schema{
+					"value": {
+						Type: genai.TypeInteger,
+					},
+					"column_index": {
+						Type: genai.TypeInteger,
+					},
+				},
+			},
+			"language_code": {
+				Type: genai.TypeString,
+			},
+		},
+		Required: []string{
+			"term", "language_code",
+		},
+	}
+
+	responseText, err := c.generateContent(ctx, prompt, 0, responseSchema)
+	if err != nil {
+		return CSVToJSONFields{}, fmt.Errorf("error generating gemini mapping: %w", err)
+	}
+	//
+	var fields CSVToJSONFields
+	fields, err = parseResponse[CSVToJSONFields](responseText)
+	if err != nil {
+		return CSVToJSONFields{}, fmt.Errorf("error parsing gemini mapping response: %w", err)
+	}
+
+	return fields, nil
 }
