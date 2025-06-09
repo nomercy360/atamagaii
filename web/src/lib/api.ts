@@ -94,7 +94,6 @@ export interface CardFields {
 	frequency: number
 	language_code: string
 	transcription_type: string
-	audio_word: string
 	audio_example: string
 	image_url?: string
 }

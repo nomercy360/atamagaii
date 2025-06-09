@@ -2,7 +2,6 @@ import { createSignal } from 'solid-js'
 
 type AudioWithMetadata = {
 	audio: HTMLAudioElement
-	type: 'word' | 'example'
 	url: string
 }
 
@@ -105,7 +104,7 @@ export const audioService = {
 	/**
 	 * Play a single audio file
 	 */
-	playAudio(url: string, type: 'word' | 'example' = 'word'): Promise<void> {
+	playAudio(url: string): Promise<void> {
 		if (!url) {
 			console.error('Attempted to play audio with empty URL')
 			return Promise.reject(new Error('Audio URL is empty'))
@@ -116,7 +115,7 @@ export const audioService = {
 
 		// Use cached audio if available, otherwise create new
 		const audio = audioCache.get(url) || new Audio(url)
-		const audioItem: AudioWithMetadata = { audio, type, url }
+		const audioItem: AudioWithMetadata = { audio, url }
 
 		setActiveAudios([audioItem])
 
@@ -164,129 +163,11 @@ export const audioService = {
 		})
 	},
 
-	/**
-	 * Play word audio followed by example audio
-	 */
-	playSequence(wordUrl: string, exampleUrl?: string, delayMs: number = 0): Promise<void> {
-		if (!wordUrl) {
-			return Promise.reject(new Error('Word audio URL is empty'))
-		}
-
-		// Stop any currently playing audio
-		this.stopAll()
-
-		// Use cached audio if available, otherwise create new
-		const wordAudio = audioCache.get(wordUrl) || new Audio(wordUrl)
-		const wordItem: AudioWithMetadata = { audio: wordAudio, type: 'word', url: wordUrl }
-
-		setActiveAudios([wordItem])
-		setIsPlaying(true)
-
-		// Reset to start in case it was played before
-		wordAudio.currentTime = 0
-
-		// Notify callbacks for word audio
-		audioStateCallbacks.forEach((callback, key) => {
-			if (key.includes(wordUrl)) {
-				callback(true, wordUrl)
-			}
-		})
-
-		// If we have an example audio, set up the chain to play it after the word audio
-		if (exampleUrl) {
-			wordAudio.onended = () => {
-				// Update the active audio list to remove the word audio
-				setActiveAudios(audios => audios.filter(a => a.audio !== wordAudio))
-
-				// Notify callbacks that word audio has ended
-				audioStateCallbacks.forEach((callback, key) => {
-					if (key.includes(wordUrl)) {
-						callback(false, wordUrl)
-					}
-				})
-
-				setTimeout(() => {
-					const exampleAudio = audioCache.get(exampleUrl) || new Audio(exampleUrl)
-					const exampleItem: AudioWithMetadata = { audio: exampleAudio, type: 'example', url: exampleUrl }
-
-					setActiveAudios([exampleItem])
-
-					exampleAudio.currentTime = 0
-
-					audioStateCallbacks.forEach((callback, key) => {
-						if (key.includes(exampleUrl)) {
-							callback(true, exampleUrl)
-						}
-					})
-
-					exampleAudio.onended = () => {
-						setActiveAudios(audios => audios.filter(a => a.audio !== exampleAudio))
-
-						// If this was the last audio, update the playing state
-						if (activeAudios().length === 0) {
-							setIsPlaying(false)
-						}
-
-						// Notify callbacks that example audio has ended
-						audioStateCallbacks.forEach((callback, key) => {
-							if (key.includes(exampleUrl)) {
-								callback(false, exampleUrl)
-							}
-						})
-					}
-
-					exampleAudio.play().catch(error => {
-						console.error('Error playing example audio:', error)
-						setActiveAudios(audios => audios.filter(a => a.audio !== exampleAudio))
-
-						// Notify callbacks of failure
-						audioStateCallbacks.forEach((callback, key) => {
-							if (key.includes(exampleUrl)) {
-								callback(false, exampleUrl)
-							}
-						})
-					})
-				}, delayMs)
-			}
-		} else {
-			// If no example audio, just set up onended for the word audio
-			wordAudio.onended = () => {
-				setActiveAudios(audios => audios.filter(a => a.audio !== wordAudio))
-
-				// If this was the last audio, update the playing state
-				if (activeAudios().length === 0) {
-					setIsPlaying(false)
-				}
-
-				// Notify callbacks that audio has ended
-				audioStateCallbacks.forEach((callback, key) => {
-					if (key.includes(wordUrl)) {
-						callback(false, wordUrl)
-					}
-				})
-			}
-		}
-
-		return wordAudio.play().catch(error => {
-			console.error('Error playing word audio:', error)
-			setActiveAudios(audios => audios.filter(a => a.audio !== wordAudio))
-			setIsPlaying(false)
-
-			// Notify callbacks of failure
-			audioStateCallbacks.forEach((callback, key) => {
-				if (key.includes(wordUrl)) {
-					callback(false, wordUrl)
-				}
-			})
-
-			throw error
-		})
-	},
 
 	/**
 	 * Toggle audio playback (play/pause)
 	 */
-	toggleAudio(url: string, type: 'word' | 'example' = 'word'): Promise<void> {
+	toggleAudio(url: string): Promise<void> {
 		// Check if this audio is already playing
 		const isThisPlaying = activeAudios().some(item => item.url === url && item.audio.paused === false)
 
@@ -304,7 +185,7 @@ export const audioService = {
 			return Promise.resolve()
 		} else {
 			// If not playing, start it
-			return this.playAudio(url, type)
+			return this.playAudio(url)
 		}
 	},
 

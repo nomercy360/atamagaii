@@ -137,7 +137,7 @@ func main() {
 
 	// Start task generation job
 	taskGenerator := job.NewTaskGenerator(dbStorage, aiClient, storageProvider)
-	go taskGenerator.Start()
+	// go taskGenerator.Start()
 	log.Println("Task generation job started")
 
 	h.RegisterRoutes(e)

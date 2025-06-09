@@ -15,7 +15,7 @@ import (
 
 const (
 	// Default model for Gemini
-	model = "gemini-2.5-flash-preview-05-20"
+	model = "gemini-2.5-pro-preview-06-05"
 )
 
 type GeminiClient struct {
@@ -122,7 +122,10 @@ func (c *GeminiClient) GenerateCardContent(ctx context.Context, term string, lan
 Требования к полям:
 - Слово в поле term должно быть в словарной форме (для глаголов и прилагательных).
 - Если у слова несколько значений, укажи наиболее употребимое или перечисли их кратко, если они просты и различны
-- Для фуриганы в term_with_transcription и example_with_transcription используй только квадратные скобки в формате 漢字[かな]. Не используй HTML, не используй круглые скобки - только [].
+- В term_with_transcription и example_with_transcription фуригану (транскрипцию) указывай только для иероглифов (漢字), используя формат 漢字[かな].
+- Не добавляй транскрипцию к хирагане, катакане, частицам или целым словам, если это не кандзи.
+- Например, правильно: とても寂[さび]しいです。Неправильно: とても寂しい[さびしい]です。
+- Используй квадратные скобки [] и только формат 漢字[かな]. Не используй HTML, не используй круглые скобки.
 
 Требования к примеру:
 - Пример должен быть простым, понятными и близкими к повседневным ситуациям, чтобы ясно показывать значение и типичное употребление слова.
@@ -156,11 +159,10 @@ func (c *GeminiClient) GenerateCardContent(ctx context.Context, term string, lan
 
 func (c *GeminiClient) GenerateTask(ctx context.Context, language, knownWords string, taskType db.TaskType) (*string, error) {
 	prompt := fmt.Sprintf(`
-Создай задание на перевод с русского на японский для учащегося
+Создай задание на перевод с русского на японский для учащегося, уровня N4-N5.
 Условия:
 • Используй НЕ БОЛЕЕ 1–2 слов из списка выученных слов, подходящие по контексту
-Русское предложение должно быть коротким (не более 7–9 слов).
-• Перевод должен быть на японском.
+Задание должно быть коротким (не более 7–9 слов).
 Недавно изученные слова: %s
 `, knownWords)
 
@@ -178,18 +180,14 @@ func (c *GeminiClient) GenerateTask(ctx context.Context, language, knownWords st
 
 	if taskType == db.TaskTypeAudio {
 		prompt = fmt.Sprintf(`
-Create a Japanese listening comprehension task for a language learning app. The task should:
+Create a JLPT N4-N5 Japanese listening comprehension task for a language learning app. The task should:
 
-- Use a target word [%s] that the user has recently learned.
-- Create a short, natural 1-2 sentence monologue or story using the word.
+- Use a word [%s] that the user has recently learned.
+- Create a short, natural 1-1.5 sentence monologue or story using the word.
 - The story should be written in Japanese and suitable to be read aloud as audio.
 - Ask a question in Japanese based on the story.
-- Provide four answer choices labeled a–d, all in Japanese.
-- Include one correct answer and three distractors that are plausible but incorrect.
-- Indicate which letter (a, b, c, or d) is the correct answer.
-- Make sure the story contains the target word clearly, but avoid repetition or unnatural phrasing.
-- Vary the sentence structures, topics, and vocabulary to create diverse and engaging tasks.
-`, knownWords)
+- Include correct answer in response.
+- Vary the sentence structures, topics, and vocabulary to create diverse and engaging tasks.`, knownWords)
 		schema = &genai.Schema{
 			Type: genai.TypeObject,
 			Properties: map[string]*genai.Schema{
@@ -199,30 +197,11 @@ Create a Japanese listening comprehension task for a language learning app. The 
 				"question": {
 					Type: genai.TypeString,
 				},
-				"options": {
-					Type: genai.TypeObject,
-					Properties: map[string]*genai.Schema{
-						"a": {
-							Type: genai.TypeString,
-						},
-						"b": {
-							Type: genai.TypeString,
-						},
-						"c": {
-							Type: genai.TypeString,
-						},
-						"d": {
-							Type: genai.TypeString,
-						},
-					},
-					Required: []string{"a", "b", "c", "d"},
-				},
 				"correct_answer": {
 					Type: genai.TypeString,
-					Enum: []string{"a", "b", "c", "d"},
 				},
 			},
-			Required: []string{"story", "question", "options", "correct_answer"},
+			Required: []string{"story", "question", "correct_answer"},
 		}
 	} else if taskType == db.TaskTypeVocabRecall {
 		prompt = fmt.Sprintf(`
@@ -351,7 +330,7 @@ func (c *GeminiClient) CheckSentenceTranslation(ctx context.Context, sentenceRu,
 		Required: []string{"score"},
 	}
 
-	responseText, err := c.generateContent(ctx, prompt, 1.4, responseSchema)
+	responseText, err := c.generateContent(ctx, prompt, 0.3, responseSchema)
 	if err != nil {
 		return nil, fmt.Errorf("error generating translation check: %w", err)
 	}
@@ -360,6 +339,80 @@ func (c *GeminiClient) CheckSentenceTranslation(ctx context.Context, sentenceRu,
 	result, err = parseResponse[TranslationCheckResult](responseText)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing translation check response: %w", err)
+	}
+
+	return &result, nil
+}
+
+type QuestionCheckResult struct {
+	Score   int     `json:"score"`
+	Comment *string `json:"comment"`
+}
+
+func (c *GeminiClient) CheckQuestionAnswer(ctx context.Context, question, userAnswer string, languageCode string) (*QuestionCheckResult, error) {
+
+	prompt := fmt.Sprintf(`Вы — эксперт по японскому языку. Ученик ответил на вопрос на японском языке. Проверьте ответ на правильность, естественность и соответствие вопросу, добавьте оценку (0-100). Дайте только краткий комментарий на русском (1-2 предложения) об ошибках, если они есть, или о том, как сделать ответ более естественным для носителя языка. Не добавляйте общие суждения вроде «ответ верный» или «ответ понятен». Не усложняйте и не добавляйте лишней информации.
+
+Вопрос: %s
+Ответ ученика: %s`, question, userAnswer)
+	responseSchema := &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			"score": {
+				Type: genai.TypeInteger,
+			},
+			"comment": {
+				Type: genai.TypeString,
+			},
+		},
+		Required: []string{"score"},
+	}
+
+	responseText, err := c.generateContent(ctx, prompt, 0.3, responseSchema)
+	if err != nil {
+		return nil, fmt.Errorf("error generating translation check: %w", err)
+	}
+
+	var result QuestionCheckResult
+	result, err = parseResponse[QuestionCheckResult](responseText)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing translation check response: %w", err)
+	}
+
+	return &result, nil
+}
+
+type StoryQuestionCheckResult struct {
+	Score   int     `json:"score"`
+	Comment *string `json:"comment"`
+}
+
+func (c *GeminiClient) CheckStoryQuestionAnswer(ctx context.Context, story, question, userAnswer string, languageCode string) (*StoryQuestionCheckResult, error) {
+	prompt := fmt.Sprintf(`Вы — эксперт по японскому языку. Ученик ответил на вопрос на японском языке, основанный на истории. Проверьте ответ на правильность, естественность и соответствие вопросу, добавьте оценку (0-100). Дайте только краткий комментарий на русском (1-2 предложения) об ошибках, если они есть, или о том, как сделать ответ более естественным для носителя языка. Не добавляйте общие суждения вроде «ответ верный» или «ответ понятен». Не усложняйте и не добавляйте лишней информации.
+История: %s
+Вопрос: %s
+Ответ ученика: %s`, story, question, userAnswer)
+	responseSchema := &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			"score": {
+				Type: genai.TypeInteger,
+			},
+			"comment": {
+				Type: genai.TypeString,
+			},
+		},
+	}
+
+	responseText, err := c.generateContent(ctx, prompt, 0.3, responseSchema)
+	if err != nil {
+		return nil, fmt.Errorf("error generating story question check: %w", err)
+	}
+
+	var result StoryQuestionCheckResult
+	result, err = parseResponse[StoryQuestionCheckResult](responseText)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing story question check response: %w", err)
 	}
 
 	return &result, nil

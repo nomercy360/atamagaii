@@ -84,41 +84,13 @@ func (h *Handler) generateCardContent(ctx context.Context, card *db.Card) (*cont
 
 	updatedFields.LanguageCode = deck.LanguageCode
 
-	// Generate audio for term if not present
-	if updatedFields.AudioWord == "" {
-		termAudioFileName := fmt.Sprintf("%s_term.wav", card.ID)
-		tempFilePath, err := h.aiClient.GenerateAudio(ctx, updatedFields.Term, deck.LanguageCode)
-		if err != nil {
-			fmt.Printf("Error generating term audio: %v\n", err)
-		} else {
-			tempFile, err := os.Open(tempFilePath)
-			if err != nil {
-				fmt.Printf("Error opening temp file: %v\n", err)
-			} else {
-				defer tempFile.Close()
-				defer os.Remove(tempFilePath)
-
-				audioURL, err := h.storageProvider.UploadFile(
-					ctx,
-					tempFile,
-					termAudioFileName,
-					"audio/wav",
-				)
-				if err != nil {
-					fmt.Printf("Error uploading term audio: %v\n", err)
-				} else {
-					updatedFields.AudioWord = audioURL
-				}
-			}
-		}
-	}
-
-	// Generate audio for example if not present
+	// Generate combined audio for word and example
 	if updatedFields.AudioExample == "" && updatedFields.ExampleNative != "" {
-		exampleAudioFileName := fmt.Sprintf("%s_example.wav", card.ID)
-		tempFilePath, err := h.aiClient.GenerateAudio(ctx, updatedFields.ExampleNative, deck.LanguageCode)
+		combinedAudioFileName := fmt.Sprintf("%s_combined.wav", card.ID)
+		combinedText := fmt.Sprintf("%s. %s", updatedFields.Term, updatedFields.ExampleNative)
+		tempFilePath, err := h.aiClient.GenerateAudio(ctx, combinedText, deck.LanguageCode)
 		if err != nil {
-			fmt.Printf("Error generating example audio: %v\n", err)
+			fmt.Printf("Error generating combined audio: %v\n", err)
 		} else {
 			tempFile, err := os.Open(tempFilePath)
 			if err != nil {
@@ -130,11 +102,11 @@ func (h *Handler) generateCardContent(ctx context.Context, card *db.Card) (*cont
 				audioURL, err := h.storageProvider.UploadFile(
 					ctx,
 					tempFile,
-					exampleAudioFileName,
+					combinedAudioFileName,
 					"audio/wav",
 				)
 				if err != nil {
-					fmt.Printf("Error uploading example audio: %v\n", err)
+					fmt.Printf("Error uploading combined audio: %v\n", err)
 				} else {
 					updatedFields.AudioExample = audioURL
 				}

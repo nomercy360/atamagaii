@@ -268,7 +268,14 @@ func (tg *TaskGenerator) generateTasks() {
 		}
 
 		// Add task to database
-		_, err = tg.storage.AddTask(taskType, string(contentJSON), correctAnswer, card.ID, card.UserID)
+		task := db.Task{
+			Type:    taskType,
+			Content: string(contentJSON),
+			Answer:  correctAnswer,
+			CardID:  &card.ID,
+			UserID:  card.UserID,
+		}
+		_, err = tg.storage.AddTask(ctx, &task)
 		if err != nil {
 			log.Printf("Error saving task for card %s: %v", card.ID, err)
 			continue

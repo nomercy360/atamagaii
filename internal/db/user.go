@@ -15,18 +15,18 @@ type UserSettings struct {
 }
 
 type User struct {
-	ID           string       `db:"id" json:"id"`
-	TelegramID   int64        `db:"telegram_id" json:"telegram_id"`
-	Points       float64      `db:"points" json:"points"`
-	Name         *string      `db:"name" json:"name"`
-	Username     *string      `db:"username" json:"username"`
-	LanguageCode string       `db:"language_code" json:"language_code"`
-	AvatarURL    *string      `db:"avatar_url" json:"avatar_url"`
+	ID           string        `db:"id" json:"id"`
+	TelegramID   int64         `db:"telegram_id" json:"telegram_id"`
+	Points       float64       `db:"points" json:"points"`
+	Name         *string       `db:"name" json:"name"`
+	Username     *string       `db:"username" json:"username"`
+	LanguageCode string        `db:"language_code" json:"language_code"`
+	AvatarURL    *string       `db:"avatar_url" json:"avatar_url"`
 	Settings     *UserSettings `db:"settings" json:"settings,omitempty"`
-	SettingsJSON *string      `db:"-" json:"-"` // Used for SQL operations
-	CreatedAt    time.Time    `db:"created_at" json:"created_at"`
-	UpdatedAt    time.Time    `db:"updated_at" json:"updated_at"`
-	DeletedAt    *time.Time   `db:"deleted_at" json:"deleted_at"`
+	SettingsJSON *string       `db:"-" json:"-"` // Used for SQL operations
+	CreatedAt    time.Time     `db:"created_at" json:"created_at"`
+	UpdatedAt    time.Time     `db:"updated_at" json:"updated_at"`
+	DeletedAt    *time.Time    `db:"deleted_at" json:"deleted_at"`
 }
 
 const (
@@ -139,7 +139,7 @@ func (s *Storage) SaveUser(user *User) error {
 	}
 
 	query := `
-		INSERT INTO users 
+		INSERT INTO users
 		    (id, telegram_id, username, avatar_url, name, language_code, settings)
 		VALUES (?, ?, ?, ?, ?, ?, ?)`
 

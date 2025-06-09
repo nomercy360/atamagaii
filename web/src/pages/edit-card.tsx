@@ -29,7 +29,6 @@ export default function EditCard() {
     frequency: 0,
     language_code: 'jp',
     transcription_type: 'furigana',
-    audio_word: '',
     audio_example: '',
   }
 
@@ -322,28 +321,6 @@ export default function EditCard() {
               </div>
             </div>
 
-            <div>
-              <label class="block text-sm font-medium mb-1" for="audio_word">
-                Word Audio URL
-              </label>
-              <div class="flex items-center gap-2">
-                <input
-                  id="audio_word"
-                  type="text"
-                  value={cardFields().audio_word}
-                  onInput={(e) => handleInputChange(e, 'audio_word')}
-                  class="bg-secondary w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-                <Show when={cardFields().audio_word}>
-                  <AudioButton
-                    audioUrl={cardFields().audio_word}
-                    size="sm"
-                    label="Play word audio"
-                    type="word"
-                  />
-                </Show>
-              </div>
-            </div>
           </div>
 
           {/* Example section */}
@@ -417,7 +394,6 @@ export default function EditCard() {
                     audioUrl={cardFields().audio_example}
                     size="sm"
                     label="Play example audio"
-                    type="example"
                   />
                 </Show>
               </div>

@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -15,6 +16,7 @@ const (
 	TaskTypeVocabRecall         TaskType = "vocab_recall"
 	TaskTypeSentenceTranslation TaskType = "sentence_translation"
 	TaskTypeAudio               TaskType = "audio"
+	TaskTypeQuestion            TaskType = "question"
 )
 
 // Task represents a task in the database
@@ -23,7 +25,7 @@ type Task struct {
 	Type         TaskType   `db:"type" json:"type"`
 	Content      string     `db:"content" json:"content"`
 	Answer       string     `db:"answer" json:"answer"`
-	CardID       string     `db:"card_id" json:"card_id"`
+	CardID       *string    `db:"card_id" json:"card_id"`
 	UserID       string     `db:"user_id" json:"user_id"`
 	CompletedAt  *time.Time `db:"completed_at" json:"completed_at,omitempty"`
 	UserResponse *string    `db:"user_response" json:"user_response,omitempty"`
@@ -34,7 +36,7 @@ type Task struct {
 }
 
 // AddTask adds a new task to the database
-func (s *Storage) AddTask(taskType TaskType, content, answer, cardID, userID string) (*Task, error) {
+func (s *Storage) AddTask(ctx context.Context, task *Task) (*Task, error) {
 	taskID := nanoid.Must()
 	now := time.Now()
 
@@ -45,14 +47,14 @@ func (s *Storage) AddTask(taskType TaskType, content, answer, cardID, userID str
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
-	_, err := s.db.Exec(
+	_, err := s.db.ExecContext(ctx,
 		query,
 		taskID,
-		taskType,
-		content,
-		answer,
-		cardID,
-		userID,
+		task.Type,
+		task.Content,
+		task.Answer,
+		task.CardID,
+		task.UserID,
 		now,
 		now,
 	)
@@ -60,16 +62,11 @@ func (s *Storage) AddTask(taskType TaskType, content, answer, cardID, userID str
 		return nil, fmt.Errorf("error adding task: %w", err)
 	}
 
-	return &Task{
-		ID:        taskID,
-		Type:      taskType,
-		Content:   content,
-		Answer:    answer,
-		CardID:    cardID,
-		UserID:    userID,
-		CreatedAt: now,
-		UpdatedAt: now,
-	}, nil
+	task.ID = taskID
+	task.CreatedAt = now
+	task.UpdatedAt = now
+
+	return task, nil
 }
 
 // GetTask gets a task by ID
@@ -381,6 +378,60 @@ func (s *Storage) SubmitTaskResponse(taskID, userID, response string, isCorrect 
 
 	if rowsAffected == 0 {
 		return fmt.Errorf("no task updated")
+	}
+
+	return nil
+}
+
+func (s *Storage) AddBasicTasks(userID string) error {
+	query := `
+		SELECT COUNT(*) FROM tasks WHERE user_id = ? AND deleted_at IS NULL
+	`
+	var count int
+	if err := s.db.QueryRow(query, userID).Scan(&count); err != nil {
+		return fmt.Errorf("error checking existing tasks: %w", err)
+	}
+
+	if count > 0 {
+		return nil // Tasks already exist for this user
+	}
+
+	content := []string{
+		`{"question": "お名前は何ですか？", "translation": "Как вас зовут?"}`,
+		`{"question": "おいくつですか？", "translation": "Сколько вам лет?"}`,
+		`{"question": "ごしゅっしんはどこですか？", "translation": "Откуда вы родом?"}`,
+		`{"question": "おしごとは何ですか？ / 学生ですか？", "translation": "Кем вы работаете? / Вы студент?"}`,
+		`{"question": "毎日何時に起きますか？", "translation": "Во сколько вы встаете каждый день?"}`,
+		`{"question": "朝ごはんは何を食べますか？", "translation": "Что вы едите на завтрак?"}`,
+		`{"question": "どこで日本語を勉強していますか？", "translation": "Где вы учите японский язык?"}`,
+		`{"question": "何曜日に学校へ行きますか？", "translation": "В какие дни вы ходите в школу?"}`,
+		`{"question": "昨日何をしましたか？", "translation": "Что вы делали вчера?"}`,
+		`{"question": "週末に何をしますか？", "translation": "Что вы делаете по выходным?"}`,
+		`{"question": "日本語はどうですか？ むずかしいですか？", "translation": "Как вам японский язык? Трудный?"}`,
+		`{"question": "日本語のひらがなをぜんぶ書けますか？", "translation": "Вы можете написать все хирагана?"}`,
+		`{"question": "すきな日本の食べ物は何ですか？", "translation": "Какое ваше любимое японское блюдо?"}`,
+		`{"question": "日本のアニメが好きですか？", "translation": "Вы любите японское аниме?"}`,
+		`{"question": "よくどんな音楽を聞きますか？", "translation": "Какую музыку вы часто слушаете?"}`,
+		`{"question": "いま、どこに住んでいますか？", "translation": "Где вы сейчас живёте?"}`,
+		`{"question": "あなたのへやはどんなへやですか？", "translation": "Какая у вас комната?"}`,
+		`{"question": "今日の天気はどうですか？", "translation": "Какая сегодня погода?"}`,
+		`{"question": "コンビニはどこにありますか？", "translation": "Где находится ближайший комбини (магазин)?"}`,
+		`{"question": "好きな動物は何ですか？ なぜですか？", "translation": "Какое ваше любимое животное? Почему?"}`,
+	}
+
+	tasks := make([]Task, len(content))
+	for i, c := range content {
+		tasks[i] = Task{
+			Type:    TaskTypeQuestion,
+			Content: c,
+			UserID:  userID,
+		}
+	}
+
+	for _, task := range tasks {
+		if _, err := s.AddTask(context.Background(), &task); err != nil {
+			return fmt.Errorf("error adding basic task: %w", err)
+		}
 	}
 
 	return nil

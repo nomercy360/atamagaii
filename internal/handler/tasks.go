@@ -134,10 +134,32 @@ func (h *Handler) SubmitTaskResponse(c echo.Context) error {
 			feedback = checkResult.Feedback
 		}
 	} else if task.Type == db.TaskTypeAudio {
-		// For audio tasks, just check if the user selected the correct option
-		isCorrect = req.Response == task.Answer
-	} else {
-		return echo.NewHTTPError(http.StatusNotImplemented, "Task type not implemented")
+		audioContent, err := db.UnmarshalTaskContent[db.TaskAudioContent](task)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error parsing audio task content: %v", err))
+		}
+
+		ctx := c.Request().Context()
+		checkResult, err := h.aiClient.CheckStoryQuestionAnswer(
+			ctx,
+			audioContent.Story,
+			audioContent.CorrectAnswer, // Correct answer from the DB
+			req.Response,               // User-provided answer
+			"jp",                       // TODO: Get the language code from the card
+		)
+
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error checking audio answer: %v", err))
+		}
+
+		// Update the is_correct field based on the AI check (score >= 80 is considered correct)
+		isCorrect = checkResult.Score >= 80
+		if checkResult.Comment != nil && !isCorrect {
+			feedback = checkResult.Comment
+		}
+	} else if task.Type == db.TaskTypeQuestion {
+		// questionContent, err := db.UnmarshalTaskContent[db.TaskAudioContent](task)
+
 	}
 
 	if err := h.db.SubmitTaskResponse(req.TaskID, userID, req.Response, isCorrect); err != nil {

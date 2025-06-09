@@ -197,9 +197,6 @@ export default function Cards() {
       // Preload audio files for current card and next card if they exist
       if (card) {
         const audioFiles = []
-        if (card.fields.audio_word) {
-          audioFiles.push(card.fields.audio_word)
-        }
         if (card.fields.audio_example) {
           audioFiles.push(card.fields.audio_example)
         }
@@ -209,9 +206,6 @@ export default function Cards() {
         const buffer = cardBuffer()
         if (buffer.length > nextIdx) {
           const nextCard = buffer[nextIdx]
-          if (nextCard?.fields.audio_word) {
-            audioFiles.push(nextCard.fields.audio_word)
-          }
           if (nextCard?.fields.audio_example) {
             audioFiles.push(nextCard.fields.audio_example)
           }
@@ -230,16 +224,11 @@ export default function Cards() {
 
   const playCardAudio = () => {
     const card = currentCard()
-    if (card?.fields.audio_word) {
+    if (card?.fields.audio_example) {
       try {
         // First make sure any existing audio is properly stopped
         audioService.stopAll()
-
-        if (card?.fields.audio_example) {
-          audioService.playSequence(card.fields.audio_word, card.fields.audio_example)
-        } else {
-          audioService.playAudio(card.fields.audio_word, 'word')
-        }
+        audioService.playAudio(card.fields.audio_example)
       } catch (error) {
         console.error('Error playing card audio:', error)
       }
@@ -546,7 +535,7 @@ export default function Cards() {
 								</span>
               </button>
               <div class="flex flex-row items-center justify-center gap-3">
-                <Show when={currentCard()?.fields.audio_word}>
+                <Show when={currentCard()?.fields.audio_example}>
                   <button
                     class="rounded-full p-3.5 size-14 flex items-center justify-center bg-secondary text-secondary-foreground">
                     <svg
@@ -561,8 +550,7 @@ export default function Cards() {
                   </button>
                   <AudioButton
                     size="lg"
-                    audioUrl={currentCard()?.fields.audio_word!}
-                    secondaryAudioUrl={currentCard()?.fields.audio_example}
+                    audioUrl={currentCard()?.fields.audio_example!}
                   />
                 </Show>
               </div>
