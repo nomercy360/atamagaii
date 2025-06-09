@@ -1,13 +1,27 @@
-import { createSignal, Show, createEffect, onMount, onCleanup, createResource } from 'solid-js'
-import { apiRequest, Card, CardReviewResponse, Deck, DeckProgress } from '~/lib/api'
-import { useParams, useNavigate } from '@solidjs/router'
+import { useNavigate, useParams } from '@solidjs/router'
 import { useQuery } from '@tanstack/solid-query'
-import AudioButton from '~/components/audio-button'
-import { cn, hapticFeedback } from '~/lib/utils'
-import TranscriptionText from '~/components/transcription-text'
-import { audioService } from '~/lib/audio-service'
+import {
+  Show,
+  createEffect,
+  createResource,
+  createSignal,
+  onCleanup,
+  onMount,
+} from 'solid-js'
+
 import AllDoneAnimation from '~/components/all-done-animation'
+import AudioButton from '~/components/audio-button'
 import ProgressBar from '~/components/progress-bar'
+import TranscriptionText from '~/components/transcription-text'
+import {
+  Card,
+  CardReviewResponse,
+  Deck,
+  DeckProgress,
+  apiRequest,
+} from '~/lib/api'
+import { audioService } from '~/lib/audio-service'
+import { cn, hapticFeedback } from '~/lib/utils'
 
 const getFrontFaceClasses = (isFlipped: boolean, isTrans: boolean) => {
   let opacityClass = ''
@@ -18,7 +32,7 @@ const getFrontFaceClasses = (isFlipped: boolean, isTrans: boolean) => {
   }
 
   const rotationClass = isFlipped ? 'rotate-y-180' : 'rotate-y-0'
-  const pointerEventsClass = (isTrans || isFlipped) ? 'pointer-events-none' : ''
+  const pointerEventsClass = isTrans || isFlipped ? 'pointer-events-none' : ''
 
   return `space-y-2 absolute inset-0 w-full flex flex-col items-center justify-center p-4 ${rotationClass} ${opacityClass} ${pointerEventsClass} transition-all duration-200 transform-gpu backface-hidden`
 }
@@ -32,7 +46,7 @@ const getBackFaceClasses = (isFlipped: boolean, isTrans: boolean) => {
   }
 
   const rotationClass = isFlipped ? 'rotate-y-0' : 'rotate-y-180'
-  const pointerEventsClass = (isTrans || !isFlipped) ? 'pointer-events-none' : ''
+  const pointerEventsClass = isTrans || !isFlipped ? 'pointer-events-none' : ''
 
   return `absolute inset-0 w-full flex flex-col items-center justify-center p-4 ${rotationClass} ${opacityClass} ${pointerEventsClass} transition-all duration-200 transform-gpu backface-hidden`
 }
@@ -43,7 +57,9 @@ export default function Cards() {
   const [cardIndex, setCardIndex] = createSignal(0)
   const [flipped, setFlipped] = createSignal(false)
   const [isTransitioning, setIsTransitioning] = createSignal(false)
-  const [feedbackType, setFeedbackType] = createSignal<'again' | 'good' | null>(null)
+  const [feedbackType, setFeedbackType] = createSignal<'again' | 'good' | null>(
+    null,
+  )
   const [showFeedback, setShowFeedback] = createSignal(false)
   const [timerStart, setTimerStart] = createSignal<number>(0)
   const [timeAccumulated, setTimeAccumulated] = createSignal<number>(0)
@@ -57,11 +73,18 @@ export default function Cards() {
 
   const progressInfo = () => {
     const metrics = deckMetrics()
-    const total = metrics.new_cards + metrics.learning_cards + metrics.review_cards + metrics.completed_today_cards
+    const total =
+      metrics.new_cards +
+      metrics.learning_cards +
+      metrics.review_cards +
+      metrics.completed_today_cards
     return {
       completed: metrics.completed_today_cards,
       total: total,
-      percentage: total > 0 ? Math.round((metrics.completed_today_cards / total) * 100) : 0,
+      percentage:
+        total > 0
+          ? Math.round((metrics.completed_today_cards / total) * 100)
+          : 0,
     }
   }
 
@@ -97,7 +120,7 @@ export default function Cards() {
     if (timerStart() === 0) return timeAccumulated()
 
     // Return accumulated time + current running time
-    return timeAccumulated() + (timerPaused() ? 0 : (Date.now() - timerStart()))
+    return timeAccumulated() + (timerPaused() ? 0 : Date.now() - timerStart())
   }
 
   const [cardBuffer, setCardBuffer] = createSignal<Card[]>([])
@@ -152,13 +175,15 @@ export default function Cards() {
 
   const [cards, { refetch: refetchCards }] = createResource<Card[], boolean>(
     () => needMoreCards() && cardBuffer().length === 0,
-    async (shouldFetch) => {
+    async shouldFetch => {
       if (!shouldFetch) {
         return cardBuffer()
       }
       if (!params.deckId) return []
 
-      const { data, error } = await apiRequest<Card[]>(`/cards/due?deck_id=${params.deckId}&limit=10`)
+      const { data, error } = await apiRequest<Card[]>(
+        `/cards/due?deck_id=${params.deckId}&limit=10`,
+      )
 
       if (error) {
         return []
@@ -188,7 +213,11 @@ export default function Cards() {
     const hasCard = currentCard() !== null
     const card = currentCard()
 
-    if (hasCard && !isTransitioning() && document.visibilityState === 'visible') {
+    if (
+      hasCard &&
+      !isTransitioning() &&
+      document.visibilityState === 'visible'
+    ) {
       // Reset and start the timer when a new card is shown
       // Timer runs on both front and back sides
       resetTimer()
@@ -300,17 +329,17 @@ export default function Cards() {
 
     void (async () => {
       try {
-        const {
-          data,
-          error,
-        } = await apiRequest<CardReviewResponse>(`/cards/${cardId}/review`, {
-          method: 'POST',
-          body: JSON.stringify({
-            card_id: cardId,
-            rating,
-            time_spent_ms: timeToSend,
-          }),
-        })
+        const { data, error } = await apiRequest<CardReviewResponse>(
+          `/cards/${cardId}/review`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              card_id: cardId,
+              rating,
+              time_spent_ms: timeToSend,
+            }),
+          },
+        )
 
         if (error) return
 
@@ -335,7 +364,10 @@ export default function Cards() {
           }
         }
       } catch (e) {
-        console.error(`Exception during background review submission for card ${cardId}:`, e)
+        console.error(
+          `Exception during background review submission for card ${cardId}:`,
+          e,
+        )
       }
     })()
   }
@@ -358,7 +390,9 @@ export default function Cards() {
         >
           <div
             class={`rounded-full size-8 flex items-center justify-center ${
-              feedbackType() === 'again' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+              feedbackType() === 'again'
+                ? 'bg-red-100 text-red-800'
+                : 'bg-green-100 text-green-800'
             }`}
           >
             {feedbackType() === 'again' ? (
@@ -368,9 +402,9 @@ export default function Cards() {
                 class="size-4"
                 viewBox="0 -960 960 960"
                 width="24px"
-                fill="currentColor">
-                <path
-                  d="M480-424 284-228q-11 11-28 11t-28-11q-11-11-11-28t11-28l196-196-196-196q-11-11-11-28t11-28q11-11 28-11t28 11l196 196 196-196q11-11 28-11t28 11q11 11 11 28t-11 28L536-480l196 196q11 11 11 28t-11 28q-11 11-28 11t-28-11L480-424Z" />
+                fill="currentColor"
+              >
+                <path d="M480-424 284-228q-11 11-28 11t-28-11q-11-11-11-28t11-28l196-196-196-196q-11-11-11-28t11-28q11-11 28-11t28 11l196 196 196-196q11-11 28-11t28 11q11 11 11 28t-11 28L536-480l196 196q11 11 11 28t-11 28q-11 11-28 11t-28-11L480-424Z" />
               </svg>
             ) : (
               <svg
@@ -381,8 +415,7 @@ export default function Cards() {
                 class="size-4"
                 fill="currentColor"
               >
-                <path
-                  d="m382-354 339-339q12-12 28-12t28 12q12 12 12 28.5T777-636L410-268q-12 12-28 12t-28-12L182-440q-12-12-11.5-28.5T183-497q12-12 28.5-12t28.5 12l142 143Z" />
+                <path d="m382-354 339-339q12-12 28-12t28 12q12 12 12 28.5T777-636L410-268q-12 12-28 12t-28-12L182-440q-12-12-11.5-28.5T183-497q12-12 28.5-12t28.5 12l142 143Z" />
               </svg>
             )}
           </div>
@@ -404,14 +437,26 @@ export default function Cards() {
             >
               <div class={getFrontFaceClasses(flipped(), isTransitioning())}>
                 <TranscriptionText
-                  text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
+                  text={
+                    currentCard()?.fields.term ||
+                    currentCard()?.fields.term ||
+                    ''
+                  }
                   class="text-5xl font-bold"
                   language={currentCard()?.fields.language_code || 'jp'}
                 />
                 <Show
-                  when={currentCard()?.fields.example_native || currentCard()?.fields.example_native}>
+                  when={
+                    currentCard()?.fields.example_native ||
+                    currentCard()?.fields.example_native
+                  }
+                >
                   <TranscriptionText
-                    text={currentCard()?.fields.example_native || currentCard()?.fields.example_native || ''}
+                    text={
+                      currentCard()?.fields.example_native ||
+                      currentCard()?.fields.example_native ||
+                      ''
+                    }
                     class="font-semibold text-xl text-secondary-foreground"
                     language={currentCard()?.fields.language_code || 'jp'}
                   />
@@ -420,11 +465,10 @@ export default function Cards() {
 
               <div class={getBackFaceClasses(flipped(), isTransitioning())}>
                 <div class="flex flex-col items-center justify-center">
-                  <Show
-                    when={!currentCard()?.fields.term_with_transcription}>
-										 <span class="text-xl text-foreground font-bold">
-												{currentCard()?.fields.transcription}
-										 </span>
+                  <Show when={!currentCard()?.fields.term_with_transcription}>
+                    <span class="text-xl text-foreground font-bold">
+                      {currentCard()?.fields.transcription}
+                    </span>
                   </Show>
                   {currentCard()?.fields.term_with_transcription ? (
                     <TranscriptionText
@@ -435,22 +479,29 @@ export default function Cards() {
                     />
                   ) : (
                     <TranscriptionText
-                      text={currentCard()?.fields.term || currentCard()?.fields.term || ''}
+                      text={
+                        currentCard()?.fields.term ||
+                        currentCard()?.fields.term ||
+                        ''
+                      }
                       class="text-5xl font-bold"
                       language={currentCard()?.fields.language_code || 'jp'}
                     />
                   )}
                 </div>
-                <div
-                  class="text-center text-secondary-foreground text-xl font-normal mb-12 mt-3">
-                  {currentCard()?.fields.meaning_ru || currentCard()?.fields.meaning_en}
+                <div class="text-center text-secondary-foreground text-xl font-normal mb-12 mt-3">
+                  {currentCard()?.fields.meaning_ru ||
+                    currentCard()?.fields.meaning_en}
                 </div>
                 <Show when={currentCard()?.fields.example_native}>
                   <div class="flex items-center justify-between mb-1">
                     <p class="flex-grow">
                       {currentCard()?.fields.example_with_transcription ? (
                         <TranscriptionText
-                          text={currentCard()?.fields.example_with_transcription || ''}
+                          text={
+                            currentCard()?.fields.example_with_transcription ||
+                            ''
+                          }
                           class="tracking-wider text-xl font-semibold"
                           language={currentCard()?.fields.language_code || 'jp'}
                           rtClass="font-semibold text-xs"
@@ -465,7 +516,8 @@ export default function Cards() {
                     </p>
                   </div>
                   <p class="text-center text-xl text-secondary-foreground">
-                    {currentCard()?.fields.example_ru || currentCard()?.fields.example_en}
+                    {currentCard()?.fields.example_ru ||
+                      currentCard()?.fields.example_en}
                   </p>
                 </Show>
               </div>
@@ -479,9 +531,17 @@ export default function Cards() {
 
         <Show when={!cards.loading && !currentCard()}>
           <div class="w-full flex flex-col items-center justify-center h-[400px] px-4">
-            <AllDoneAnimation width={100} height={100} class="mb-2" />
-            <p class="text-xl font-medium text-center mb-4">All done for today!</p>
-            <p class="text-muted-foreground mb-4 text-center">You've completed all your cards for this session.</p>
+            <AllDoneAnimation
+              width={100}
+              height={100}
+              class="mb-2"
+            />
+            <p class="text-xl font-medium text-center mb-4">
+              All done for today!
+            </p>
+            <p class="text-muted-foreground mb-4 text-center">
+              You've completed all your cards for this session.
+            </p>
             <button
               onClick={() => {
                 setNeedMoreCards(true)
@@ -504,21 +564,23 @@ export default function Cards() {
       {/* Review buttons - show only when card is flipped */}
       <Show when={flipped() && currentCard() && !isTransitioning()}>
         {/* Click areas for rating cards by screen side click */}
-        <div class="fixed inset-0 bottom-28 w-full pointer-events-auto" onClick={(e) => {
-          // Get click position relative to window width
-          const x = e.clientX
-          const windowWidth = window.innerWidth
+        <div
+          class="fixed inset-0 bottom-28 w-full pointer-events-auto"
+          onClick={e => {
+            // Get click position relative to window width
+            const x = e.clientX
+            const windowWidth = window.innerWidth
 
-          // Determine if click was on left or right side
-          if (x < windowWidth / 2) {
-            // Left side - "Again"
-            handleReview(currentCard()!.id, 1)
-          } else {
-            // Right side - "Good"
-            handleReview(currentCard()!.id, 2)
-          }
-        }}>
-        </div>
+            // Determine if click was on left or right side
+            if (x < windowWidth / 2) {
+              // Left side - "Again"
+              handleReview(currentCard()!.id, 1)
+            } else {
+              // Right side - "Good"
+              handleReview(currentCard()!.id, 2)
+            }
+          }}
+        ></div>
 
         <div class="h-32 fixed bottom-0 left-0 right-0 bg-transparent z-10">
           <div class="mx-auto px-4 py-4">
@@ -527,25 +589,22 @@ export default function Cards() {
                 onClick={() => handleReview(currentCard()!.id, 1)}
                 class="rounded-[120px] justify-center flex flex-col items-center h-14 px-6 bg-red-100 text-red-800 transition-opacity font-bold text-sm"
               >
-								<span>
-									Again
-								</span>
+                <span>Again</span>
                 <span class="text-[11px] leading-none font-semibold opacity-70">
-									{currentCard()?.next_intervals.again}
-								</span>
+                  {currentCard()?.next_intervals.again}
+                </span>
               </button>
               <div class="flex flex-row items-center justify-center gap-3">
                 <Show when={currentCard()?.fields.audio_example}>
-                  <button
-                    class="rounded-full p-3.5 size-14 flex items-center justify-center bg-secondary text-secondary-foreground">
+                  <button class="rounded-full p-3.5 size-14 flex items-center justify-center bg-secondary text-secondary-foreground">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       height="24px"
                       viewBox="0 -960 960 960"
                       width="24px"
-                      fill="currentColor">
-                      <path
-                        d="m603-202-34 97q-4 11-14 18t-22 7q-20 0-32.5-16.5T496-133l152-402q5-11 15-18t22-7h30q12 0 22 7t15 18l152 403q8 19-4 35.5T868-80q-13 0-22.5-7T831-106l-34-96H603ZM362-401 188-228q-11 11-27.5 11.5T132-228q-11-11-11-28t11-28l174-174q-35-35-63.5-80T190-640h84q20 39 40 68t48 58q33-33 68.5-92.5T484-720H80q-17 0-28.5-11.5T40-760q0-17 11.5-28.5T80-800h240v-40q0-17 11.5-28.5T360-880q17 0 28.5 11.5T400-840v40h240q17 0 28.5 11.5T680-760q0 17-11.5 28.5T640-720h-76q-21 72-63 148t-83 116l96 98-30 82-122-125Zm266 129h144l-72-204-72 204Z" />
+                      fill="currentColor"
+                    >
+                      <path d="m603-202-34 97q-4 11-14 18t-22 7q-20 0-32.5-16.5T496-133l152-402q5-11 15-18t22-7h30q12 0 22 7t15 18l152 403q8 19-4 35.5T868-80q-13 0-22.5-7T831-106l-34-96H603ZM362-401 188-228q-11 11-27.5 11.5T132-228q-11-11-11-28t11-28l174-174q-35-35-63.5-80T190-640h84q20 39 40 68t48 58q33-33 68.5-92.5T484-720H80q-17 0-28.5-11.5T40-760q0-17 11.5-28.5T80-800h240v-40q0-17 11.5-28.5T360-880q17 0 28.5 11.5T400-840v40h240q17 0 28.5 11.5T680-760q0 17-11.5 28.5T640-720h-76q-21 72-63 148t-83 116l96 98-30 82-122-125Zm266 129h144l-72-204-72 204Z" />
                     </svg>
                   </button>
                   <AudioButton
@@ -558,12 +617,10 @@ export default function Cards() {
                 onClick={() => handleReview(currentCard()!.id, 2)}
                 class="rounded-[120px] justify-center flex flex-col items-center h-14 px-6 bg-green-100 text-green-800 transition-opacity font-bold text-sm"
               >
-								<span>
-									Good
-								</span>
+                <span>Good</span>
                 <span class="text-[11px] leading-none font-semibold opacity-70">
-									{currentCard()?.next_intervals.good}
-								</span>
+                  {currentCard()?.next_intervals.good}
+                </span>
               </button>
             </div>
           </div>
@@ -571,27 +628,32 @@ export default function Cards() {
       </Show>
 
       {/* Deck metrics - show only when card is not flipped */}
-      <Show when={!flipped() && currentCard() && !isTransitioning() && deckQuery.data && !deckQuery.isPending}>
+      <Show
+        when={
+          !flipped() &&
+          currentCard() &&
+          !isTransitioning() &&
+          deckQuery.data &&
+          !deckQuery.isPending
+        }
+      >
         <div class="h-32 fixed bottom-0 left-0 right-0 bg-background border-t border-border">
           <div class="mx-auto px-4 py-4">
             <div class="flex justify-center gap-3">
               <Show when={deckMetrics().new_cards > 0}>
-								<span
-                  class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-									{deckMetrics().new_cards} new
-								</span>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {deckMetrics().new_cards} new
+                </span>
               </Show>
               <Show when={deckMetrics().learning_cards > 0}>
-								<span
-                  class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-									{deckMetrics().learning_cards} learning
-								</span>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  {deckMetrics().learning_cards} learning
+                </span>
               </Show>
               <Show when={deckMetrics().review_cards > 0}>
-								<span
-                  class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-									{deckMetrics().review_cards} review
-								</span>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  {deckMetrics().review_cards} review
+                </span>
               </Show>
             </div>
           </div>
