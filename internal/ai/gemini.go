@@ -260,7 +260,9 @@ func (c *GeminiClient) GenerateAudio(ctx context.Context, text string, language 
 
 	req := &texttospeechpb.SynthesizeSpeechRequest{
 		Input: &texttospeechpb.SynthesisInput{
-			InputSource: &texttospeechpb.SynthesisInput_Text{Text: text},
+			InputSource: &texttospeechpb.SynthesisInput_Ssml{
+				Ssml: fmt.Sprintf("<speak>%s</speak>", text),
+			},
 		},
 		Voice: &texttospeechpb.VoiceSelectionParams{
 			LanguageCode: voice.LanguageCode,

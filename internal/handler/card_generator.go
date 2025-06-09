@@ -87,7 +87,7 @@ func (h *Handler) generateCardContent(ctx context.Context, card *db.Card) (*cont
 	// Generate combined audio for word and example
 	if updatedFields.AudioExample == "" && updatedFields.ExampleNative != "" {
 		combinedAudioFileName := fmt.Sprintf("%s_combined.wav", card.ID)
-		combinedText := fmt.Sprintf("%s. %s", updatedFields.Term, updatedFields.ExampleNative)
+		combinedText := fmt.Sprintf("%s<break time=\"300ms\"/>%s", updatedFields.Term, updatedFields.ExampleNative)
 		tempFilePath, err := h.aiClient.GenerateAudio(ctx, combinedText, deck.LanguageCode)
 		if err != nil {
 			fmt.Printf("Error generating combined audio: %v\n", err)
